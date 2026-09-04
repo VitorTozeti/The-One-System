@@ -43,6 +43,7 @@ function loginView(){
   const cadastro = S.auth.mode==='cadastro';
   const card=h('div',{class:'auth-card'},
     h('div',{class:'auth-logo',html:'⬡ NEXUS <span>RPG</span>'}),
+    h('div',{class:'auth-tag'},'Crie seu próprio sistema de RPG de mesa e jogue — tudo no seu navegador, sem instalar nada.'),
     h('div',{class:'auth-sub'}, cadastro?'Criar uma conta':'Entrar na sua conta'),
     S.auth.error ? h('div',{class:'auth-error'}, S.auth.error) : null,
     h('label',{class:'auth-lbl'},'Usuário'),
@@ -68,28 +69,25 @@ function loginView(){
 
 /* ---------- Hub: Meus personagens ---------- */
 function personagensView(){
-  const lista=S.personagens.length
-    ? h('div',{class:'pj-grid'}, S.personagens.map(p=>h('div',{class:'pj-card '+p.kind},
+  const primeiraVez = !S.personagens.length;
+
+  /* Lista de personagens existentes. */
+  const lista = primeiraVez ? null
+    : h('div',{class:'pj-grid'}, S.personagens.map(p=>h('div',{class:'pj-card '+p.kind},
         h('div',{class:'pj-badge'}, p.kind==='mestre'?'🛠️ Mestre':'🎲 Jogador'),
         h('div',{class:'pj-name'}, p.name),
+        h('div',{class:'pj-role-d'}, p.kind==='mestre'?'Editor de sistema e campanha.':'Ficha de jogador.'),
         h('div',{class:'row'},
-          h('button',{class:'btn primary sm', onclick:()=>selectPersonagem(p.id)},'Entrar'),
-          h('button',{class:'btn ghost sm', onclick:()=>removePersonagem(p.id)},'Excluir')))))
-    : h('div',{class:'pj-empty'},'Nenhum personagem ainda. Crie um Mestre (para montar o sistema) ou um Jogador (para criar uma ficha).');
+          h('button',{class:'btn primary sm', onclick:()=>selectPersonagem(p.id)},'Entrar →'),
+          h('button',{class:'btn ghost sm', onclick:()=>removePersonagem(p.id)},'Excluir')))));
 
   const templates=(typeof listTemplates==='function')?listTemplates():[];
-  const tplSel=templates.length?h('select',{id:'pj-template', class:'auth-inp', style:{maxWidth:'200px'}},
-    h('option',{value:''},'Mestre: sistema em branco'),
+  const tplSel=templates.length?h('select',{id:'pj-template', class:'auth-inp'},
+    h('option',{value:''},'sistema em branco'),
     templates.map(t=>h('option',{value:t.id},'a partir de: '+t.nome))):null;
 
-  const novo=h('div',{class:'pj-new'},
-    h('div',{class:'pj-new-title'},'Novo personagem'),
-    h('div',{class:'row'},
-      h('input',{id:'pj-name', class:'auth-inp', placeholder:'nome do personagem', style:{flex:'1'}}),
-      tplSel,
-      h('button',{class:'btn amber', onclick:()=>criar('mestre')},'🛠️ Mestre'),
-      h('button',{class:'btn primary', onclick:()=>criar('jogador')},'🎲 Jogador')));
-
+  /* Criação com decisão informada: cada papel explica o que faz NO ponto de
+     escolha, e o botão do próprio cartão cria aquele papel. */
   function criar(kind){
     const name=(document.getElementById('pj-name')||{}).value||'';
     let tplSystem=null;
@@ -99,8 +97,37 @@ function personagensView(){
     }
     addPersonagem(kind, name, tplSystem);
   }
+
+  const cartaoMestre=h('div',{class:'pj-role mestre'},
+    h('div',{class:'pj-role-ic'},'🛠️'),
+    h('div',{class:'pj-role-t'},'Mestre'),
+    h('div',{class:'pj-role-s'},'Monta o jogo: cria atributos, recursos, classes, itens, a ficha e a campanha. Comece por aqui se ninguém montou o sistema ainda.'),
+    tplSel ? field2('Começar de', tplSel) : null,
+    h('button',{class:'btn amber pj-role-go', onclick:()=>criar('mestre')},'Criar Mestre'));
+
+  const cartaoJogador=h('div',{class:'pj-role jogador'},
+    h('div',{class:'pj-role-ic'},'🎲'),
+    h('div',{class:'pj-role-t'},'Jogador'),
+    h('div',{class:'pj-role-s'},'Cria uma ficha e joga com o sistema de exemplo já pronto. Escolha isto para experimentar rápido, sem montar regras.'),
+    h('button',{class:'btn primary pj-role-go', onclick:()=>criar('jogador')},'Criar Jogador'));
+
+  const novo=h('div',{class:'pj-new'},
+    h('div',{class:'pj-new-title'}, primeiraVez?'Crie seu primeiro personagem':'Novo personagem'),
+    h('label',{class:'auth-lbl'},'Nome (opcional)'),
+    h('input',{id:'pj-name', class:'auth-inp', placeholder:'ex.: Mesa de Sexta, Kael, Aria…',
+      onkeydown:e=>{ if(e.key==='Enter') criar('jogador'); }}),
+    h('div',{class:'pj-new-sub'},'Escolha um papel — você pode ter os dois e alternar quando quiser.'),
+    h('div',{class:'pj-roles'}, cartaoMestre, cartaoJogador));
+
   return h('div',{class:'pj-wrap'},
-    h('h2',{class:'pj-h'},'Meus personagens'),
-    h('div',{class:'pj-hint'},'Escolha um personagem para entrar. Personagem Mestre abre o editor de sistema; Jogador abre a ficha.'),
+    h('h2',{class:'pj-h'}, primeiraVez?'Bem-vindo ao Nexus RPG' : 'Meus personagens'),
+    h('div',{class:'pj-hint'}, primeiraVez
+      ? 'Escolha um papel abaixo para começar. Mestre cria o sistema de regras; Jogador cria uma ficha e joga.'
+      : 'Escolha um personagem para entrar, ou crie outro logo abaixo.'),
     lista, novo);
+}
+
+/* Pequeno rótulo + controle, para os cartões de papel. */
+function field2(label, control){
+  return h('div',{class:'pj-fld'}, h('span',{}, label), control);
 }

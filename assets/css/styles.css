@@ -413,7 +413,8 @@
   .auth-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
   .auth-logo{font-weight:900;font-size:22px;letter-spacing:.5px;text-align:center}
   .auth-logo span{color:var(--indigo)}
-  .auth-sub{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 18px}
+  .auth-tag{text-align:center;color:var(--muted);font-size:12.5px;line-height:1.5;margin:10px 2px 4px}
+  .auth-sub{text-align:center;color:var(--txt);font-weight:600;font-size:13px;margin:14px 0 18px;padding-top:14px;border-top:1px solid var(--line)}
   .auth-lbl{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}
   .auth-inp{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:14px}
   .auth-inp:focus{outline:none;border-color:var(--indigo)}
@@ -439,8 +440,28 @@
   .pj-badge{font-size:12px;color:var(--muted);margin-bottom:6px}
   .pj-name{font-size:17px;font-weight:700;margin-bottom:12px;word-break:break-word}
   .pj-empty{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:24px;color:var(--muted);text-align:center;font-size:14px}
-  .pj-new{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:20px}
-  .pj-new-title{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .pj-role-d{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .pj-new{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:22px}
+  .pj-new-title{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:12px}
+  .pj-new .auth-lbl{margin-top:0}
+  .pj-new-sub{font-size:12px;color:var(--muted);margin:12px 2px 12px}
+
+  /* Escolha de papel: decisão informada no ponto de decisão. */
+  .pj-roles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.pj-roles{grid-template-columns:1fr}}
+  .pj-role{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+           border-radius:14px;padding:16px;border-top:3px solid var(--line);transition:.15s}
+  .pj-role.mestre{border-top-color:var(--amber)}
+  .pj-role.jogador{border-top-color:var(--indigo)}
+  .pj-role:hover{border-color:#475569}
+  .pj-role.mestre:hover{border-color:var(--amber)}
+  .pj-role.jogador:hover{border-color:var(--indigo)}
+  .pj-role-ic{font-size:26px;line-height:1}
+  .pj-role-t{font-size:16px;font-weight:800;margin:8px 0 4px}
+  .pj-role-s{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1;margin-bottom:12px}
+  .pj-role-go{width:100%;margin-top:auto}
+  .pj-fld{margin-bottom:12px}
+  .pj-fld > span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 
   /* ===================== DASHBOARD DE CAMPANHA (MESTRE) ===================== */
   .mdash{max-width:1000px;margin:0 auto;padding:16px}
