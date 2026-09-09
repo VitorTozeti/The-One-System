@@ -91,9 +91,37 @@ function worldShapeMeta(k){ return WORLD_SHAPES.find(x=>x.k===k)||WORLD_SHAPES[0
 /* Paleta de cores para reinos/territórios. */
 const KINGDOM_COLORS=['#e11d48','#2563eb','#059669','#d97706','#7c3aed','#0891b2','#be185d','#65a30d','#475569'];
 
+/* ---------- Terreno "pintado" (ferramenta pincel, estilo Paint) ----------
+   Resolução interna do canvas de terreno (16:10 como a área do mapa). */
+const TERRAIN_W=1000, TERRAIN_H=625;
+const TERRAIN_MATERIALS=[
+  {k:'grama',   nome:'Grama',  ic:'🌿', color:'#3f7d3a', color2:'#2c5a29'},
+  {k:'mato',    nome:'Mato',   ic:'🌲', color:'#2e5d34', color2:'#1e3f24'},
+  {k:'terra',   nome:'Terra',  ic:'🟫', color:'#6b4f32', color2:'#523c26'},
+  {k:'trilha',  nome:'Trilha', ic:'🟤', color:'#8a6d4b', color2:'#6f573b'},
+  {k:'pedra',   nome:'Pedra',  ic:'🪨', color:'#6b7280', color2:'#525963'},
+  {k:'areia',   nome:'Areia',  ic:'🏖️', color:'#c9b072', color2:'#ad9557'},
+  {k:'agua',    nome:'Água',   ic:'💧', color:'#2a6cb0', color2:'#1b4a83'},
+  {k:'lava',    nome:'Lava',   ic:'🌋', color:'#c0392b', color2:'#e67e22'},
+  {k:'neve',    nome:'Neve',   ic:'❄️', color:'#dfe9f2', color2:'#bcd0e4'},
+  {k:'escuro',  nome:'Sombra', ic:'⬛', color:'#161b26', color2:'#0c0f16'},
+];
+function terrainMatMeta(k){ return TERRAIN_MATERIALS.find(x=>x.k===k)||TERRAIN_MATERIALS[0]; }
+/* Marcas rápidas de status para tokens (anel de ícones). */
+const TOKEN_MARKS=['🩸','💤','😵','💫','🛡️','⭐','🔥','☠️','❓','⛓️'];
+/* Presets de tamanho de token (categoria de criatura → %). */
+const TOKEN_SIZES=[
+  {k:'mini',  nome:'Miúdo',  pct:60},
+  {k:'peq',   nome:'Peq.',   pct:82},
+  {k:'med',   nome:'Médio',  pct:100},
+  {k:'grd',   nome:'Grande', pct:150},
+  {k:'enor',  nome:'Enorme', pct:210},
+];
+
 function newMap(kind,theme,name){
   return { id:uid(), name:name||'Novo mapa', kind:kind||'regiao', theme:theme||'rustico',
-           image:null, grid:{on:false,size:48}, tokens:[], pins:[], props:[],
+           image:null, terrain:null, showLabels:true,
+           grid:{on:false,size:48,snap:true}, tokens:[], pins:[], props:[],
            world:{ continent:{shape:'none', color:'#3b6b4a', rot:0, scale:100}, kingdoms:[] },
            note:'' };
 }
@@ -143,15 +171,18 @@ function sanitizeCampaign(c){
   }
   c.maps.forEach(mm=>{
     mm.grid=mm.grid||{on:false,size:48};
+    if(mm.grid.snap==null) mm.grid.snap=true;
     mm.tokens=Array.isArray(mm.tokens)?mm.tokens:[];
     mm.pins=Array.isArray(mm.pins)?mm.pins:[];
     mm.props=Array.isArray(mm.props)?mm.props:[];
+    if(mm.terrain===undefined) mm.terrain=null;
+    if(mm.showLabels==null) mm.showLabels=true;
     mm.kind=mm.kind||'regiao'; mm.theme=mm.theme||'rustico'; mm.note=mm.note||'';
     mm.pins.forEach(p=>{ if(!p.icon) p.icon='📍'; });
     /* tokens antigos ganham os novos campos */
     mm.tokens.forEach(t=>{ if(t.icon==null)t.icon=''; if(t.img===undefined)t.img=null;
       if(t.size==null)t.size=100; if(t.hp===undefined)t.hp=null; if(t.hpMax===undefined)t.hpMax=null;
-      if(t.hidden==null)t.hidden=false; });
+      if(t.hidden==null)t.hidden=false; if(!Array.isArray(t.marks))t.marks=[]; });
     mm.props.forEach(p=>{ if(p.size==null)p.size=100; if(p.rot==null)p.rot=0;
       if(p.w==null)p.w=16; if(p.h==null)p.h=16; if(p.hidden==null)p.hidden=false; });
     /* mundo (continente + reinos) */
@@ -182,7 +213,7 @@ const TOKEN_CORES={player:'#10b981', enemy:'#e11d48', npc:'#6366f1'};
 function newToken(kind, label, refId){
   return { id:uid(), kind:kind||'npc', label:label||'?', refId:refId||null,
            xPct:50, yPct:50, color:TOKEN_CORES[kind]||'#94a3b8',
-           icon:'', img:null, size:100, hp:null, hpMax:null, hidden:false };
+           icon:'', img:null, size:100, hp:null, hpMax:null, hidden:false, marks:[] };
 }
 function newPin(xPct,yPct,icon){ return { id:uid(), xPct:xPct==null?50:xPct, yPct:yPct==null?50:yPct, label:'Local', note:'', icon:icon||'📍' }; }
 
