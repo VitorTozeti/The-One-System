@@ -73,14 +73,60 @@ function rolagemRapida(){
   return box;
 }
 
-/* Seção completa: construtor visual + resultado + expressão livre + histórico. */
+/* Para que serve cada dado (linguagem de mesa, ajuda quem está aprendendo). */
+const DICE_USOS={4:'dano leve, efeitos',6:'dano comum',8:'armas médias',10:'armas pesadas',12:'armas enormes',20:'testes & ataques',100:'sorte / porcentagem'};
+/* Atalhos por INTENÇÃO — clicam montam a rolagem e já rolam. */
+const DICE_PRESETS=[
+  {ic:'🎯', nome:'Teste',   desc:'d20 puro',        pool:{20:1}, mod:0},
+  {ic:'⚔️', nome:'Ataque',  desc:'1d20 + bônus',    pool:{20:1}, mod:0},
+  {ic:'🗡️', nome:'Dano leve',desc:'1d6',            pool:{6:1},  mod:0},
+  {ic:'🔨', nome:'Dano pesado',desc:'2d6',          pool:{6:2},  mod:0},
+  {ic:'🍀', nome:'Sorte %',  desc:'1d100',          pool:{100:1},mod:0},
+  {ic:'🎲', nome:'Clássico', desc:'3d6',             pool:{6:3},  mod:0},
+];
+function diceSet(pool,mod){ S.diceB={pool:Object.assign({},pool), mod:mod||0}; render(); }
+
+/* Renderiza o detalhamento do último resultado: cada dado como uma "carta". */
+function resultadoDetalhado(last){
+  if(!last||last.erro||!Array.isArray(last.detalhes)||!last.detalhes.length) return null;
+  let somaDados=0;
+  const grupos=last.detalhes.map(d=>{
+    somaDados+=d.soma||0;
+    const usados=d.usados||d.rolls||[];
+    const chips=(d.rolls||[]).map((v,idx)=>{
+      /* marca como descartado se sobra (kh/kl) tirou este valor */
+      const usadosCopy=usados.slice(); let manteve=false;
+      const pos=usadosCopy.indexOf(v); if(pos>=0){ usadosCopy.splice(pos,1); manteve=true; }
+      const max=v===d.faces, min=v===1;
+      return h('span',{class:'die-face'+(manteve?'':' drop')+(max?' crit':'')+(min?' fail':''),
+        style:{borderColor:DICE_COLOR[d.faces]||'#6366f1'}}, v);
+    });
+    return h('div',{class:'res-grp'},
+      h('span',{class:'res-grp-lbl'}, d.termo),
+      h('div',{class:'res-faces'}, ...chips));
+  });
+  const mod=(typeof last.total==='number')?(last.total-somaDados):0;
+  return h('div',{class:'res-breakdown'}, ...grupos,
+    mod?h('div',{class:'res-grp'}, h('span',{class:'res-grp-lbl'},'mod'), h('span',{class:'res-mod'}, sign(mod))):null,
+    h('div',{class:'res-eq'}, '= '+last.total));
+}
+
+/* Seção completa: atalhos + construtor visual + resultado + expressão livre + histórico. */
 function dadosCampanhaView(){
   const b=diceB();
 
-  /* 1) Paleta de dados — toque para adicionar */
+  /* 0) Atalhos por intenção */
+  const atalhos=h('div',{class:'dice-presets'}, DICE_PRESETS.map(pr=>
+    h('button',{class:'dice-preset', title:pr.desc, onclick:()=>{ diceSet(pr.pool,pr.mod); const e=diceBExprExec(); if(e) rolarExpr(e); }},
+      h('span',{class:'dice-preset-ic'},pr.ic),
+      h('span',{class:'dice-preset-nm'},pr.nome),
+      h('span',{class:'dice-preset-ds'},pr.desc))));
+
+  /* 1) Paleta de dados — toque para adicionar (com "para que serve") */
   const paleta=h('div',{class:'dice-palette'}, DICE_TYPES.map(f=>
     h('button',{class:'dice-type', title:'Adicionar d'+f, onclick:()=>diceAdd(f,1)},
-      diceIcon(f,46), h('span',{class:'dice-type-l'}, 'd'+f))));
+      diceIcon(f,46), h('span',{class:'dice-type-l'}, 'd'+f),
+      h('span',{class:'dice-type-uso'}, DICE_USOS[f]||''))));
 
   /* 2) Pool montado — "1 [d4] 4"  com + / − por grupo */
   const grupos=DICE_TYPES.filter(f=>b.pool[f]>0).map(f=>
@@ -98,7 +144,7 @@ function dadosCampanhaView(){
     h('button',{class:'dice-step', onclick:()=>diceModAdd(1)},'+'));
   const poolBox = (grupos.length||b.mod)
     ? h('div',{class:'dice-pool'}, ...grupos, modChip)
-    : h('div',{class:'dice-pool'}, h('div',{class:'hint'},'Toque num dado acima para montar sua rolagem.'), modChip);
+    : h('div',{class:'dice-pool'}, h('div',{class:'hint'},'Toque num dado acima ou num atalho para montar sua rolagem.'), modChip);
 
   /* 3) Expressão montada + ações */
   const expr=diceBExpr();
@@ -109,18 +155,27 @@ function dadosCampanhaView(){
         onclick:()=>{ const e=diceBExprExec(); if(e) rolarExpr(e); }},'🎲 Rolar'),
       h('button',{class:'btn ghost sm', onclick:diceReset},'🧹 Limpar')));
 
-  /* 4) Último resultado em destaque */
+  /* 4) Último resultado em destaque, com detalhamento por dado */
   const last=(S.campaign.diceLog||[])[0];
   const destaque = last ? h('div',{class:'dice-result'+(last.erro?' err':'')},
       h('div',{class:'dice-result-exp'}, last.expr||'—'),
       h('div',{class:'dice-result-total'}, last.erro?('⚠ '+last.erro):last.total),
-      last.detail?h('div',{class:'dice-result-det'}, last.detail):null) : null;
+      resultadoDetalhado(last) || (last.detail?h('div',{class:'dice-result-det'}, last.detail):null)) : null;
 
-  /* 5) Expressão livre (fórmulas com atributos) */
-  const livre=card('Expressão livre','Aceita 2d6+3, 4d6kh3, 1d20+Força… (usa os atributos no máximo como referência).',
+  /* 5) Como funciona (ajuda para entender a notação) */
+  const ajuda=card('Como ler os dados','Guia rápido da notação usada no projeto.', null,
+    h('ul',{class:'dice-help'},
+      h('li',{}, h('b',{},'2d6'),' = rolar dois dados de 6 faces e somar.'),
+      h('li',{}, h('b',{},'1d20+3'),' = um d20 mais 3 de bônus (o modificador).'),
+      h('li',{}, h('b',{},'4d6kh3'),' = rola quatro d6 e mantém os 3 maiores (kh = keep highest).'),
+      h('li',{}, h('b',{},'1d20+Força'),' = mistura com atributos do sistema (usa o valor máximo como referência).'),
+      h('li',{}, 'No resultado, cartas ',h('span',{class:'die-face crit mini'},'✓'),' são o valor máximo do dado e ',h('span',{class:'die-face drop mini'},'—'),' foram descartadas.')));
+
+  /* 6) Expressão livre (fórmulas com atributos) */
+  const livre=card('Expressão livre','Digite qualquer fórmula: 2d6+3, 4d6kh3, 1d20+Força…',
     null, rolagemRapida());
 
-  /* 6) Histórico */
+  /* 7) Histórico */
   const log=S.campaign.diceLog||[];
   const hist=log.length
     ? h('div',{class:'dice-log'}, log.map(e=>h('div',{class:'dice-row'+(e.erro?' err':'')},
@@ -133,8 +188,10 @@ function dadosCampanhaView(){
     : h('div',{class:'hint'},'Nenhuma rolagem ainda.');
 
   return h('div',{},
-    card('Montar rolagem','Toque nos dados para montar — você vê a quantidade, o ícone e as faces de cada um.',
+    card('Rolagens rápidas','Escolha pela intenção — já monta e rola pra você.', null, atalhos),
+    card('Montar rolagem','Toque nos dados (veja para que cada um serve), ajuste a quantidade e o modificador.',
       null, paleta, poolBox, acoes, destaque),
+    ajuda,
     livre,
     card('Histórico', null,
       log.length?h('button',{class:'btn sm ghost', onclick:()=>{S.campaign.diceLog=[];render();}},'🧹 Limpar'):null,

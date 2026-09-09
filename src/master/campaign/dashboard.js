@@ -62,7 +62,7 @@ function tabBadge(k){
   if(k==='jogadores'&&c.players.length) return c.players.length;
   if(k==='bestiario'&&(c.bestiary.enemies.length+c.bestiary.npcs.length)) return c.bestiary.enemies.length+c.bestiary.npcs.length;
   if(k==='itens'&&c.loot.length) return c.loot.length;
-  if(k==='mapa'&&c.map.pins.length) return c.map.pins.length;
+  if(k==='mapa'&&Array.isArray(c.maps)&&c.maps.length) return c.maps.length;
   return null;
 }
 
@@ -130,7 +130,7 @@ function painelView(){
     pnlStat('🐉', c.bestiary.enemies.length, 'inimigos', ()=>irMtab('bestiario')),
     pnlStat('🎭', c.bestiary.npcs.length, 'NPCs', ()=>irMtab('bestiario')),
     pnlStat('🎒', c.loot.length, 'itens', ()=>irMtab('itens')),
-    pnlStat('📍', c.map.pins.length, 'locais', ()=>irMtab('mapa')));
+    pnlStat('📍', totalPins(), 'locais', ()=>irMtab('mapa')));
 
   const acoes=card('Rolagem rápida',null,null, rolagemRapida());
 

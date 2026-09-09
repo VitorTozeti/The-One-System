@@ -9,10 +9,43 @@ function defaultCampaign(){
     players:[],                       /* {id,name,note,sheet|null,importedAt} */
     bestiary:{ enemies:[], npcs:[] }, /* Statblock[] e NpcCard[] */
     loot:[],                          /* {id,itemId|null,nome,qty,ownerPlayerId|null,note} */
-    map:{ image:null, grid:{on:false,size:48}, tokens:[], pins:[] },
-    diceLog:[],                       /* {id,ts,expr,total,detail,by} */
+    maps:[],                          /* coleção de mapas (mundo, região, local, interior…) */
+    currentMapId:null,                /* mapa aberto no editor */
+    diceLog:[],                       /* {id,ts,expr,total,detail,detalhes,by} */
     sessions:[],                      /* {id,date,log} */
   };
+}
+
+/* Tipos e temas de mapa (usados pela UI do mapa). */
+const MAP_KINDS=[
+  {k:'mundo',    ic:'🌍', nome:'Mundo'},
+  {k:'regiao',   ic:'🗺️', nome:'Região'},
+  {k:'local',    ic:'🏘️', nome:'Local / Cidade'},
+  {k:'interior', ic:'🏠', nome:'Interior / Casa'},
+  {k:'masmorra', ic:'🕳️', nome:'Masmorra'},
+];
+const MAP_THEMES=[
+  {k:'rustico',  ic:'📜', nome:'Rústico'},
+  {k:'natural',  ic:'🌲', nome:'Natural'},
+  {k:'futurista',ic:'🛸', nome:'Futurista'},
+  {k:'sombrio',  ic:'🕯️', nome:'Sombrio'},
+  {k:'limpo',    ic:'▢',  nome:'Limpo'},
+];
+/* Ícones de local por categoria — as "peças" para construir o mapa. */
+const PIN_ICONS=['📍','🏰','🏘️','🏠','⛺','🗼','⚓','🕳️','🌲','⛰️','🌋','🏜️','🏝️','🌊','🛣️','⚔️','☠️','💀','⭐','❓','💎','🔥','🛸','🏭','📡'];
+function newMap(kind,theme,name){
+  return { id:uid(), name:name||'Novo mapa', kind:kind||'regiao', theme:theme||'rustico',
+           image:null, grid:{on:false,size:48}, tokens:[], pins:[], note:'' };
+}
+/* Mapa atualmente aberto no editor (ou null). */
+function curMap(){
+  const c=S.campaign; if(!c||!Array.isArray(c.maps)||!c.maps.length) return null;
+  return c.maps.find(m=>m.id===c.currentMapId) || c.maps[0];
+}
+/* Soma de locais (pins) em todos os mapas — usada no Painel/badges. */
+function totalPins(){
+  const c=S.campaign; if(!c||!Array.isArray(c.maps)) return 0;
+  return c.maps.reduce((s,m)=>s+(Array.isArray(m.pins)?m.pins.length:0),0);
 }
 /* Garante que uma campanha carregada tenha todos os campos (migração leve). */
 function sanitizeCampaign(c){
@@ -23,9 +56,28 @@ function sanitizeCampaign(c){
   c.bestiary=c.bestiary||{}; c.bestiary.enemies=Array.isArray(c.bestiary.enemies)?c.bestiary.enemies:[];
   c.bestiary.npcs=Array.isArray(c.bestiary.npcs)?c.bestiary.npcs:[];
   c.loot=Array.isArray(c.loot)?c.loot:[];
-  c.map=c.map||d.map; c.map.grid=c.map.grid||{on:false,size:48};
-  c.map.tokens=Array.isArray(c.map.tokens)?c.map.tokens:[];
-  c.map.pins=Array.isArray(c.map.pins)?c.map.pins:[];
+  /* Mapas: migra o antigo `map` único para a coleção `maps`. */
+  if(!Array.isArray(c.maps)){
+    c.maps=[];
+    const legacy=c.map;
+    if(legacy && (legacy.image || (legacy.tokens&&legacy.tokens.length) || (legacy.pins&&legacy.pins.length))){
+      const mm=newMap('regiao','rustico','Mapa principal');
+      mm.image=legacy.image||null;
+      mm.grid=legacy.grid||{on:false,size:48};
+      mm.tokens=Array.isArray(legacy.tokens)?legacy.tokens:[];
+      mm.pins=Array.isArray(legacy.pins)?legacy.pins:[];
+      c.maps.push(mm);
+    }
+  }
+  c.maps.forEach(mm=>{
+    mm.grid=mm.grid||{on:false,size:48};
+    mm.tokens=Array.isArray(mm.tokens)?mm.tokens:[];
+    mm.pins=Array.isArray(mm.pins)?mm.pins:[];
+    mm.kind=mm.kind||'regiao'; mm.theme=mm.theme||'rustico'; mm.note=mm.note||'';
+    mm.pins.forEach(p=>{ if(!p.icon) p.icon='📍'; });
+  });
+  delete c.map;   /* modelo antigo aposentado */
+  c.currentMapId = (c.currentMapId && c.maps.some(x=>x.id===c.currentMapId)) ? c.currentMapId : (c.maps[0]?c.maps[0].id:null);
   c.diceLog=Array.isArray(c.diceLog)?c.diceLog:[];
   c.sessions=Array.isArray(c.sessions)?c.sessions:[];
   return c;
@@ -48,14 +100,15 @@ function newToken(kind, label, refId){
   return { id:uid(), kind:kind||'npc', label:label||'?', refId:refId||null,
            xPct:50, yPct:50, color:cores[kind]||'#94a3b8' };
 }
-function newPin(xPct,yPct){ return { id:uid(), xPct:xPct==null?50:xPct, yPct:yPct==null?50:yPct, label:'Local', note:'' }; }
+function newPin(xPct,yPct,icon){ return { id:uid(), xPct:xPct==null?50:xPct, yPct:yPct==null?50:yPct, label:'Local', note:'', icon:icon||'📍' }; }
 
 /* ---------- Registro de rolagens ---------- */
 function logDice(res, by){
   if(!S.campaign) return;
   const entry={ id:uid(), ts:Date.now(), expr:res&&res.expr||'', by:by||'Mestre',
     total:res&&!res.erro?res.total:null, erro:res&&res.erro||null,
-    detail:(typeof textoRolagem==='function')?textoRolagem(res):'' };
+    detail:(typeof textoRolagem==='function')?textoRolagem(res):'',
+    detalhes:(res&&!res.erro&&Array.isArray(res.detalhes))?res.detalhes:null };
   S.campaign.diceLog.unshift(entry);
   if(S.campaign.diceLog.length>60) S.campaign.diceLog.length=60;  /* mantém enxuto */
 }
