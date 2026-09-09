@@ -46,7 +46,7 @@ function bindPersonagem(p){
     p.campaign=sanitizeCampaign(p.campaign);   /* migra campanhas antigas/ausentes */
     S.campaign=p.campaign;
     S.draft=null; S.saved=[];   /* o preview "Testar como jogador" gera uma ficha na hora */
-    S.view='mestre'; S.tab='inicio'; S.mtab='painel';
+    S.view='mestre'; S.tab='inicio'; S.mtabL='painel'; S.mtabR=null;
   } else {
     /* por enquanto a ficha do jogador usa o sistema de exemplo embutido */
     S.system=defaultSystem();

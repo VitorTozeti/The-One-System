@@ -1,45 +1,107 @@
 /* ============================================================ CAMPANHA — DASHBOARD ============================================================
-   Casca do modo Mestre: navegação entre as seções da campanha. A seção
-   "Sistema" reaproveita o editor existente (mestreView). Depende de state (S),
-   ui-basic (card), e das seções (jogadoresView, mapaView, …). */
+   Casca do modo Mestre. Layout de DOIS menus laterais + DOIS painéis:
+     • Menu da ESQUERDA (índigo) → controla o painel esquerdo: Sistema, Jogadores, Bestiário, Itens.
+     • Menu da DIREITA  (âmbar)  → controla o painel direito:  Mapa, Notas, Dados.
+   Como os dois painéis são independentes (S.mtabL e S.mtabR), dá pra ter DUAS
+   seções abertas ao mesmo tempo (ex.: Jogadores à esquerda e Notas à direita).
+   Fechar um painel faz o outro ocupar a largura inteira.
+   A seção "Sistema" reaproveita o editor existente (mestreView). Depende de
+   state (S), ui-basic (card) e das seções (jogadoresView, mapaView, …). */
 
 const MTAB_META=[
   {k:'painel',    ic:'🧭', nome:'Painel'},
+  {k:'sistema',   ic:'⚙️', nome:'Sistema'},
   {k:'jogadores', ic:'🧑‍🤝‍🧑', nome:'Jogadores'},
-  {k:'mapa',      ic:'🗺️', nome:'Mapa'},
   {k:'bestiario', ic:'🐉', nome:'Bestiário'},
   {k:'itens',     ic:'🎒', nome:'Itens'},
-  {k:'dados',     ic:'🎲', nome:'Dados'},
+  {k:'mapa',      ic:'🗺️', nome:'Mapa'},
   {k:'notas',     ic:'📓', nome:'Notas'},
-  {k:'sistema',   ic:'⚙️', nome:'Sistema'},
+  {k:'dados',     ic:'🎲', nome:'Dados'},
 ];
-function mtabAtual(){ return S.mtab||'painel'; }
-function irMtab(k){ S.mtab=k; render(); window.scrollTo(0,0); }
+/* quais seções pertencem a cada lado */
+const MLEFT =['painel','sistema','jogadores','bestiario','itens'];
+const MRIGHT=['mapa','notas','dados'];
+function metaOf(k){ return MTAB_META.find(t=>t.k===k); }
+function sideOf(k){ return MRIGHT.includes(k)?'R':'L'; }
+
+function mtabL(){ return (S.mtabL===undefined) ? 'painel' : S.mtabL; }
+function mtabR(){ return S.mtabR||null; }
+/* abre a seção no painel do lado certo (usado também pelos botões do Painel) */
+function irMtab(k){
+  if(sideOf(k)==='R') S.mtabR=k; else S.mtabL=k;
+  render(); window.scrollTo(0,0);
+}
+function fecharPainel(side){
+  if(side==='R') S.mtabR=null; else S.mtabL=null;
+  render();
+}
+
+/* renderiza o conteúdo de uma seção pela chave */
+function secView(k){
+  switch(k){
+    case 'jogadores': return jogadoresView();
+    case 'mapa':      return mapaView();
+    case 'bestiario': return bestiarioView();
+    case 'itens':     return itensCampanhaView();
+    case 'dados':     return dadosCampanhaView();
+    case 'notas':     return notasView();
+    case 'sistema':   return mestreView();            /* editor de sistema existente */
+    case 'painel':    return painelView();
+    default:          return painelView();
+  }
+}
+
+/* contador de badge por seção */
+function tabBadge(k){
+  const c=S.campaign||defaultCampaign();
+  if(k==='jogadores'&&c.players.length) return c.players.length;
+  if(k==='bestiario'&&(c.bestiary.enemies.length+c.bestiary.npcs.length)) return c.bestiary.enemies.length+c.bestiary.npcs.length;
+  if(k==='itens'&&c.loot.length) return c.loot.length;
+  if(k==='mapa'&&c.map.pins.length) return c.map.pins.length;
+  return null;
+}
+
+/* um menu lateral (rail) */
+function mrail(side){
+  const ativo = side==='R'?mtabR():mtabL();
+  const chaves = side==='R'?MRIGHT:MLEFT;
+  const titulo = side==='R'?'🗂️ Mesa':'🛠️ Sistema';
+  const botoes = chaves.map(k=>{
+    const t=metaOf(k), badge=tabBadge(k);
+    return h('button',{class:'mrail-btn'+(ativo===k?' on':''), onclick:()=>irMtab(k), title:t.nome},
+      h('span',{class:'mrail-ic'},t.ic), h('span',{class:'mrail-lbl'},t.nome),
+      badge!=null?h('span',{class:'mrail-badge'},badge):null);
+  });
+  return h('nav',{class:'mrail '+(side==='R'?'right':'left')},
+    h('div',{class:'mrail-title'},titulo), botoes);
+}
+
+/* um painel de conteúdo */
+function mpane(side){
+  const k = side==='R'?mtabR():mtabL();
+  if(!k){
+    return h('section',{class:'mpane '+(side==='R'?'right':'left')+' empty'},
+      h('div',{class:'mpane-empty'},
+        h('div',{class:'mpane-empty-ic'}, side==='R'?'🗺️':'🧭'),
+        h('div',{}, side==='R'?'Escolha Mapa, Notas ou Dados no menu à direita.'
+                              :'Escolha uma seção no menu à esquerda.')));
+  }
+  const t=metaOf(k);
+  const head=h('div',{class:'mpane-head'},
+    h('div',{class:'mpane-title'}, h('span',{class:'mpane-ic'},t.ic), t.nome),
+    h('button',{class:'mpane-x', title:'Fechar painel', onclick:()=>fecharPainel(side)},'✕'));
+  return h('section',{class:'mpane '+(side==='R'?'right':'left')},
+    head, h('div',{class:'mpane-body'}, secView(k)));
+}
 
 function mestreDashboard(){
-  const c=S.campaign||defaultCampaign();
-  const nav=h('div',{class:'mdash-nav'}, MTAB_META.map(t=>{
-    let badge=null;
-    if(t.k==='jogadores'&&c.players.length) badge=c.players.length;
-    if(t.k==='bestiario'&&(c.bestiary.enemies.length+c.bestiary.npcs.length)) badge=c.bestiary.enemies.length+c.bestiary.npcs.length;
-    if(t.k==='itens'&&c.loot.length) badge=c.loot.length;
-    return h('button',{class:'mdash-tab'+(mtabAtual()===t.k?' on':''), onclick:()=>irMtab(t.k)},
-      h('span',{class:'mdash-ic'},t.ic), h('span',{},t.nome),
-      badge!=null?h('span',{class:'mdash-badge'},badge):null);
-  }));
-
-  let sec;
-  switch(mtabAtual()){
-    case 'jogadores': sec=jogadoresView(); break;
-    case 'mapa':      sec=mapaView(); break;
-    case 'bestiario': sec=bestiarioView(); break;
-    case 'itens':     sec=itensCampanhaView(); break;
-    case 'dados':     sec=dadosCampanhaView(); break;
-    case 'notas':     sec=notasView(); break;
-    case 'sistema':   sec=mestreView(); break;   /* editor de sistema existente */
-    default:          sec=painelView();
-  }
-  return h('div',{class:'mdash'}, nav, h('div',{class:'mdash-body'}, sec));
+  const temL=!!mtabL(), temR=!!mtabR();
+  const panes=h('div',{class:'mpanes'+(temL&&temR?' split':'')},
+    temL?mpane('L'):null, temR?mpane('R'):null,
+    (!temL&&!temR)?h('section',{class:'mpane empty'},
+      h('div',{class:'mpane-empty'}, h('div',{class:'mpane-empty-ic'},'🎲'),
+        h('div',{},'Use os menus laterais para abrir o Sistema, os Jogadores, o Mapa…'))):null);
+  return h('div',{class:'mdash2'}, mrail('L'), panes, mrail('R'));
 }
 
 /* ---------- Painel (visão geral) ---------- */

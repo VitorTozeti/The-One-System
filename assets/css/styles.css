@@ -463,15 +463,52 @@
   .pj-fld{margin-bottom:12px}
   .pj-fld > span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 
-  /* ===================== DASHBOARD DE CAMPANHA (MESTRE) ===================== */
-  .mdash{max-width:1000px;margin:0 auto;padding:16px}
-  .mdash-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-  .mdash-tab{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
-  .mdash-tab:hover{filter:brightness(1.15)}
-  .mdash-tab.on{background:var(--indigo2);color:#fff;border-color:var(--indigo)}
-  .mdash-ic{font-size:15px}
-  .mdash-badge{background:rgba(0,0,0,.25);border-radius:999px;padding:0 7px;font-size:11px;font-weight:700}
-  .mdash-body{min-height:200px}
+  /* ===================== DASHBOARD DE CAMPANHA (MESTRE) =====================
+     Layout de dois menus laterais (rails) + dois painéis de conteúdo.
+     [ menu esquerda ] [ painel L ] [ painel R ] [ menu direita ] */
+  .mdash2{display:flex;align-items:flex-start;gap:14px;max-width:1700px;margin:0 auto;padding:16px}
+
+  /* ---- menus laterais (rails) ---- */
+  .mrail{position:sticky;top:70px;flex:0 0 156px;width:156px;display:flex;flex-direction:column;gap:6px;
+         max-height:calc(100vh - 86px);overflow:auto;padding-bottom:8px}
+  .mrail-title{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);font-weight:800;padding:2px 6px 4px}
+  .mrail-btn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;position:relative;
+             background:var(--panel);border:1px solid var(--line);color:var(--muted);
+             border-radius:11px;padding:10px 12px;font-size:13px;font-weight:700;transition:.12s}
+  .mrail-btn:hover{filter:brightness(1.18)}
+  .mrail-ic{font-size:16px;line-height:1;flex:0 0 auto}
+  .mrail-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mrail-badge{background:rgba(0,0,0,.28);border-radius:999px;padding:1px 7px;font-size:11px;font-weight:800}
+  .mrail.left  .mrail-btn.on{background:var(--indigo2);color:#fff;border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo) inset}
+  .mrail.right .mrail-btn.on{background:var(--amber);color:#1a1206;border-color:var(--amber)}
+  .mrail.right .mrail-btn.on .mrail-badge{background:rgba(0,0,0,.22)}
+
+  /* ---- área central com os painéis ---- */
+  .mpanes{flex:1;min-width:0;display:flex;gap:14px}
+  .mpane{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+         display:flex;flex-direction:column;overflow:hidden;min-height:420px}
+  .mpane.left{border-top:3px solid var(--indigo)}
+  .mpane.right{border-top:3px solid var(--amber)}
+  .mpane-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+              padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.12)}
+  .mpane-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--txt)}
+  .mpane-ic{font-size:17px}
+  .mpane-x{background:transparent;color:var(--dim);font-size:15px;font-weight:700;border-radius:8px;padding:4px 9px;line-height:1}
+  .mpane-x:hover{background:rgba(255,255,255,.08);color:var(--txt)}
+  .mpane-body{flex:1;min-width:0;padding:16px;overflow:auto}
+  .mpane.empty{align-items:center;justify-content:center;border-top-color:var(--line);border-style:dashed}
+  .mpane-empty{text-align:center;color:var(--muted);font-size:14px;padding:30px;line-height:1.6}
+  .mpane-empty-ic{font-size:34px;margin-bottom:8px;opacity:.7}
+
+  /* telas estreitas: empilha rails e painéis */
+  @media (max-width:1100px){
+    .mdash2{flex-wrap:wrap}
+    .mrail{position:static;flex:1 1 100%;width:auto;flex-direction:row;flex-wrap:wrap;max-height:none}
+    .mrail-title{flex:1 1 100%}
+    .mrail-btn{width:auto;flex:1 1 auto}
+    .mpanes.split{flex-direction:column}
+    .mpanes{flex:1 1 100%}
+  }
 
   .pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
   .pnl-probs{margin:8px 0 0;padding-left:18px;color:#fecaca;font-size:13px;line-height:1.6}
