@@ -544,8 +544,6 @@
   .map-area{position:relative;width:100%;min-height:420px;aspect-ratio:16/10;background:#0e1424 center/cover no-repeat;border:1px solid var(--line);border-radius:14px;overflow:hidden;touch-action:none}
   .map-grid-ov{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(148,163,184,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.35) 1px,transparent 1px)}
   .map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted);font-size:14px}
-  .map-token{position:absolute;transform:translate(-50%,-50%);min-width:34px;height:34px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#04140f;border:2px solid rgba(255,255,255,.8);cursor:grab;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.4);white-space:nowrap}
-  .map-token.sel{outline:3px solid #fff;outline-offset:1px}
   .map-pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;cursor:grab;user-select:none}
   .map-pin.sel .map-pin-dot{filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 2px #fff)}
   .map-pin-dot{font-size:22px;line-height:1}
@@ -591,6 +589,63 @@
   .map-theme-futurista .map-grid-ov{background-image:linear-gradient(rgba(34,211,238,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.35) 1px,transparent 1px)}
   .map-theme-sombrio{background:radial-gradient(circle at 50% 40%,#1a1426,#0a0810)}
   .map-theme-limpo{background:#0e1424}
+
+  /* ---------- Tokens (novo visual: rosto + anel + rótulo + HP) ---------- */
+  .map-token{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;padding:0;border:none;background:none;display:flex;flex-direction:column;align-items:center;cursor:grab;user-select:none;white-space:nowrap;box-shadow:none}
+  .map-token-face{width:100%;height:100%;border-radius:50%;border:2px solid var(--ring,#94a3b8);background-size:cover;background-position:center;background-color:#0e1424;box-shadow:0 2px 6px rgba(0,0,0,.5),0 0 0 2px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}
+  .map-token-face.glyph{color:#fff;line-height:1}
+  .map-token.sel .map-token-face{outline:3px solid #fff;outline-offset:1px}
+  .map-token.hidden{opacity:.55}
+  .map-token.hidden .map-token-face{border-style:dashed}
+  .map-token-lbl{margin-top:2px;font-size:10px;font-weight:700;color:#fff;background:rgba(11,16,32,.8);padding:0 5px;border-radius:6px;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+  .map-token-hp{margin-top:2px;width:30px;height:4px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+  .map-token-hp span{display:block;height:100%;background:linear-gradient(90deg,#f43f5e,#22c55e)}
+  .emoji-pal{display:flex;flex-wrap:wrap;gap:4px}
+  .emoji-pick{width:28px;height:28px;background:var(--panel);border:1px solid var(--line);border-radius:7px;font-size:15px;line-height:1;cursor:pointer}
+  .emoji-pick:hover{border-color:var(--indigo)}
+  .emoji-pick.on{border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo) inset}
+  .map-swatch.on{outline:2px solid #fff;outline-offset:1px}
+  .in.color{width:44px;height:32px;padding:2px;cursor:pointer}
+
+  /* ---------- Peças táticas (props) ---------- */
+  .construtor{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px}
+  .prop-groups{display:flex;flex-wrap:wrap;gap:14px}
+  .prop-group{min-width:150px}
+  .prop-group-t{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+  .prop-pal{display:flex;flex-wrap:wrap;gap:6px}
+  .prop-pick{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:5px 8px;font-size:12px;font-weight:600;cursor:pointer}
+  .prop-pick:hover{border-color:var(--indigo);transform:translateY(-1px)}
+  .prop-pick.block{border-style:dashed}
+  .prop-pick-ic{font-size:15px}
+  .map-prop{position:absolute;user-select:none;cursor:grab;line-height:1}
+  .map-prop.stamp{filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+  .map-prop.stamp.sel{outline:2px dashed #fff;outline-offset:3px;border-radius:6px}
+  .map-prop.block{border:2px solid rgba(255,255,255,.25);border-radius:4px;display:flex;align-items:center;justify-content:center}
+  .map-prop.block.sel{outline:2px solid #fff;outline-offset:1px}
+  .map-prop.hidden{opacity:.5}
+  .map-prop-lbl{font-size:10px;font-weight:700;color:#fff;background:rgba(11,16,32,.7);padding:0 4px;border-radius:4px}
+  .fill-wall{background:repeating-linear-gradient(90deg,#6b7280,#6b7280 8px,#565d68 8px,#565d68 10px);border-color:#7c848f}
+  .fill-floor{background:repeating-linear-gradient(45deg,rgba(120,110,90,.35),rgba(120,110,90,.35) 10px,rgba(90,82,66,.35) 10px,rgba(90,82,66,.35) 20px);border-color:rgba(160,150,120,.5)}
+  .fill-water{background:linear-gradient(180deg,rgba(37,99,235,.5),rgba(6,120,180,.45));border-color:rgba(96,165,250,.6)}
+  .fill-grass{background:radial-gradient(circle at 30% 30%,rgba(74,175,80,.4),rgba(34,90,45,.4));border-color:rgba(120,200,120,.5)}
+  .fill-ice{background:linear-gradient(180deg,rgba(186,230,253,.45),rgba(125,211,252,.35));border-color:rgba(224,242,254,.6)}
+
+  /* ---------- Mundo: continente + reinos ---------- */
+  .map-continent{position:absolute;inset:0;pointer-events:none;opacity:.9;filter:drop-shadow(0 0 12px rgba(0,0,0,.4))}
+  .map-kingdom{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border:1px dashed;border-radius:50%;display:flex;align-items:flex-start;justify-content:center;cursor:grab}
+  .map-kingdom.sel{outline:2px solid #fff;outline-offset:2px;border-radius:50%}
+  .map-kingdom-lbl{margin-top:-9px;font-size:11px;font-weight:800;color:#fff;padding:1px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+  /* ---------- Molduras da era (clima visual) ---------- */
+  .map-frame{position:absolute;inset:0;pointer-events:none;border-radius:14px;z-index:5}
+  .frame-rustico{box-shadow:inset 0 0 0 3px rgba(201,166,104,.55),inset 0 0 26px 10px rgba(20,12,4,.6);border:6px solid transparent;border-image:repeating-linear-gradient(45deg,#7a5c33,#7a5c33 6px,#5e4526 6px,#5e4526 12px) 6}
+  .frame-natural{box-shadow:inset 0 0 0 3px rgba(76,175,80,.4),inset 0 0 30px 8px rgba(6,20,10,.5);border:5px solid rgba(60,110,60,.5);border-radius:14px}
+  .frame-futurista{box-shadow:inset 0 0 0 1px rgba(34,211,238,.5),inset 0 0 22px 2px rgba(6,182,212,.15)}
+  .frame-futurista::before,.frame-futurista::after{content:'';position:absolute;width:26px;height:26px;border:2px solid #22d3ee}
+  .frame-futurista::before{top:6px;left:6px;border-right:none;border-bottom:none}
+  .frame-futurista::after{bottom:6px;right:6px;border-left:none;border-top:none}
+  .frame-sombrio{box-shadow:inset 0 0 60px 24px rgba(0,0,0,.75),inset 0 0 0 2px rgba(139,92,246,.3)}
+  .frame-limpo{box-shadow:inset 0 0 0 1px var(--line)}
 
   /* Itens / loot */
   .loot-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
