@@ -1,10 +1,10 @@
 /* ============================================================ CAMPANHA — DASHBOARD ============================================================
-   Casca do modo Mestre. Layout de DOIS menus laterais + DOIS painéis:
-     • Menu da ESQUERDA (índigo) → controla o painel esquerdo: Sistema, Jogadores, Bestiário, Itens.
-     • Menu da DIREITA  (âmbar)  → controla o painel direito:  Mapa, Notas, Dados.
-   Como os dois painéis são independentes (S.mtabL e S.mtabR), dá pra ter DUAS
-   seções abertas ao mesmo tempo (ex.: Jogadores à esquerda e Notas à direita).
-   Fechar um painel faz o outro ocupar a largura inteira.
+   Casca do modo Mestre. Layout de DOIS menus laterais + MÚLTIPLOS painéis:
+     • Menu da ESQUERDA (índigo): Painel, Sistema, Jogadores, Bestiário, Itens.
+     • Menu da DIREITA  (âmbar):  Mapa, Notas, Dados.
+   Clicar num item abre/fecha aquela seção. VÁRIAS seções podem ficar abertas ao
+   mesmo tempo (S.mopen = lista de chaves); os painéis abertos se distribuem e
+   quebram em linha. Fechar painéis faz os restantes ocuparem o espaço.
    A seção "Sistema" reaproveita o editor existente (mestreView). Depende de
    state (S), ui-basic (card) e das seções (jogadoresView, mapaView, …). */
 
@@ -24,16 +24,21 @@ const MRIGHT=['mapa','notas','dados'];
 function metaOf(k){ return MTAB_META.find(t=>t.k===k); }
 function sideOf(k){ return MRIGHT.includes(k)?'R':'L'; }
 
-function mtabL(){ return (S.mtabL===undefined) ? 'painel' : S.mtabL; }
-function mtabR(){ return S.mtabR||null; }
-/* abre a seção no painel do lado certo (usado também pelos botões do Painel) */
-function irMtab(k){
-  if(sideOf(k)==='R') S.mtabR=k; else S.mtabL=k;
-  render(); window.scrollTo(0,0);
-}
-function fecharPainel(side){
-  if(side==='R') S.mtabR=null; else S.mtabL=null;
+/* Vários painéis podem ficar abertos ao mesmo tempo (S.mopen = lista de chaves). */
+function mopen(){ if(!Array.isArray(S.mopen)) S.mopen=['painel']; return S.mopen; }
+function isOpen(k){ return mopen().includes(k); }
+function toggleMtab(k){
+  const a=mopen(), i=a.indexOf(k);
+  if(i>=0) a.splice(i,1); else a.push(k);
   render();
+}
+/* Garante que a seção esteja aberta (usado pelos atalhos do Painel). */
+function irMtab(k){ if(!isOpen(k)) mopen().push(k); render(); }
+function fecharPainel(k){ const a=mopen(), i=a.indexOf(k); if(i>=0){ a.splice(i,1); render(); } }
+/* Ordem estável: seções da esquerda primeiro, depois as da direita. */
+function ordemAbertos(){
+  const ordem=[...MLEFT,...MRIGHT];
+  return mopen().slice().sort((a,b)=>ordem.indexOf(a)-ordem.indexOf(b));
 }
 
 /* renderiza o conteúdo de uma seção pela chave */
@@ -61,46 +66,39 @@ function tabBadge(k){
   return null;
 }
 
-/* um menu lateral (rail) */
+/* um menu lateral (rail) — clicar abre/fecha a seção (várias podem ficar abertas) */
 function mrail(side){
-  const ativo = side==='R'?mtabR():mtabL();
   const chaves = side==='R'?MRIGHT:MLEFT;
   const titulo = side==='R'?'🗂️ Mesa':'🛠️ Sistema';
   const botoes = chaves.map(k=>{
     const t=metaOf(k), badge=tabBadge(k);
-    return h('button',{class:'mrail-btn'+(ativo===k?' on':''), onclick:()=>irMtab(k), title:t.nome},
+    return h('button',{class:'mrail-btn'+(isOpen(k)?' on':''), onclick:()=>toggleMtab(k),
+      title:(isOpen(k)?'Fechar ':'Abrir ')+t.nome},
       h('span',{class:'mrail-ic'},t.ic), h('span',{class:'mrail-lbl'},t.nome),
-      badge!=null?h('span',{class:'mrail-badge'},badge):null);
+      badge!=null?h('span',{class:'mrail-badge'},badge):null,
+      isOpen(k)?h('span',{class:'mrail-dot'}):null);
   });
   return h('nav',{class:'mrail '+(side==='R'?'right':'left')},
     h('div',{class:'mrail-title'},titulo), botoes);
 }
 
-/* um painel de conteúdo */
-function mpane(side){
-  const k = side==='R'?mtabR():mtabL();
-  if(!k){
-    return h('section',{class:'mpane '+(side==='R'?'right':'left')+' empty'},
-      h('div',{class:'mpane-empty'},
-        h('div',{class:'mpane-empty-ic'}, side==='R'?'🗺️':'🧭'),
-        h('div',{}, side==='R'?'Escolha Mapa, Notas ou Dados no menu à direita.'
-                              :'Escolha uma seção no menu à esquerda.')));
-  }
-  const t=metaOf(k);
+/* um painel de conteúdo (uma seção aberta) */
+function mpane(k){
+  const t=metaOf(k), lado=sideOf(k)==='R'?'right':'left';
   const head=h('div',{class:'mpane-head'},
     h('div',{class:'mpane-title'}, h('span',{class:'mpane-ic'},t.ic), t.nome),
-    h('button',{class:'mpane-x', title:'Fechar painel', onclick:()=>fecharPainel(side)},'✕'));
-  return h('section',{class:'mpane '+(side==='R'?'right':'left')},
+    h('button',{class:'mpane-x', title:'Fechar painel', onclick:()=>fecharPainel(k)},'✕'));
+  return h('section',{class:'mpane '+lado},
     head, h('div',{class:'mpane-body'}, secView(k)));
 }
 
 function mestreDashboard(){
-  const temL=!!mtabL(), temR=!!mtabR();
-  const panes=h('div',{class:'mpanes'+(temL&&temR?' split':'')},
-    temL?mpane('L'):null, temR?mpane('R'):null,
-    (!temL&&!temR)?h('section',{class:'mpane empty'},
-      h('div',{class:'mpane-empty'}, h('div',{class:'mpane-empty-ic'},'🎲'),
-        h('div',{},'Use os menus laterais para abrir o Sistema, os Jogadores, o Mapa…'))):null);
+  const abertos=ordemAbertos();
+  const panes = abertos.length
+    ? h('div',{class:'mpanes'}, abertos.map(k=>mpane(k)))
+    : h('div',{class:'mpanes'}, h('section',{class:'mpane empty'},
+        h('div',{class:'mpane-empty'}, h('div',{class:'mpane-empty-ic'},'🎲'),
+          h('div',{},'Use os menus laterais para abrir o Sistema, os Jogadores, o Mapa… Pode abrir quantos quiser ao mesmo tempo.'))));
   return h('div',{class:'mdash2'}, mrail('L'), panes, mrail('R'));
 }
 

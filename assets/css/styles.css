@@ -468,9 +468,14 @@
      [ menu esquerda ] [ painel L ] [ painel R ] [ menu direita ] */
   .mdash2{display:flex;align-items:flex-start;gap:14px;max-width:1700px;margin:0 auto;padding:16px}
 
+  /* esconde as barras de rolagem nos contêineres do dashboard (scroll continua funcionando) */
+  .mrail, .mpane-body{scrollbar-width:none;-ms-overflow-style:none}
+  .mrail::-webkit-scrollbar, .mpane-body::-webkit-scrollbar{width:0;height:0;display:none}
+
   /* ---- menus laterais (rails) ---- */
   .mrail{position:sticky;top:70px;flex:0 0 156px;width:156px;display:flex;flex-direction:column;gap:6px;
          max-height:calc(100vh - 86px);overflow:auto;padding-bottom:8px}
+  .mrail-dot{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:999px;background:currentColor;opacity:.9}
   .mrail-title{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);font-weight:800;padding:2px 6px 4px}
   .mrail-btn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;position:relative;
              background:var(--panel);border:1px solid var(--line);color:var(--muted);
@@ -483,10 +488,11 @@
   .mrail.right .mrail-btn.on{background:var(--amber);color:#1a1206;border-color:var(--amber)}
   .mrail.right .mrail-btn.on .mrail-badge{background:rgba(0,0,0,.22)}
 
-  /* ---- área central com os painéis ---- */
-  .mpanes{flex:1;min-width:0;display:flex;gap:14px}
-  .mpane{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
-         display:flex;flex-direction:column;overflow:hidden;min-height:420px}
+  /* ---- área central com os painéis (vários ao mesmo tempo, quebram em linha) ---- */
+  .mpanes{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+  .mpane{flex:1 1 360px;min-width:300px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+         display:flex;flex-direction:column;overflow:hidden;
+         min-height:420px;max-height:calc(100vh - 104px)}
   .mpane.left{border-top:3px solid var(--indigo)}
   .mpane.right{border-top:3px solid var(--amber)}
   .mpane-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -506,8 +512,9 @@
     .mrail{position:static;flex:1 1 100%;width:auto;flex-direction:row;flex-wrap:wrap;max-height:none}
     .mrail-title{flex:1 1 100%}
     .mrail-btn{width:auto;flex:1 1 auto}
-    .mpanes.split{flex-direction:column}
+    .mrail-dot{display:none}
     .mpanes{flex:1 1 100%}
+    .mpane{flex:1 1 100%;max-height:none}
   }
 
   .pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
@@ -559,3 +566,41 @@
   .dice-eq{font-size:20px;font-weight:800}
   .dice-detail{font-size:12px;color:var(--dim);margin-top:4px}
   .dice-meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim);margin-top:6px}
+
+  /* ---- Construtor visual de dados ---- */
+  .die-ic{display:inline-flex;line-height:0}
+  .die-ic svg{display:block}
+  .die-num{font-size:34px;font-weight:800;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .die-num.pct{font-size:30px}
+  .die-num.sm{font-size:26px}
+
+  .dice-palette{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+  .dice-type{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--panel);
+             border:1px solid var(--line);border-radius:14px;padding:9px 12px;color:var(--txt);transition:.12s}
+  .dice-type:hover{border-color:#475569;transform:translateY(-2px)}
+  .dice-type:active{transform:translateY(0)}
+  .dice-type-l{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.5px}
+
+  .dice-pool{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--panel2);
+             border:1px dashed var(--line);border-radius:14px;padding:12px;min-height:64px;margin-bottom:12px}
+  .dice-chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);
+             border-radius:12px;padding:5px 8px}
+  .dice-chip.mod{margin-left:auto}
+  .dice-qty{font-size:17px;font-weight:800;min-width:22px;text-align:center}
+  .dice-faces{font-size:13px;font-weight:800;color:var(--muted)}
+  .dice-mod-l{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-right:2px}
+  .dice-step{width:26px;height:26px;border-radius:8px;background:#1e293b;color:var(--txt);font-size:16px;font-weight:800;line-height:1}
+  .dice-step:hover{background:var(--indigo2);color:#fff}
+
+  .dice-actions{display:flex;flex-direction:column;gap:10px}
+  .dice-expr-big{font-size:22px;font-weight:800;letter-spacing:.5px;color:var(--txt);
+                 background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center;min-height:50px}
+  .btn.lg{padding:12px 22px;font-size:16px}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+
+  .dice-result{margin-top:14px;background:linear-gradient(180deg,rgba(99,102,241,.16),rgba(99,102,241,.04));
+               border:1px solid var(--indigo);border-radius:14px;padding:14px;text-align:center}
+  .dice-result.err{background:rgba(225,29,72,.08);border-color:var(--rose)}
+  .dice-result-exp{font-size:13px;color:var(--muted);font-weight:600}
+  .dice-result-total{font-size:40px;font-weight:900;line-height:1.1;margin:2px 0}
+  .dice-result-det{font-size:12px;color:var(--dim)}

@@ -18,7 +18,8 @@ let S = {
   auth:{mode:'login', error:null},  /* estado das telas de login/cadastro */
   system: null,          /* espelho do personagem MESTRE selecionado */
   campaign: null,        /* espelho da campanha do personagem MESTRE selecionado */
-  mtab:'painel',         /* seção do dashboard do Mestre (separada de tab, do editor) */
+  mopen:['painel'],      /* seções do dashboard do Mestre abertas ao mesmo tempo (multi-painel) */
+  diceB:{pool:{},mod:0}, /* construtor visual de dados do Mestre: pool[faces]=qtd + modificador */
   draft: null,           /* espelho da ficha do personagem JOGADOR selecionado */
   step:0,
   saved: [],             /* fichas salvas do personagem JOGADOR selecionado */
@@ -46,7 +47,7 @@ function bindPersonagem(p){
     p.campaign=sanitizeCampaign(p.campaign);   /* migra campanhas antigas/ausentes */
     S.campaign=p.campaign;
     S.draft=null; S.saved=[];   /* o preview "Testar como jogador" gera uma ficha na hora */
-    S.view='mestre'; S.tab='inicio'; S.mtabL='painel'; S.mtabR=null;
+    S.view='mestre'; S.tab='inicio'; S.mopen=['painel'];
   } else {
     /* por enquanto a ficha do jogador usa o sistema de exemplo embutido */
     S.system=defaultSystem();
