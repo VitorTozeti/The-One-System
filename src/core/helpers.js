@@ -24,5 +24,10 @@ const uid = ()=>Math.random().toString(36).slice(2,9);
 const load = k=>{ try{return JSON.parse(localStorage.getItem(k));}catch{return null;} };
 const store = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* Acessibilidade: botões só-ícone e campos sem rótulo ganham aria-label (do title/placeholder). */
+function a11yPass(root){
+  root.querySelectorAll('button[title]:not([aria-label])').forEach(b=>{ if(b.textContent.trim().length<3) b.setAttribute('aria-label',b.title); });
+  root.querySelectorAll('input[placeholder]:not([aria-label])').forEach(i=>{ if(!i.closest('label')) i.setAttribute('aria-label',i.placeholder); });
+}
 function sign(n){ return (n>=0?'+':'')+n; }
 

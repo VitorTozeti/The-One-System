@@ -89,7 +89,9 @@ function persist(){
 }
 function render(){
   persist();
-  const r=document.getElementById('root'); r.innerHTML=''; r.appendChild(App());
+  const r=document.getElementById('root'); r.innerHTML='';
+  try{ r.appendChild(App()); a11yPass(r); }
+  catch(err){ console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
   /* avisa o CSS para abrir espaço à direita quando o painel flutuante está aberto */
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);
   fitCanvases();

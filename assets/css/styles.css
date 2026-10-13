@@ -1,6 +1,6 @@
   :root{
     --bg:#0b1020; --panel:#141a2e; --panel2:#101527; --line:#2a3350;
-    --txt:#e2e8f0; --muted:#94a3b8; --dim:#64748b;
+    --txt:#e2e8f0; --muted:#a9b6ca; --dim:#8696ad;
     --indigo:#6366f1; --indigo2:#4f46e5; --emerald:#10b981; --amber:#d97706; --rose:#e11d48;
   }
   *{box-sizing:border-box}
@@ -405,7 +405,7 @@
   .seg button.on{background:var(--indigo2);color:#fff}
 
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--emerald);color:#04231a;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-  footer{text-align:center;font-size:11px;color:#475569;padding:8px 0 28px}
+  footer{text-align:center;font-size:11px;color:#7b8aa3;padding:8px 0 28px}
   .hide{display:none}
 
   /* ===================== CONTAS / LOGIN / HUB DE PERSONAGENS ===================== */
@@ -760,3 +760,59 @@
 
   .dice-help{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.7}
   .dice-help b{color:var(--txt)}
+
+  /* ============================ UX/UI — MELHORIAS GERAIS ============================ */
+  /* foco visível por teclado em tudo que é interativo */
+  :focus{outline:none}
+  :focus-visible{outline:2px solid #a5b4fc;outline-offset:2px;border-radius:6px}
+  input.in:focus-visible,select.in:focus-visible,textarea.in:focus-visible{outline-offset:0}
+  /* respeita quem pede menos animação */
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+  /* feedback de clique e desabilitado */
+  .btn:hover:not([disabled]){filter:brightness(1.12)}
+  .btn:active:not([disabled]){transform:translateY(1px)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  /* alvos de toque maiores em telas pequenas */
+  @media (pointer:coarse){.btn.sm{padding:9px 12px}.tool-btn{min-height:52px}.map-opt.sm{padding:10px 12px}.seg-b{padding:9px 12px}}
+  /* toast com mais presença e leitura por leitor de tela (role=status no JS) */
+  .toast{z-index:60;max-width:min(92vw,520px);text-align:center}
+  .toast.erro{background:var(--rose);color:#fff}
+  /* tela de erro global */
+  .falha{max-width:560px;margin:12vh auto;padding:24px;background:var(--panel);border:1px solid var(--rose);border-radius:16px;text-align:center}
+  .falha h2{margin:0 0 8px}
+  .falha p{color:var(--muted);font-size:14px;line-height:1.5}
+  .falha .row{justify-content:center;margin-top:14px}
+  /* link "pular para o conteúdo" (teclado) */
+  .skip{position:absolute;left:-999px;top:8px;background:var(--indigo2);color:#fff;padding:8px 12px;border-radius:8px;z-index:100}
+  .skip:focus{left:8px}
+
+  /* ============================ MAPAS — VIEWPORT, ZOOM, SOBREPOSIÇÕES ============================ */
+  .map-vp{position:relative;width:100%;aspect-ratio:16/10;min-height:420px;overflow:hidden;background:#0b1020;border:1px solid var(--line);border-radius:14px;touch-action:none}
+  .map-vp .map-area{position:absolute;inset:0;width:100%;height:100%;min-height:0;aspect-ratio:auto;border:none;border-radius:0;transform-origin:0 0;will-change:transform}
+  .map-vp.pan-ready,.map-vp.pan-ready .map-terrain{cursor:grab!important}
+  .map-vp.panning,.map-vp.panning .map-terrain{cursor:grabbing!important}
+  .map-vp:fullscreen{aspect-ratio:auto;width:100vw;height:100vh;border-radius:0;border:none}
+  .map-vp .map-frame{z-index:5}
+  .map-vp .map-pin{transform:translate(-50%,-100%) scale(calc(1 / var(--z,1)));transform-origin:50% 100%}
+  .map-vp .map-kingdom-lbl{transform:scale(calc(1 / var(--z,1)));transform-origin:50% 0}
+  .map-ring{position:absolute;display:none;pointer-events:none;border:2px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.6);z-index:8}
+  .map-zoom{position:absolute;right:10px;bottom:10px;z-index:9;display:flex;align-items:center;gap:2px;background:rgba(11,16,32,.82);border:1px solid var(--line);border-radius:10px;padding:3px;backdrop-filter:blur(4px)}
+  .map-zbtn{min-width:30px;height:30px;background:transparent;color:var(--txt);border-radius:8px;font-size:16px;font-weight:800}
+  .map-zbtn:hover{background:#1e293b}
+  .map-zoom-lbl{font-size:11px;font-weight:800;color:var(--muted);min-width:42px;text-align:center}
+  .map-compass{position:absolute;left:12px;top:12px;z-index:7;color:#e2e8f0;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .map-scale{position:absolute;left:12px;bottom:12px;z-index:7;pointer-events:none;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000;display:flex;flex-direction:column;gap:2px}
+  .map-scale-bar{height:7px;border:2px solid #fff;border-top:none;box-shadow:0 1px 3px rgba(0,0,0,.6);min-width:10px}
+  .map-hex-ov{position:absolute;inset:0;pointer-events:none}
+  .map-hex-ov svg{display:block}
+  .map-hex-ov path{stroke:rgba(148,163,184,.5);stroke-width:1}
+  .map-theme-futurista .map-hex-ov path{stroke:rgba(34,211,238,.4)}
+  /* barras de opções do mapa organizadas em grupos */
+  .map-bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:12px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px}
+  .map-bar-grp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .map-bar-grp+.map-bar-grp{padding-left:16px;border-left:1px solid var(--line)}
+  @media (max-width:640px){.map-bar-grp+.map-bar-grp{padding-left:0;border-left:none}}
+  .in.sm{padding:5px 8px;font-size:12px}
+  .gen-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;align-items:end}
+  .map-keys{margin-top:8px;font-size:11.5px}
+  .tool-btn:focus-visible,.map-chip:focus-visible,.map-opt:focus-visible{outline-offset:1px}
