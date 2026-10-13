@@ -705,3 +705,19 @@ function reqTags(sys,ab){ const r=ab.req||{}; const out=[];
   (r.attrs||[]).forEach(rq=>{const a=sys.attributes.find(x=>x.id===rq.attrId);out.push((a?a.name:'?')+' '+rq.min+'+');});
   return out; }
 
+
+/* Valida e migra o texto de um arquivo .nexus. Devolve {sys} ou {erro:'mensagem clara'}. */
+function importarSistemaTexto(texto){
+  let o;
+  try{ o=lerJSONSeguro(texto); }catch(e){ return {erro:'O arquivo não é um .nexus válido (JSON quebrado ou incompleto).'}; }
+  if(!o || typeof o!=='object' || Array.isArray(o)) return {erro:'O arquivo não contém um sistema do Nexus.'};
+  /* aceita também um backup completo por engano? avisa em vez de falhar mudo */
+  if(o.app==='nexus-rpg' && o.dados) return {erro:'Este arquivo é um BACKUP da conta, não um sistema. Use “📥 Restaurar backup” no topo da tela.'};
+  if(typeof o.__v!=='number') return {erro:'O arquivo não parece um sistema do Nexus (sem número de versão).'};
+  if(o.__v>SCHEMA) return {erro:'Este sistema foi criado numa versão mais nova do Nexus (v'+o.__v+'). Atualize o app para abri-lo.'};
+  if(o.__v<SCHEMA_MIN) return {erro:'Este sistema é de uma versão antiga demais (v'+o.__v+') para ser migrado automaticamente.'};
+  const sys=migrateSystem(o);
+  if(!sys) return {erro:'Não foi possível migrar o sistema para a versão atual.'};
+  if(!sys.sheet || !Array.isArray(sys.sheet.blocks)) return {erro:'O sistema está sem a ficha (arquivo corrompido).'};
+  return {sys};
+}

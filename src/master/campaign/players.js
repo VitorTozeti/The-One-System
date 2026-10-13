@@ -21,7 +21,7 @@ function jogadoresView(){
   }
 
   const lista=c.players.length
-    ? h('div',{class:'pj-grid'}, c.players.map(p=>h('div',{class:'pj-card jogador'},
+    ? h('div',{class:'pj-grid'}, c.players.map(p=>h('div',{class:'pj-card jogador', id:'px-'+p.id},
         h('div',{class:'pj-badge'}, p.sheet?'🎲 ficha importada':'📝 sem ficha'),
         h('div',{class:'pj-name'}, p.name),
         p.note?h('div',{class:'hint', style:{marginBottom:'8px'}}, p.note):null,

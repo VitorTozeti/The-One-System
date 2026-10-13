@@ -7,10 +7,15 @@
 function campVars(){
   try{ return sysVarsSample(S.system); }catch(e){ return {}; }
 }
-function rolarExpr(expr, by){
+/* secret = true (ou o interruptor 🤫 da seção Dados): a rolagem fica só no histórico do Mestre e
+   NUNCA vai para a Tela dos jogadores. Rolagens públicas ficam disponíveis como "última rolagem". */
+function rolarExpr(expr, by, secret){
+  if(secret===undefined) secret=!!(S.ui&&S.ui.camp&&S.ui.camp.secret);
   const res=rollExpr(expr, campVars());
-  logDice(res, by);
-  if(res&&!res.erro) showToast('🎲 '+(res.expr||'')+' = '+res.total);
+  logDice(res, secret?'Mestre 🤫':by);
+  if(secret&&S.campaign.diceLog[0]) S.campaign.diceLog[0].secret=true;
+  else if(typeof presRolagemPublica==='function') presRolagemPublica(res, by);
+  if(res&&!res.erro) showToast((secret?'🤫 ':'🎲 ')+(res.expr||'')+' = '+res.total);
   else render();
   return res;
 }
@@ -180,15 +185,18 @@ function dadosCampanhaView(){
   const hist=log.length
     ? h('div',{class:'dice-log'}, log.map(e=>h('div',{class:'dice-row'+(e.erro?' err':'')},
         h('div',{class:'dice-main'},
-          h('span',{class:'dice-expr'}, e.expr||'—'),
+          h('span',{class:'dice-expr'}, (e.secret?'🤫 ':'')+(e.expr||'—')),
           h('span',{class:'dice-eq'}, e.erro?('⚠ '+e.erro):(' = '+e.total))),
         e.detail?h('div',{class:'dice-detail'}, e.detail):null,
         h('div',{class:'dice-meta'}, (e.by||'Mestre')+' • '+relTempo(e.ts),
-          h('button',{class:'btn mini ghost', title:'Repetir', onclick:()=>rolarExpr(e.expr, e.by)},'↻')))))
+          h('button',{class:'btn mini ghost', title:'Repetir', onclick:()=>rolarExpr(e.expr, e.by, !!e.secret)},'↻')))))
     : h('div',{class:'hint'},'Nenhuma rolagem ainda.');
 
   return h('div',{},
-    card('Rolagens rápidas','Escolha pela intenção — já monta e rola pra você.', null, atalhos),
+    card('Rolagens rápidas','Escolha pela intenção — já monta e rola pra você.',
+      h('label',{class:'chk', title:'Rolagens secretas ficam só no seu histórico e não aparecem na Tela dos jogadores'},
+        h('input',{type:'checkbox', checked:!!cmp().secret, onchange:e=>{cmp().secret=e.target.checked;render();}}),' 🤫 Rolagem secreta'),
+      atalhos),
     card('Montar rolagem','Toque nos dados (veja para que cada um serve), ajuste a quantidade e o modificador.',
       null, paleta, poolBox, acoes, destaque),
     ajuda,

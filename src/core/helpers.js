@@ -31,3 +31,20 @@ function a11yPass(root){
 }
 function sign(n){ return (n>=0?'+':'')+n; }
 
+
+/* JSON.parse que descarta chaves perigosas (__proto__/constructor/prototype) em qualquer nível. */
+function lerJSONSeguro(texto){
+  return JSON.parse(texto,(k,v)=>(k==='__proto__'||k==='constructor'||k==='prototype')?undefined:v);
+}
+const LIMITE_ARQUIVO=8*1024*1024;   /* 8 MB: acima disso não lemos importações/backups */
+/* Lê um File de texto com limite de tamanho; devolve Promise<string>. */
+function lerArquivoTexto(file){
+  return new Promise((ok,err)=>{
+    if(!file) return err(new Error('Nenhum arquivo escolhido.'));
+    if(file.size>LIMITE_ARQUIVO) return err(new Error('O arquivo é grande demais ('+(file.size/1048576).toFixed(1)+' MB). O limite é '+(LIMITE_ARQUIVO/1048576)+' MB.'));
+    const rd=new FileReader();
+    rd.onload=()=>ok(String(rd.result));
+    rd.onerror=()=>err(new Error('Não foi possível ler o arquivo.'));
+    rd.readAsText(file);
+  });
+}

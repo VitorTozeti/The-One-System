@@ -382,11 +382,11 @@ function tabFicha(sys){
     h('div',{style:{marginTop:'14px'}},
       h('div',{class:'hint',style:{marginBottom:'6px'}},'Modelos prontos (substituem o layout, não as regras):'),
       h('div',{class:'row wrapf'}, ...Object.keys(LAYOUT_PRESETS).map(nome=>
-        h('button',{class:'btn sm ghost',onclick:()=>{
-          if(!confirm('Aplicar o modelo "'+nome+'"? O layout atual é substituído. As regras não são afetadas.')) return;
+        h('button',{class:'btn sm ghost',onclick:async()=>{
+          if(!await uiConfirm('Aplicar o modelo "'+nome+'"? O layout atual é substituído. As regras não são afetadas.',{titulo:'Aplicar modelo de ficha',okText:'Aplicar'})) return;
           pushUndo(); const novo=LAYOUT_PRESETS[nome]();
           sh.blocks=novo.blocks; sh.canvasH=novo.canvasH; S.ui.sel=null; S.ui.multi=[]; render();
-          showToast('Modelo aplicado: '+nome);}},nome)))),
+          uiToastUndo('Modelo aplicado: '+nome, undo);}},nome)))),
     h('div',{style:{marginTop:'14px'}}, h('div',{class:'hint',style:{marginBottom:'6px'}},'Arraste um bloco para o papel — ou clique para encaixar sozinho:'), paleta));
 
   const atalhos=h('div',{class:'keys',style:{marginTop:'10px'}},
@@ -437,9 +437,10 @@ function tabFicha(sys){
         onclick:()=>{S.ui.camadas=!S.ui.camadas;render();}},'☰ Camadas'),
       h('button',{class:'btn sm ghost',title:'Encolhe o papel até o último bloco',onclick:()=>{
         pushUndo(); const low=sh.blocks.reduce((m,b)=>Math.max(m,b.y+b.h),0); sh.canvasH=Math.max(200,low+20); render();}},'⇕ Ajustar altura'),
-      h('button',{class:'btn sm ghost',title:'Volta ao layout padrão (não mexe nas regras)',onclick:()=>{
-        if(confirm('Restaurar o layout padrão da ficha? As regras do sistema não são afetadas.')){
-          pushUndo(); const d=defaultSheet(); sh.blocks=d.blocks; sh.canvasH=d.canvasH; S.ui.sel=null; S.ui.multi=[]; render();}}},'↺ Layout padrão')),
+      h('button',{class:'btn sm ghost',title:'Volta ao layout padrão (não mexe nas regras)',onclick:async()=>{
+        if(await uiConfirm('Restaurar o layout padrão da ficha? As regras do sistema não são afetadas.',{titulo:'Layout padrão',okText:'Restaurar'})){
+          pushUndo(); const d=defaultSheet(); sh.blocks=d.blocks; sh.canvasH=d.canvasH; S.ui.sel=null; S.ui.multi=[]; render();
+          uiToastUndo('Layout padrão restaurado', undo);}}},'↺ Layout padrão')),
     barraZoom, barraGrade, barraGuias,
     S.ui.camadas?camadasBox(sh):null,
     canvasNode(sys, sampleDraft(sys), 'edit'),
@@ -927,14 +928,27 @@ function effectRow(sys,arr,ef,depth){
 
 function portCard(){
   const importInput=h('input',{type:'file',accept:'.nexus,.json',class:'hide',
-    onchange:e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-      rd.onload=()=>{try{S.system=JSON.parse(rd.result);S.draft=initDraft(S.system);render();}catch{alert('Arquivo .nexus inválido');}};
-      rd.readAsText(f);}});
+    onchange:async e=>{
+      const f=e.target.files[0]; e.target.value=''; if(!f) return;
+      let txt; try{ txt=await lerArquivoTexto(f); }catch(err){ return uiAlert(err.message,{titulo:'Não foi possível importar'}); }
+      const r=importarSistemaTexto(txt);
+      if(r.erro) return uiAlert(r.erro,{titulo:'Arquivo .nexus inválido'});
+      const novo=r.sys, velho=S.system;
+      const resumo=novo.attributes.length+' atributos, '+novo.resources.length+' recursos, '+novo.skills.length+' perícias, '+novo.classes.length+' classes';
+      if(!await uiConfirm('Importar “'+(novo.campaignName||novo.name||f.name)+'” ('+resumo+')?\n\nIsso SUBSTITUI o sistema atual (“'+(velho.campaignName||velho.name)+'”). Você poderá desfazer logo em seguida.',
+        {titulo:'Importar sistema',okText:'Importar e substituir',perigo:true})) return;
+      const snap=JSON.stringify(velho);
+      S.system=novo; S.draft=initDraft(S.system); S.ui.sel=null; undoStack.length=0; redoStack.length=0; render();
+      uiToastUndo('Sistema importado', ()=>{ S.system=JSON.parse(snap); S.draft=initDraft(S.system); S.ui.sel=null; render(); }, 10000);
+    }});
   return card(tit('Portabilidade do Sistema','nexus'),'É aqui que mora a liberdade: leve seu sistema pra qualquer lugar.',null,
     h('div',{class:'row wrapf'},
       h('button',{class:'btn amber',onclick:exportSystem},'⬇ Exportar .nexus'),
       h('button',{class:'btn',onclick:()=>importInput.click()},'⬆ Importar .nexus'), importInput,
-      h('button',{class:'btn ghost',onclick:()=>{if(confirm('Restaurar o sistema de exemplo? Isso substitui o atual.')){S.system=defaultSystem();S.draft=initDraft(S.system);render();}}},'↺ Restaurar exemplo')),
+      h('button',{class:'btn ghost',onclick:async()=>{if(await uiConfirm('Restaurar o sistema de exemplo? Isso substitui o sistema atual.',{titulo:'Restaurar exemplo',okText:'Substituir',perigo:true})){
+        const snap=JSON.stringify(S.system);
+        S.system=defaultSystem();S.draft=initDraft(S.system);render();
+        uiToastUndo('Sistema de exemplo restaurado',()=>{ S.system=JSON.parse(snap); S.draft=initDraft(S.system); render(); }, 10000);}}},'↺ Restaurar exemplo')),
     h('div',{class:'hint',style:{marginTop:'12px'}}, `Sistema atual: ${S.system.attributes.length} atributos • ${S.system.resources.length} recursos • ${S.system.skills.length} perícias • ${S.system.classes.length} classes • ${S.system.origins.length} raças.`));
 }
 function exportSystem(){

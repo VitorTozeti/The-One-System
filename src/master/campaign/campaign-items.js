@@ -38,22 +38,4 @@ function itensCampanhaView(){
     add);
 }
 
-function notasView(){
-  const c=S.campaign;
-  const diario=card('Anotações do Mestre','Rascunho livre: segredos, ganchos, lembretes.',null,
-    h('textarea',{class:'in', rows:'10', style:{width:'100%'}, placeholder:'Escreva aqui…',
-      onchange:e=>{c.notes=e.target.value;render();}}, c.notes||''));
-
-  const templates=listTemplates();
-  const tpl=card('Sistema & Templates','Salve este sistema como template para reusar em outra campanha.',
-    h('button',{class:'btn primary sm', onclick:()=>{ const nome=prompt('Nome do template:', S.system.name||'Meu sistema');
-      if(nome){ saveSystemAsTemplate(S.system, nome); showToast('Template salvo ✔'); render(); } }},'💾 Salvar como template'),
-    templates.length
-      ? h('div',{}, templates.map(t=>h('div',{class:'loot-row'},
-          h('div',{class:'loot-name'}, '🧩 '+t.nome),
-          h('span',{class:'hint'}, new Date(t.createdAt).toLocaleDateString()),
-          h('button',{class:'btn mini ghost', title:'Excluir template', onclick:()=>{if(confirm('Excluir o template '+t.nome+'?')){deleteTemplate(t.id);render();}}},'✕'))))
-      : h('div',{class:'hint'},'Nenhum template salvo. Ao criar um novo personagem Mestre você poderá partir de um template.'));
-
-  return h('div',{}, diario, tpl);
-}
+/* notasView() (caderno, handouts, rascunho, templates) vive agora em handouts.js */

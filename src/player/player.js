@@ -167,9 +167,31 @@ function jogadorView(){
   }
   else body=finalSheet(sys,d);
 
+  /* O que falta para avançar — dito em palavras, no ponto de uso (em vez de só desabilitar o botão) */
+  let motivo='';
+  if(!canNext){
+    if(atual==='id') motivo=!d.name.trim()?'Falta dar um nome ao personagem.':!d.classId?'Falta escolher uma classe.':'Falta escolher uma origem/raça.';
+    else if(atual==='attr') motivo=left>0?('Ainda sobram '+left+' ponto(s) de atributo para distribuir.'):('Você usou '+(-left)+' ponto(s) a mais do que tem — baixe algum atributo.');
+    else if(atual==='skill') motivo=(d.skills.length<lp.skillCount)?('Escolha mais '+(lp.skillCount-d.skills.length)+' perícia(s).'):('Escolha só '+lp.skillCount+' perícias — remova '+(d.skills.length-lp.skillCount)+'.');
+    else motivo='Falta fazer todas as escolhas deste passo.';
+  }
+  const avancar=()=>{
+    const okAgora = atual==='id' ? !!(d.name.trim()&&d.classId&&d.originId) : canNext;   /* o nome é digitado sem render() */
+    if(!okAgora){
+      showToast(motivo);
+      const alvo=atual==='id'&&!d.name.trim()?document.querySelector('.wrap-sm input.in'):null;
+      if(alvo) setTimeout(()=>{ const i=document.querySelector('.wrap-sm input.in'); if(i) i.focus(); },30);
+      return;
+    }
+    S.step++; render(); window.scrollTo(0,0);
+  };
   const nav=h('div',{class:'row between',style:{marginTop:'4px'}},
-    h('button',{class:'btn ghost',disabled:S.step===0,onclick:()=>{if(S.step>0){S.step--;render();}}},'← Voltar'),
-    !ultimo ? h('button',{class:'btn primary',disabled:!canNext,onclick:()=>{if(canNext){S.step++;render();}}},'Avançar →') : h('span'));
+    h('button',{class:'btn ghost',disabled:S.step===0,onclick:()=>{if(S.step>0){S.step--;render();window.scrollTo(0,0);}}},'← Voltar'),
+    !ultimo ? h('div',{class:'nav-av'},
+        motivo?h('span',{class:'nav-motivo', role:'status'},'⚠ '+motivo):h('span',{class:'nav-motivo ok', role:'status'},'✔ Tudo certo neste passo'),
+        h('button',{class:'btn primary'+(canNext?'':' meio'),'aria-disabled':canNext?null:'true',onclick:avancar},
+          'Avançar: '+labels[S.step+1]+' →'))
+      : h('span'));
 
   const themeChips=(sys.themes||[]).map(t=>h('span',{class:'pill'},t));
   return h('div',{class:'wrap-sm'},
@@ -573,12 +595,12 @@ function textoInner(b){
 /* ---- Foto: upload real, reduzida e guardada como base64 (offline) ---- */
 function readPhoto(file,cb){
   if(!file) return;
-  if(!/^image\//.test(file.type)) return alert('Selecione um arquivo de imagem.');
+  if(!/^image\//.test(file.type)) return uiAlert('Selecione um arquivo de imagem (JPG, PNG, WebP…).',{titulo:'Foto inválida'});
   const rd=new FileReader();
-  rd.onerror=()=>alert('Não foi possível ler o arquivo.');
+  rd.onerror=()=>uiAlert('Não foi possível ler o arquivo.',{titulo:'Foto inválida'});
   rd.onload=()=>{
     const img=new Image();
-    img.onerror=()=>alert('Imagem inválida ou corrompida.');
+    img.onerror=()=>uiAlert('Imagem inválida ou corrompida.',{titulo:'Foto inválida'});
     img.onload=()=>{
       const MAX=320, sc=Math.min(1, MAX/Math.max(img.width,img.height));
       const c=document.createElement('canvas');

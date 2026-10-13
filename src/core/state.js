@@ -66,6 +66,18 @@ function bindPersonagem(p){
 })();
 
 let quotaWarned=false;
+/* Situação do salvamento: alimenta o indicador "✔ salvo" do cabeçalho. */
+const saveState={ok:true, t:null, erro:''};
+function atualizaIndicadorSalvo(){
+  const el=document.getElementById('save-ind'); if(!el) return;
+  if(saveState.ok){
+    const hh=saveState.t?saveState.t.toTimeString().slice(0,5):'';
+    el.className='save-ind ok'; el.textContent='✔ salvo'; el.title='Salvo no navegador'+(hh?' às '+hh:'');
+    el.removeAttribute('data-erro');
+  } else {
+    el.className='save-ind erro'; el.textContent='⚠ NÃO salvo'; el.title=saveState.erro; el.setAttribute('data-erro','1');
+  }
+}
 function persist(){
   if(!S.account) return;   /* nada a salvar na tela de login */
   try{
@@ -79,13 +91,18 @@ function persist(){
     const data=loadAccountData(S.account.id);
     data.personagens=S.personagens;
     saveAccountData(S.account.id, data);
+    saveState.ok=true; saveState.t=new Date(); quotaWarned=false;
   }
   catch(e){
-    /* Uma foto grande demais pode estourar a cota do navegador. Avisa uma vez
-       em vez de deixar a exceção subir e matar o render(). */
+    /* Uma foto grande demais pode estourar a cota do navegador. O indicador do
+       cabeçalho fica vermelho e o aviso aparece uma vez (não a cada tecla). */
+    saveState.ok=false;
+    saveState.erro='Falha ao salvar: '+(e&&e.message||'armazenamento indisponível')+'. Baixe um backup (💾) para não perder o trabalho.';
     if(!quotaWarned){ quotaWarned=true;
-      alert('Não foi possível salvar: o armazenamento do navegador está cheio.\n\nProvável causa: fotos de personagem muito grandes. Remova alguma foto ou apague fichas salvas.'); }
+      const msg='Não foi possível salvar: o armazenamento do navegador está cheio ou bloqueado.\n\nProvável causa: fotos de personagem muito grandes. Remova alguma foto ou apague fichas salvas — e use 💾 Backup agora para não perder o que fez.';
+      if(typeof uiAlert==='function') uiAlert(msg,{titulo:'Seus dados NÃO estão sendo salvos'}); else console.error(msg); }
   }
+  atualizaIndicadorSalvo();
 }
 function render(){
   persist();

@@ -15,6 +15,9 @@
   A ORDEM dos <script> abaixo importa: cada arquivo depende dos anteriores.
 -->
 <link rel="stylesheet" href="assets/css/styles.css" />
+<link rel="stylesheet" href="assets/css/sistema.css" />
+<link rel="stylesheet" href="assets/css/mapa.css" />
+<link rel="stylesheet" href="assets/css/campanha.css" />
 </head>
 <body>
 <div id="root"></div>
@@ -23,9 +26,11 @@
 <script src="src/core/helpers.js"></script>
 <script src="src/core/formula-engine.js"></script>
 <script src="src/core/dice-engine.js"></script>
+<script src="src/ui/dialogs.js"></script>
 
 <!-- 2) Dados: sistema de exemplo, migração e criação de ficha -->
 <script src="src/data/example-system.js"></script>
+<script src="src/data/sistema-modelos.js"></script>
 
 <!-- 2b) Contas/auth (camada de dados) — precisa de helpers, example-system; antes do estado -->
 <script src="src/auth/accounts.js"></script>
@@ -42,6 +47,7 @@
 <script src="src/ui/ui-basic.js"></script>
 <script src="src/ui/glossary.js"></script>
 <script src="src/ui/formula-field.js"></script>
+<script src="src/ui/wizard.js"></script>
 
 <!-- 4b) Telas de login/cadastro e hub de personagens -->
 <script src="src/auth/auth-ui.js"></script>
@@ -59,8 +65,16 @@
 <script src="src/master/campaign/players.js"></script>
 <script src="src/master/campaign/bestiary.js"></script>
 <script src="src/master/campaign/map-gen.js"></script>
+<script src="src/master/campaign/map-editor.js"></script>
 <script src="src/master/campaign/campaign-map.js"></script>
 <script src="src/master/campaign/campaign-items.js"></script>
+<script src="src/master/campaign/sessions.js"></script>
+<script src="src/master/campaign/initiative.js"></script>
+<script src="src/master/campaign/handouts.js"></script>
+<script src="src/master/campaign/table-tools.js"></script>
+<script src="src/master/campaign/campaign-io.js"></script>
+<script src="src/master/campaign/presentation.js"></script>
+<!-- ^ Mesa ao vivo: diário, combate, notas/busca, ferramentas, backup .campanha e tela dos jogadores (presentation.js por último: assume a janela #tela-jogadores) -->
 
 <!-- 7) App: monta o cabeçalho e dispara o render() inicial (deve ser o ÚLTIMO) -->
 <script src="src/app.js"></script>

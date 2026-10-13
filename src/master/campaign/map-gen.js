@@ -8,8 +8,10 @@
      • Mapas PEQUENOS — ideias do One Page Dungeon (Watabou) / Dungeon Scrawl:
        masmorra em salas+corredores com portas, hachuras nas paredes, caverna orgânica,
        interior (planta de casa por BSP) e vila com ruas e casas.
-   Todo gerador desenha uma imagem (m.image, JPEG) — o pincel pinta POR CIMA — e cria
-   peças/locais/reinos marcados com `gen:true` (regenerar remove só o que foi gerado). */
+   Os geradores produzem OBJETOS editáveis (m.objs: salas, paredes, portas, casas, rios,
+   estradas, fronteiras…) + peças/locais/reinos, tudo marcado `gen:true` (regenerar troca só
+   o que ainda é gerado). Só o relevo do mundo e a grama da vila continuam como imagem de
+   fundo (m.image), que pode ser convertida em terreno pintável. */
 
 /* ---------- Base: PRNG com semente, ruído, nomes ---------- */
 function hashStr(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
@@ -60,17 +62,23 @@ function dijkstraGrade(GW,GH,fontes,custo){
   return {dist,prev,dono};
 }
 
-/* Aplica o resultado de um gerador ao mapa: imagem + peças/locais/reinos gerados. */
+/* Aplica o resultado de um gerador ao mapa. O fundo (m.image) agora é só o relevo/papel
+   quando há um (mundo, vila); salas, paredes, portas, casas, rios, estradas e fronteiras
+   vêm como OBJETOS editáveis (extra.objs). Tudo que é gerado leva gen:true — regenerar
+   troca só o que ainda é gerado (o que o usuário editou perde o gen e fica). */
 function aplicarGerado(m, canvas, extra){
-  m.image=canvas.toDataURL('image/jpeg',0.88);
+  m.image=canvas?canvas.toDataURL('image/jpeg',0.88):null;
   m.terrain=null; if(typeof terrainReset==='function') terrainReset();
   m.pins=(m.pins||[]).filter(p=>!p.gen);
   m.props=(m.props||[]).filter(p=>!p.gen);
+  m.objs=(m.objs||[]).filter(o=>!o.gen);
   if(m.world) m.world.kingdoms=(m.world.kingdoms||[]).filter(k=>!k.gen);
+  (extra.objs||[]).forEach(o=>{ o.gen=true; m.objs.push(o); });
   (extra.pins||[]).forEach(p=>{ p.gen=true; m.pins.push(p); });
   (extra.props||[]).forEach(p=>{ p.gen=true; m.props.push(p); });
   (extra.kingdoms||[]).forEach(k=>{ k.gen=true; m.world.kingdoms.push(k); });
   if(extra.note!=null) m.note=extra.note;
+  m.bg=extra.bg||null; m.fx=extra.fx||null;
   m.genMeta=extra.meta||null;
   if(extra.grid) m.grid=Object.assign(m.grid||{},extra.grid);
 }
@@ -171,20 +179,36 @@ function genMundo(m,o){
     wx.fillStyle=hexA(estados[d].cor,.26); wx.fillRect(i%GW,(i/GW)|0,1,1); }
   cx.imageSmoothingEnabled=true; cx.imageSmoothingQuality='high'; cx.drawImage(wash,0,0,OW,OH);
 
-  /* ---- 3) rios ---- */
-  cx.lineCap='round'; cx.lineJoin='round';
-  for(let i=0;i<N;i++){ if(!terra(i)||fluxo[i]<limRio||desce[i]<0) continue;
-    const a=cc(i), b=cc(desce[i]), mx=(a[0]+b[0])/2+(rnd()-.5)*cell*.7, my=(a[1]+b[1])/2+(rnd()-.5)*cell*.7;
-    cx.strokeStyle='#3f7fb8'; cx.lineWidth=1+Math.min(3.4,Math.sqrt(fluxo[i]/limRio)*.9);
-    cx.beginPath(); cx.moveTo(a[0],a[1]); cx.quadraticCurveTo(mx,my,b[0],b[1]); cx.stroke(); }
+  /* ---- 3) rios → OBJETOS editáveis (polilinhas suaves, da nascente à foz) ---- */
+  const objs=[], UC=1000/GW;
+  const cu=i=>[ (i%GW+.5)*UC, (((i/GW)|0)+.5)*UC ];
+  const jit=(p,k)=>[p[0]+(rnd()-.5)*UC*k, p[1]+(rnd()-.5)*UC*k];
+  const ehRio=i=>terra(i)&&fluxo[i]>=limRio&&desce[i]>=0;
+  const recebe=new Set(); for(let i=0;i<N;i++) if(ehRio(i)) recebe.add(desce[i]);
+  const viu=new Uint8Array(N);
+  for(let i=0;i<N;i++){ if(!ehRio(i)||recebe.has(i)) continue;
+    const cad=[]; let k=i, g=0, fmax=0;
+    while(k>=0 && g++<700){ cad.push(k); if(ehRio(k)) fmax=Math.max(fmax,fluxo[k]); if(viu[k]||!ehRio(k)) break; viu[k]=1; k=desce[k]; }
+    if(cad.length<4) continue;
+    const pts=cad.filter((_,n)=>n%2===0||n===cad.length-1).map((c,n,arr)=>(n===0||n===arr.length-1)?cu(c):jit(cu(c),.5));
+    objs.push(mkObj(m,'path','river',{pts,closed:false,smooth:true,stroke:'#3f7fb8',sw:Math.round((1.6+Math.min(3.4,Math.sqrt(fmax/limRio)*.9))*10)/10,edge:null,edgew:0,label:'Rio'}));
+  }
 
-  /* ---- 4) fronteiras entre reinos ---- */
-  cx.strokeStyle='rgba(60,30,30,.7)'; cx.lineWidth=1.6; cx.setLineDash([5,3]);
+  /* ---- 4) fronteiras entre reinos → polilinhas ---- */
+  const segs=[];
   for(let y=0;y<GH-1;y++) for(let x=0;x<GW-1;x++){ const i=y*GW+x; if(!terra(i)) continue;
     const r=i+1, d=i+GW;
-    if(terra(r)&&exp.dono[r]!==exp.dono[i]){ const px=(x+1)*cell+(rnd()-.5)*1.5; cx.beginPath(); cx.moveTo(px,y*cell); cx.lineTo(px,(y+1)*cell); cx.stroke(); }
-    if(terra(d)&&exp.dono[d]!==exp.dono[i]){ const py=(y+1)*cell+(rnd()-.5)*1.5; cx.beginPath(); cx.moveTo(x*cell,py); cx.lineTo((x+1)*cell,py); cx.stroke(); } }
-  cx.setLineDash([]);
+    if(terra(r)&&exp.dono[r]!==exp.dono[i]) segs.push([[x+1,y],[x+1,y+1]]);
+    if(terra(d)&&exp.dono[d]!==exp.dono[i]) segs.push([[x,y+1],[x+1,y+1]]); }
+  { const key=(p)=>p[0]*1000+p[1], adj=new Map(), usado=new Uint8Array(segs.length);
+    segs.forEach((sg,ix)=>{ sg.forEach(p=>{ const kk=key(p); if(!adj.has(kk)) adj.set(kk,[]); adj.get(kk).push(ix); }); });
+    const estende=(linha,fim)=>{ for(;;){ const pt=fim?linha[linha.length-1]:linha[0], cand=(adj.get(key(pt))||[]).find(ix=>!usado[ix]); if(cand==null) break;
+        usado[cand]=1; const sg=segs[cand], outro=(key(sg[0])===key(pt))?sg[1]:sg[0]; if(fim) linha.push(outro); else linha.unshift(outro); } };
+    for(let ix=0;ix<segs.length;ix++){ if(usado[ix]) continue; usado[ix]=1;
+      const linha=[segs[ix][0],segs[ix][1]]; estende(linha,true); estende(linha,false);
+      const simp=linha.filter((p,n)=>{ if(n===0||n===linha.length-1) return true; const a=linha[n-1], b=linha[n+1]; return !((p[0]-a[0])*(b[1]-p[1])===(p[1]-a[1])*(b[0]-p[0])); });
+      if(simp.length<2) continue;
+      objs.push(mkObj(m,'path','border',{pts:simp.map((p,n)=>{ const q=[p[0]*UC,p[1]*UC]; return (n===0||n===simp.length-1)?q:jit(q,.4); }),closed:false,smooth:true,stroke:'#6b2e2e',sw:1.6,dash:'dash',label:'Fronteira'})); } }
 
   /* ---- 5) cidades + estradas (menor custo a partir da capital de cada reino) ---- */
   const burgos=[], reinosPin=[], propsNone=[];
@@ -196,10 +220,10 @@ function genMundo(m,o){
     const alvo=1+((rnd()*2)|0);
     for(let t=0;t<proprios.length&&es.cidades.length<alvo;t++){ const i=proprios[t]; if(longe(i,13)){ burgos.push(i); es.cidades.push(i); } }
     const rota=dijkstraGrade(GW,GH,[[es.cap,0]],(i,j)=>{ if(!terra(j)) return null; return 1+Math.abs(E[j]-E[i])*50+(E[j]>.5?9:0)+(fluxo[j]>limRio?4:0); });
-    cx.strokeStyle='rgba(112,72,36,.85)'; cx.lineWidth=1.5; cx.setLineDash([4,3]);
     es.cidades.forEach(c=>{ const caminho=[]; for(let k=c;k>=0&&caminho.length<500;k=rota.prev[k]) caminho.push(k);
-      if(caminho.length<2) return; cx.beginPath(); caminho.forEach((k,n)=>{ const p=cc(k); n?cx.lineTo(p[0]+(rnd()-.5)*2,p[1]+(rnd()-.5)*2):cx.moveTo(p[0],p[1]); }); cx.stroke(); });
-    cx.setLineDash([]);
+      if(caminho.length<2) return;
+      const pts=caminho.filter((_,n)=>n%3===0||n===caminho.length-1).map((k,n,arr)=>(n===0||n===arr.length-1)?cu(k):jit(cu(k),.6));
+      objs.push(mkObj(m,'path','road',{pts,closed:false,smooth:true,stroke:'#704824',sw:2.4,edge:null,edgew:0,dash:'dash',label:'Estrada de '+es.nome})); });
   });
 
   /* ---- 6) montanhas e árvores (símbolos de cartografia) ---- */
@@ -224,65 +248,20 @@ function genMundo(m,o){
     pins.push(cp); nota.push('- **'+es.nome+'** — capital '+capNome+', '+(es.cidades.length+1)+' povoados');
     es.cidades.forEach(c=>{ const porto=costeira(c); const p=newPin((c%GW+.5)/GW*100,(((c/GW)|0)+.5)/GH*100,porto?'⚓':'🏘️'); p.label=nomeProc(rnd,'cidade'); p.note=(porto?'Porto de ':'Povoado de ')+es.nome; pins.push(p); });
   });
-  aplicarGerado(m,cv,{pins,kingdoms:reinos,note:nota.join('\n'),meta:{g:'mundo',seed:o.seed},
+  aplicarGerado(m,cv,{objs,pins,kingdoms:reinos,note:nota.join('\n'),meta:{g:'mundo',seed:o.seed},
     grid:{on:false}});
   m.world.continent.shape='none';
 }
 
-/* ============================ PEQUENA ESCALA: masmorra / caverna / interior ============================ */
+/* ============================ PEQUENA ESCALA: masmorra / caverna / interior ============================
+   Tudo vira OBJETOS: salas e corredores (role 'floor', fundidos numa planta só), portas, números de
+   sala, casas, árvores, rios. As hachuras e a sombra são desenhadas pelo renderizador de objetos
+   (m.fx), então continuam certas depois de mover/apagar qualquer sala. */
 function paletaMapa(theme){
   if(theme==='sombrio') return {bg:'#1a1722',floor:'#3b364a',grid:'#4a4560',ink:'#07060b',hatch:'#6d678a',wall:'#58526f',txt:'#e8e2ff',door:'#7a5a3a'};
   if(theme==='futurista') return {bg:'#06121f',floor:'#0f2a44',grid:'#1b476c',ink:'#22d3ee',hatch:'#1b6a86',wall:'#134a6e',txt:'#cffafe',door:'#0e7490'};
   if(theme==='natural') return {bg:'#c9cfa8',floor:'#efe8cc',grid:'#d3cba6',ink:'#2b3a1f',hatch:'#3f5130',wall:'#a39d78',txt:'#2b3a1f',door:'#7b5a2e'};
   return {bg:'#e9dcc0',floor:'#f8f1dc',grid:'#dccfa9',ink:'#2a2118',hatch:'#3a2d20',wall:'#b9a883',txt:'#2a2118',door:'#8b5a2b'};
-}
-/* Desenha uma grade de células (0 parede, 1 sala, 2 corredor, 3 porta) com sombra, hachura e muros. */
-function desenharGrade(cx,g,GW,GH,cs,pal,rnd,op){
-  const OW=GW*cs, OH=GH*cs, piso=i=>g[i]>0;
-  cx.fillStyle=pal.bg; cx.fillRect(0,0,OW,OH);
-  /* granulado do papel */
-  for(let k=0;k<OW*OH/260;k++){ cx.fillStyle='rgba(0,0,0,'+(rnd()*.05)+')'; cx.fillRect(rnd()*OW,rnd()*OH,1.4,1.4); }
-  /* distância (até 3) das paredes ao piso mais próximo */
-  const dist=new Uint8Array(GW*GH).fill(9);
-  for(let i=0;i<g.length;i++) if(piso(i)) dist[i]=0;
-  for(let d=1;d<=3;d++) for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ const i=y*GW+x; if(dist[i]<9) continue;
-    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=GW||ny>=GH) continue; if(dist[ny*GW+nx]===d-1) dist[i]=d; } }
-  /* miolo das paredes (interior): preenchido, sem hachura */
-  if(op.paredeCheia){ cx.fillStyle=pal.wall; for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ const i=y*GW+x;
-    if(!piso(i)&&op.dentro(x,y)) cx.fillRect(x*cs,y*cs,cs,cs); } }
-  else { /* hachuras */
-    cx.strokeStyle=pal.hatch; cx.lineCap='round';
-    for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ const d=dist[y*GW+x]; if(d<1||d>3) continue;
-      const n=d===1?3:d===2?2:1; cx.lineWidth=d===1?1.1:.9; cx.globalAlpha=d===1?.7:d===2?.5:.35;
-      for(let k=0;k<n;k++){ const px=x*cs+rnd()*cs, py=y*cs+rnd()*cs, a=-0.8+rnd()*.5, l=cs*(.35+rnd()*.35);
-        cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l); cx.stroke(); } }
-    cx.globalAlpha=1; }
-  /* sombra projetada + piso */
-  cx.fillStyle='rgba(0,0,0,.22)'; for(let i=0;i<g.length;i++) if(piso(i)) cx.fillRect((i%GW)*cs+3,((i/GW)|0)*cs+4,cs,cs);
-  cx.fillStyle=pal.floor; for(let i=0;i<g.length;i++) if(piso(i)) cx.fillRect((i%GW)*cs,((i/GW)|0)*cs,cs,cs);
-  /* ladrilhos / tábuas */
-  cx.strokeStyle=pal.grid; cx.lineWidth=1; cx.beginPath();
-  for(let i=0;i<g.length;i++){ if(!piso(i)) continue; const x=(i%GW)*cs, y=((i/GW)|0)*cs;
-    if(op.tabuas){ cx.moveTo(x,y+cs/2); cx.lineTo(x+cs,y+cs/2); cx.moveTo(x,y); cx.lineTo(x+cs,y); }
-    else { cx.moveTo(x,y); cx.lineTo(x+cs,y); cx.moveTo(x,y); cx.lineTo(x,y+cs); } }
-  cx.stroke();
-  /* contorno das paredes (traço de tinta tremido) */
-  cx.strokeStyle=pal.ink; cx.lineWidth=op.paredeCheia?3.4:3; cx.lineCap='round';
-  const seg=(x1,y1,x2,y2)=>{ cx.beginPath(); cx.moveTo(x1+(rnd()-.5)*1.2,y1+(rnd()-.5)*1.2); cx.lineTo(x2+(rnd()-.5)*1.2,y2+(rnd()-.5)*1.2); cx.stroke(); };
-  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ const i=y*GW+x; if(!piso(i)) continue;
-    if(y===0||!piso(i-GW)) seg(x*cs,y*cs,(x+1)*cs,y*cs);
-    if(y===GH-1||!piso(i+GW)) seg(x*cs,(y+1)*cs,(x+1)*cs,(y+1)*cs);
-    if(x===0||!piso(i-1)) seg(x*cs,y*cs,x*cs,(y+1)*cs);
-    if(x===GW-1||!piso(i+1)) seg((x+1)*cs,y*cs,(x+1)*cs,(y+1)*cs); }
-  /* portas */
-  (op.portas||[]).forEach(d=>{ const x=d.x*cs, y=d.y*cs;
-    cx.fillStyle=pal.door; cx.strokeStyle=pal.ink; cx.lineWidth=1.8;
-    if(d.v){ cx.fillRect(x+cs*.3,y+cs*.05,cs*.4,cs*.9); cx.strokeRect(x+cs*.3,y+cs*.05,cs*.4,cs*.9); }
-    else { cx.fillRect(x+cs*.05,y+cs*.3,cs*.9,cs*.4); cx.strokeRect(x+cs*.05,y+cs*.3,cs*.9,cs*.4); } });
-  /* números de sala */
-  (op.numeros||[]).forEach(r=>{ cx.fillStyle=pal.floor; cx.strokeStyle=pal.ink; cx.lineWidth=1.6;
-    cx.beginPath(); cx.arc(r.x*cs,r.y*cs,cs*.62,0,6.3); cx.fill(); cx.stroke();
-    cx.fillStyle=pal.txt; cx.font='bold '+Math.round(cs*.7)+'px sans-serif'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText(String(r.n),r.x*cs,r.y*cs+1); });
 }
 const CONTEUDO_SALA=[
   ['vazia','Sala vazia, com poeira e eco. Vale uma checagem de percepção.'],
@@ -292,10 +271,18 @@ const CONTEUDO_SALA=[
   ['enigma','Enigma ou mecanismo que abre outra passagem.'],
   ['descanso','Local seguro para descansar, com sinais de acampamento antigo.'],
 ];
-function propEm(k,cx_,cy_,GW,GH,extra){ const p=newProp(k,(cx_+.5)/GW*100,(cy_+.5)/GH*100); if(extra) Object.assign(p,extra); return p; }
+/* peça (prop) posicionada em unidades de mapa */
+function propAt(k,ux,uy,extra){ const p=newProp(k,ux/10,uy/6.25); if(extra) Object.assign(p,extra); return p; }
+/* objetos de piso/porta/número a partir de células (x,y,w,h em células de tamanho cu) */
+function pisoRect(m,x,y,w,h,cu,label,ell){
+  return mkObj(m,ell?'ellipse':'rect','floor',{cx:(x+w/2)*cu,cy:(y+h/2)*cu,w:w*cu,h:h*cu,label:label||'Sala'});
+}
+function portaObj(m,x,y,cu,v){ return mkObj(m,'door','plain',{cx:(x+.5)*cu,cy:(y+.5)*cu,w:cu*0.9,rot:v?90:0,fill:paletaMapa(m.theme).door,stroke:paletaMapa(m.theme).ink,label:'Porta'}); }
+function numeroObj(m,n,x,y,cu){ const pal=paletaMapa(m.theme);
+  return mkObj(m,'text','plain',{x:x*cu,y:y*cu,text:String(n),size:Math.max(9,Math.round(cu*.62)),color:pal.txt,bold:true,halo:false,badge:true,bgc:pal.floor,label:'Sala '+n}); }
 
 function genMasmorra(m,o){
-  const rnd=rngSeed('masmorra:'+o.seed), GW=60, GH=37, cs=20, g=new Uint8Array(GW*GH);
+  const rnd=rngSeed('masmorra:'+o.seed), GW=60, GH=37, cu=1000/GW, g=new Uint8Array(GW*GH);
   const alvo=Math.max(4,Math.min(24,o.salas||12)), salas=[];
   for(let t=0;t<900&&salas.length<alvo;t++){
     const w=4+((rnd()*7)|0), h=3+((rnd()*5)|0), x=2+((rnd()*(GW-w-4))|0), y=2+((rnd()*(GH-h-4))|0);
@@ -305,86 +292,71 @@ function genMasmorra(m,o){
   salas.forEach(r=>{ for(let yy=r.y;yy<r.y+r.h;yy++) for(let xx=r.x;xx<r.x+r.w;xx++){
     if(r.redonda){ const dx=(xx+.5-(r.x+r.w/2))/(r.w/2), dy=(yy+.5-(r.y+r.h/2))/(r.h/2); if(dx*dx+dy*dy>1.05) continue; }
     g[yy*GW+xx]=1; } });
-  /* conecta com árvore geradora mínima (Prim) + alguns atalhos */
   const lig=[], dentro=new Set([0]); while(dentro.size<salas.length){
     let bi=-1,bj=-1,bd=Infinity; dentro.forEach(i=>{ salas.forEach((s,j)=>{ if(dentro.has(j)) return; const d=Math.hypot(salas[i].cx-s.cx,salas[i].cy-s.cy); if(d<bd){ bd=d; bi=i; bj=j; } }); });
     lig.push([bi,bj]); dentro.add(bj); }
   for(let k=0;k<Math.floor(salas.length/4);k++){ const a=(rnd()*salas.length)|0, b=(rnd()*salas.length)|0; if(a!==b) lig.push([a,b]); }
+  const objs=[], corr=[];
   const corredor=(a,b)=>{ let x=a.cx,y=a.cy; const horizPrimeiro=rnd()<.5;
-    const passo=(h)=>{ if(h){ while(x!==b.cx){ x+=Math.sign(b.cx-x); if(!g[y*GW+x]) g[y*GW+x]=2; } } else { while(y!==b.cy){ y+=Math.sign(b.cy-y); if(!g[y*GW+x]) g[y*GW+x]=2; } } };
+    const passo=(hz)=>{ const x0=x,y0=y;
+      if(hz){ while(x!==b.cx){ x+=Math.sign(b.cx-x); if(!g[y*GW+x]) g[y*GW+x]=2; } corr.push([Math.min(x0,x),y,Math.abs(x-x0)+1,1]); }
+      else { while(y!==b.cy){ y+=Math.sign(b.cy-y); if(!g[y*GW+x]) g[y*GW+x]=2; } corr.push([x,Math.min(y0,y),1,Math.abs(y-y0)+1]); } };
     passo(horizPrimeiro); passo(!horizPrimeiro); };
   lig.forEach(([a,b])=>corredor(salas[a],salas[b]));
-  /* portas: célula de corredor com sala de um lado e corredor reto do lado oposto */
-  const portas=[];
+  salas.forEach((r,i)=>objs.push(pisoRect(m,r.x,r.y,r.w,r.h,cu,'Sala '+(i+1),r.redonda)));
+  corr.forEach(c=>objs.push(pisoRect(m,c[0],c[1],c[2],c[3],cu,'Corredor')));
   for(let y=1;y<GH-1;y++) for(let x=1;x<GW-1;x++){ if(g[y*GW+x]!==2) continue;
     [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
-      if(g[(y+dy)*GW+x+dx]===1&&g[(y-dy)*GW+x-dx]===2&&!g[(y+dx)*GW+x+dy]&&!g[(y-dx)*GW+x-dy]) portas.push({x,y,v:dx!==0}); }); }
-  const numeros=salas.map((r,i)=>({n:i+1,x:r.x+r.w/2,y:r.y+r.h/2}));
-  const pal=paletaMapa(m.theme), cv=mkCanvas(GW*cs,GH*cs), cx=cv.getContext('2d');
-  desenharGrade(cx,g,GW,GH,cs,pal,rnd,{portas,numeros});
-  /* conteúdo das salas: peças + anotações para o Mestre */
-  const props=[], nota=['# Masmorra — semente '+o.seed,'', '1 = entrada · '+salas.length+' = covil final',''];
+      if(g[(y+dy)*GW+x+dx]===1&&g[(y-dy)*GW+x-dx]===2&&!g[(y+dx)*GW+x+dy]&&!g[(y-dx)*GW+x-dy]) objs.push(portaObj(m,x,y,cu,dx!==0)); }); }
+  salas.forEach((r,i)=>objs.push(numeroObj(m,i+1,r.x+r.w/2,r.y+r.h/2,cu)));
+  const pal=paletaMapa(m.theme);
+  const pc=(k,cx_,cy_,extra)=>propAt(k,(cx_+.5)*cu,(cy_+.5)*cu,extra);
+  const props=[], nota=['# Masmorra — semente '+o.seed,'','1 = entrada · '+salas.length+' = covil final',''];
   salas.forEach((r,i)=>{
     const ultima=i===salas.length-1, primeira=i===0, sorte=primeira?'vazia':(ultima?'inimigos':CONTEUDO_SALA[(rnd()*CONTEUDO_SALA.length)|0][0]);
     const texto=(CONTEUDO_SALA.find(c=>c[0]===sorte)||CONTEUDO_SALA[0])[1];
-    if(primeira) props.push(propEm('escada',r.cx,r.cy,GW,GH,{label:'Entrada'}));
-    if(sorte==='tesouro'||ultima) props.push(propEm('bau',r.cx+((rnd()*2)|0),r.cy,GW,GH));
-    if(sorte==='armadilha') props.push(propEm('armadilha',r.cx,r.cy+1>=r.y+r.h?r.cy:r.cy+1,GW,GH,{hidden:true}));
-    if(sorte==='enigma') props.push(propEm('altar',r.cx,r.cy,GW,GH));
-    if(rnd()<.5) props.push(propEm('tocha',r.x,r.y,GW,GH));
+    if(primeira) props.push(pc('escada',r.cx,r.cy,{label:'Entrada'}));
+    if(sorte==='tesouro'||ultima) props.push(pc('bau',r.cx+((rnd()*2)|0),r.cy));
+    if(sorte==='armadilha') props.push(pc('armadilha',r.cx,r.cy+1>=r.y+r.h?r.cy:r.cy+1,{hidden:true}));
+    if(sorte==='enigma') props.push(pc('altar',r.cx,r.cy));
+    if(rnd()<.5) props.push(pc('tocha',r.x,r.y));
     nota.push((i+1)+'. '+r.w+'×'+r.h+' — '+(ultima?'**Covil final.** ':primeira?'**Entrada.** ':'')+texto);
   });
-  aplicarGerado(m,cv,{props,note:nota.join('\n'),meta:{g:'masmorra',seed:o.seed},grid:{on:true,size:cs/ (cv.width/1000) ,snap:true}});
+  aplicarGerado(m,null,{objs,props,note:nota.join('\n'),bg:pal.bg,fx:{hatch:pal.hatch},meta:{g:'masmorra',seed:o.seed},grid:{on:true,size:cu,snap:true}});
 }
 
 function genCaverna(m,o){
-  const rnd=rngSeed('caverna:'+o.seed), GW=100, GH=62, cs=12; let g=new Uint8Array(GW*GH);
+  const rnd=rngSeed('caverna:'+o.seed), GW=100, GH=62, cu=10; let g=new Uint8Array(GW*GH);
   for(let y=0;y<GH;y++) for(let x=0;x<GW;x++) g[y*GW+x]=(x<2||y<2||x>=GW-2||y>=GH-2)?0:(rnd()<.46?0:1);
   for(let it=0;it<5;it++){ const n=new Uint8Array(g.length);
     for(let y=1;y<GH-1;y++) for(let x=1;x<GW-1;x++){ let w=0; for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) if(!g[(y+dy)*GW+x+dx]) w++; n[y*GW+x]=w>=5?0:1; }
     g=n; }
-  /* mantém só a maior região conectada */
   const seen=new Uint8Array(g.length); let melhor=[];
   for(let s=0;s<g.length;s++){ if(!g[s]||seen[s]) continue; const fila=[s], reg=[]; seen[s]=1;
     while(fila.length){ const i=fila.pop(); reg.push(i); [i+1,i-1,i+GW,i-GW].forEach(j=>{ if(j>=0&&j<g.length&&g[j]&&!seen[j]){ seen[j]=1; fila.push(j); } }); }
     if(reg.length>melhor.length) melhor=reg; }
   g=new Uint8Array(g.length); melhor.forEach(i=>{ g[i]=1; });
-  const OW=GW*cs, OH=GH*cs, pal=paletaMapa(m.theme), cv=mkCanvas(OW,OH), cx=cv.getContext('2d');
-  cx.fillStyle=pal.bg; cx.fillRect(0,0,OW,OH);
-  for(let k=0;k<OW*OH/260;k++){ cx.fillStyle='rgba(0,0,0,'+(rnd()*.05)+')'; cx.fillRect(rnd()*OW,rnd()*OH,1.4,1.4); }
-  /* máscara suave: piso desenhado, borrado e binarizado → contorno orgânico */
-  const mk=mkCanvas(OW,OH), mx=mk.getContext('2d'); mx.fillStyle='#fff';
-  g.forEach((v,i)=>{ if(v) mx.fillRect((i%GW)*cs,((i/GW)|0)*cs,cs,cs); });
-  const bl=mkCanvas(OW,OH), bx=bl.getContext('2d'); bx.filter='blur(8px)'; bx.drawImage(mk,0,0); bx.filter='none';
-  const id=bx.getImageData(0,0,OW,OH), D=id.data; for(let i=3;i<D.length;i+=4) D[i]=D[i]>110?255:0; bx.putImageData(id,0,0);
-  const tinta=(src,cor)=>{ const c=mkCanvas(OW,OH), x=c.getContext('2d'); x.drawImage(src,0,0); x.globalCompositeOperation='source-in'; x.fillStyle=cor; x.fillRect(0,0,OW,OH); return c; };
-  /* hachuras fora da caverna, perto da borda */
-  cx.strokeStyle=pal.hatch; cx.lineCap='round';
-  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ let perto=false;
-    for(let dy=-3;dy<=3&&!perto;dy++) for(let dx=-3;dx<=3;dx++){ const nx=x+dx, ny=y+dy; if(nx>=0&&ny>=0&&nx<GW&&ny<GH&&g[ny*GW+nx]){ perto=true; break; } }
-    if(!perto||g[y*GW+x]) continue;
-    for(let k=0;k<2;k++){ const px=x*cs+rnd()*cs, py=y*cs+rnd()*cs; if(D[((py|0)*OW+(px|0))*4+3]) continue;
-      cx.lineWidth=1; cx.globalAlpha=.55; cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px+cs*.45,py-cs*.3); cx.stroke(); } }
-  cx.globalAlpha=1;
-  cx.globalAlpha=.25; cx.drawImage(tinta(bl,'#000'),4,5); cx.globalAlpha=1;
-  const ink=tinta(bl,pal.ink); for(let a=0;a<8;a++) cx.drawImage(ink,Math.cos(a*.785)*3.2,Math.sin(a*.785)*3.2);
-  cx.drawImage(tinta(bl,pal.floor),0,0);
-  /* pedrinhas e manchas no piso */
-  for(let k=0;k<420;k++){ const px=rnd()*OW, py=rnd()*OH; if(!D[((py|0)*OW+(px|0))*4+3]) continue;
-    cx.fillStyle=pal.grid; cx.beginPath(); cx.arc(px,py,1+rnd()*2.4,0,6.3); cx.fill(); }
-  /* peças: entrada, baús, armadilhas, tochas em células de piso */
+  /* cobre as células de piso com poucos retângulos (guloso); o filtro "goo" arredonda o contorno */
+  const usado=new Uint8Array(g.length), objs=[];
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){ const i=y*GW+x; if(!g[i]||usado[i]) continue;
+    let w=1; while(x+w<GW&&g[i+w]&&!usado[i+w]) w++;
+    let hh=1; for(;y+hh<GH;hh++){ let ok=true; for(let k=0;k<w;k++){ const j=(y+hh)*GW+x+k; if(!g[j]||usado[j]){ ok=false; break; } } if(!ok) break; }
+    for(let yy=0;yy<hh;yy++) for(let k=0;k<w;k++) usado[(y+yy)*GW+x+k]=1;
+    const r=pisoRect(m,x,y,w,hh,cu,'Galeria'); r.sw=2.5; objs.push(r); }
+  const pal=paletaMapa(m.theme);
+  const pc=(k,i,extra)=>propAt(k,((i%GW)+.5)*cu,(((i/GW)|0)+.5)*cu,extra);
   const livres=melhor.slice(); const sorteia=()=>livres.splice((rnd()*livres.length)|0,1)[0];
-  const props=[]; const ent=sorteia(); props.push(propEm('escada',ent%GW,(ent/GW)|0,GW,GH,{label:'Entrada'}));
+  const props=[]; const ent=sorteia(); props.push(pc('escada',ent,{label:'Entrada'}));
   const nBau=2+((rnd()*3)|0), nArm=2+((rnd()*3)|0);
-  for(let k=0;k<nBau;k++){ const i=sorteia(); props.push(propEm('bau',i%GW,(i/GW)|0,GW,GH)); }
-  for(let k=0;k<nArm;k++){ const i=sorteia(); props.push(propEm('armadilha',i%GW,(i/GW)|0,GW,GH,{hidden:true})); }
-  for(let k=0;k<6;k++){ const i=sorteia(); props.push(propEm(rnd()<.5?'pedra':'tocha',i%GW,(i/GW)|0,GW,GH)); }
-  aplicarGerado(m,cv,{props,note:'# Caverna — semente '+o.seed+'\n\n'+melhor.length+' células de piso. '+nBau+' baús e '+nArm+' armadilhas ocultas espalhados.',
-    meta:{g:'caverna',seed:o.seed},grid:{on:true,size:cs/(OW/1000)*1,snap:true}});
+  for(let k=0;k<nBau;k++) props.push(pc('bau',sorteia()));
+  for(let k=0;k<nArm;k++) props.push(pc('armadilha',sorteia(),{hidden:true}));
+  for(let k=0;k<6;k++) props.push(pc(rnd()<.5?'pedra':'tocha',sorteia()));
+  aplicarGerado(m,null,{objs,props,note:'# Caverna — semente '+o.seed+'\n\n'+melhor.length+' células de piso. '+nBau+' baús e '+nArm+' armadilhas ocultas espalhados.',
+    bg:pal.bg,fx:{hatch:pal.hatch,goo:true,hatchW:30},meta:{g:'caverna',seed:o.seed},grid:{on:false,size:cu*5,snap:true}});
 }
 
 function genInterior(m,o){
-  const rnd=rngSeed('interior:'+o.seed), GW=60, GH=37, cs=20, g=new Uint8Array(GW*GH);
+  const rnd=rngSeed('interior:'+o.seed), GW=60, GH=37, cu=1000/GW, g=new Uint8Array(GW*GH);
   const R={x:8,y:5,w:44,h:27}, folhas=[], paredes=[];
   const corta=(x,y,w,h,d)=>{
     const pode=(w>=10||h>=10)&&d<5&&(d<2||rnd()<.8);
@@ -397,34 +369,33 @@ function genInterior(m,o){
   const portas=[];
   paredes.forEach(p=>{ const cand=[]; for(let k=2;k<p.len-2;k++){ const x=p.v?p.x:p.x+k, y=p.v?p.y+k:p.y;
       const a=p.v?g[y*GW+x-1]:g[(y-1)*GW+x], b=p.v?g[y*GW+x+1]:g[(y+1)*GW+x]; if(a===1&&b===1) cand.push([x,y]); }
-    if(cand.length){ const [x,y]=cand[(rnd()*cand.length)|0]; g[y*GW+x]=3; portas.push({x,y,v:!p.v}); } });
-  /* porta de entrada no muro externo (lado de baixo) */
-  const ex=R.x+4+((rnd()*(R.w-8))|0), ey=R.y+R.h; g[ey*GW+ex]=3; portas.push({x:ex,y:ey,v:false});
-  const pal=paletaMapa(m.theme), cv=mkCanvas(GW*cs,GH*cs), cx=cv.getContext('2d');
-  const dentro=(x,y)=>x>=R.x-1&&x<=R.x+R.w&&y>=R.y-1&&y<=R.y+R.h+1;
-  const numeros=folhas.map((f,i)=>({n:i+1,x:f.x+f.w/2,y:f.y+f.h/2}));
-  desenharGrade(cx,g,GW,GH,cs,pal,rnd,{portas,numeros,paredeCheia:true,tabuas:true,dentro});
+    if(cand.length){ const [x,y]=cand[(rnd()*cand.length)|0]; portas.push({x,y,v:!p.v}); } });
+  const ex=R.x+4+((rnd()*(R.w-8))|0), ey=R.y+R.h; portas.push({x:ex,y:ey,v:false});
+  const pal=paletaMapa(m.theme), objs=[];
+  const parede=mkObj(m,'rect','wall',{cx:(R.x-1+(R.w+2)/2)*cu,cy:(R.y-1+(R.h+2)/2)*cu,w:(R.w+2)*cu,h:(R.h+2)*cu,label:'Paredes externas'}); parede.sw=3.2; objs.push(parede);
   const NOMES=['Sala de estar','Cozinha','Quarto','Despensa','Escritório','Oficina','Salão','Adega','Quarto de hóspedes','Biblioteca'];
-  const MOVEIS=['mesa','barril','bau','mesa','bandeira'];
-  const props=[], nota=['# Interior — semente '+o.seed,''];
-  folhas.forEach((f,i)=>{ nota.push((i+1)+'. '+sorteiaDe(rnd,NOMES)+' ('+f.w+'×'+f.h+')');
-    const n=1+((rnd()*3)|0); for(let k=0;k<n;k++) props.push(propEm(sorteiaDe(rnd,MOVEIS),f.x+1+((rnd()*(f.w-2))|0),f.y+1+((rnd()*(f.h-2))|0),GW,GH)); });
-  aplicarGerado(m,cv,{props,note:nota.join('\n'),meta:{g:'interior',seed:o.seed},grid:{on:true,size:cs/(cv.width/1000),snap:true}});
+  const nota=['# Interior — semente '+o.seed,''], nomes=folhas.map(()=>sorteiaDe(rnd,NOMES));
+  folhas.forEach((f,i)=>{ objs.push(pisoRect(m,f.x,f.y,f.w,f.h,cu,nomes[i])); nota.push((i+1)+'. '+nomes[i]+' ('+f.w+'×'+f.h+')'); });
+  portas.forEach(d=>{ objs.push(pisoRect(m,d.x,d.y,1,1,cu,'Vão da porta')); });
+  portas.forEach(d=>objs.push(portaObj(m,d.x,d.y,cu,d.v)));
+  folhas.forEach((f,i)=>objs.push(numeroObj(m,i+1,f.x+f.w/2,f.y+f.h/2,cu)));
+  const MOVEIS=['mesa','barril','bau','mesa','bandeira'], props=[];
+  folhas.forEach(f=>{ const n=1+((rnd()*3)|0); for(let k=0;k<n;k++) props.push(propAt(sorteiaDe(rnd,MOVEIS),(f.x+1+((rnd()*(f.w-2))|0)+.5)*cu,(f.y+1+((rnd()*(f.h-2))|0)+.5)*cu)); });
+  aplicarGerado(m,null,{objs,props,note:nota.join('\n'),bg:pal.bg,fx:null,meta:{g:'interior',seed:o.seed},grid:{on:true,size:cu,snap:true}});
 }
 
 /* ============================ LOCAL: vila / cidade ============================ */
 function genVila(m,o){
-  const rnd=rngSeed('vila:'+o.seed), nz=makeNoise(rnd), OW=1200, OH=750, cv=mkCanvas(OW,OH), cx=cv.getContext('2d');
+  const rnd=rngSeed('vila:'+o.seed), nz=makeNoise(rnd), OW=1200, OH=750, K=1000/OW, cv=mkCanvas(OW,OH), cx=cv.getContext('2d');
   const nat=m.theme!=='sombrio'&&m.theme!=='futurista', verde=m.theme==='sombrio'?[34,46,40]:m.theme==='futurista'?[10,28,40]:[118,156,92];
   const im=cx.createImageData(OW,OH), D=im.data;
   for(let y=0;y<OH;y++) for(let x=0;x<OW;x++){ const n=nz.fbm(x*.008,y*.008,4), r=(nz.n2(x*.4,y*.4)-.5)*14, k=.8+n*.5, p=(y*OW+x)*4;
     D[p]=verde[0]*k+r; D[p+1]=verde[1]*k+r; D[p+2]=verde[2]*k+r; D[p+3]=255; }
   cx.putImageData(im,0,0);
   const tam=Math.max(2,Math.min(5,o.tamanho||3));
-  /* rio opcional */
   const rio=o.rio!==false&&rnd()<.8, rioY=OH*(.25+rnd()*.5), rioAmp=40+rnd()*50;
   const rioPts=[]; for(let x=-20;x<=OW+20;x+=20) rioPts.push([x,rioY+Math.sin(x*.006+rnd()*.2)*rioAmp+(nz.n2(x*.01,3)-.5)*60]);
-  const ruas=[]; /* cada rua: lista de pontos */
+  const ruas=[];
   const curva=(a,b,flex)=>{ const pts=[], mx=(a[0]+b[0])/2+(rnd()-.5)*flex, my=(a[1]+b[1])/2+(rnd()-.5)*flex;
     for(let t=0;t<=1.0001;t+=.05) pts.push([(1-t)*(1-t)*a[0]+2*(1-t)*t*mx+t*t*b[0],(1-t)*(1-t)*a[1]+2*(1-t)*t*my+t*t*b[1]]); return pts; };
   const cxm=OW/2+(rnd()-.5)*120, cym=OH/2+(rnd()-.5)*80;
@@ -432,12 +403,7 @@ function genVila(m,o){
   ruas.push(curva([cxm+(rnd()-.5)*200,-20],[cxm+(rnd()-.5)*200,OH+20],120));
   for(let k=0;k<tam;k++){ const base=ruas[(rnd()*ruas.length)|0], p=base[(3+rnd()*(base.length-6))|0];
     const ang=rnd()*6.28, l=160+rnd()*160; ruas.push(curva(p,[p[0]+Math.cos(ang)*l,p[1]+Math.sin(ang)*l],60)); }
-  const tracar=(pts,larg,cor)=>{ cx.strokeStyle=cor; cx.lineWidth=larg; cx.lineCap='round'; cx.lineJoin='round'; cx.beginPath(); pts.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1])); cx.stroke(); };
-  if(rio){ tracar(rioPts,36,'#2c5f94'); tracar(rioPts,30,'#4b8fcf'); tracar(rioPts,12,'rgba(255,255,255,.18)'); }
-  ruas.forEach((r,i)=>{ tracar(r,i<2?24:15,'#5c4630'); tracar(r,i<2?20:11,'#b79a6e'); });
-  /* pontes onde a rua cruza o rio */
   const sobreRio=(x,y)=>rio&&rioPts.some(p=>Math.hypot(p[0]-x,p[1]-y)<26);
-  /* casas ao longo das ruas */
   const casas=[], cores=m.theme==='sombrio'?['#4a3b52','#3a4a5e','#5a3a3a']:m.theme==='futurista'?['#1d6f8f','#2d4a8f','#2a7f77']:['#a8553a','#8c6a3c','#b4743f','#7a4a3a','#9a5a46'];
   const casaOk=(x,y,r)=>x>30&&y>30&&x<OW-30&&y<OH-30&&!sobreRio(x,y)&&!casas.some(c=>Math.hypot(c.x-x,c.y-y)<c.r+r)&&!ruas.some(rr=>rr.some(p=>Math.hypot(p[0]-x,p[1]-y)<r+10));
   const alvoCasas=18+tam*14;
@@ -446,25 +412,20 @@ function genVila(m,o){
     const ang=Math.atan2(b[1]-a[1],b[0]-a[0]), lado=rnd()<.5?1:-1, w=26+rnd()*26, hh=18+rnd()*16, dist=22+hh/2+rnd()*30;
     const x=a[0]+Math.cos(ang+lado*1.5708)*dist, y=a[1]+Math.sin(ang+lado*1.5708)*dist, r=Math.max(w,hh)*.62;
     if(!casaOk(x,y,r)) continue; casas.push({x,y,r,w,h:hh,ang,cor:sorteiaDe(rnd,cores)}); }
-  casas.forEach(c=>{ cx.save(); cx.translate(c.x,c.y); cx.rotate(c.ang);
-    cx.fillStyle='rgba(0,0,0,.28)'; cx.fillRect(-c.w/2+3,-c.h/2+4,c.w,c.h);
-    cx.fillStyle=c.cor; cx.fillRect(-c.w/2,-c.h/2,c.w,c.h);
-    cx.fillStyle='rgba(0,0,0,.2)'; cx.fillRect(-c.w/2,0,c.w,c.h/2);
-    cx.strokeStyle='#2a1c12'; cx.lineWidth=1.8; cx.strokeRect(-c.w/2,-c.h/2,c.w,c.h);
-    cx.beginPath(); cx.moveTo(-c.w/2,0); cx.lineTo(c.w/2,0); cx.stroke(); cx.restore(); });
-  /* árvores e campos nas bordas */
-  for(let k=0;k<260;k++){ const x=rnd()*OW, y=rnd()*OH; if(!casaOk(x,y,6)) continue;
-    cx.fillStyle='rgba(0,0,0,.25)'; cx.beginPath(); cx.arc(x+2,y+3,6,0,6.3); cx.fill();
-    cx.fillStyle=nat?'#2f6b3a':'#1c3a30'; cx.strokeStyle='#14301c'; cx.lineWidth=1; cx.beginPath(); cx.arc(x,y,5+rnd()*3,0,6.3); cx.fill(); cx.stroke(); }
-  /* praça + poço */
-  const px=cxm, py=cym; cx.fillStyle='#c7ad7e'; cx.strokeStyle='#5c4630'; cx.lineWidth=2; cx.beginPath(); cx.arc(px,py,26,0,6.3); cx.fill(); cx.stroke();
-  cx.fillStyle='#4b8fcf'; cx.beginPath(); cx.arc(px,py,8,0,6.3); cx.fill(); cx.strokeStyle='#2a1c12'; cx.stroke();
-  /* locais de interesse sobre casas sorteadas */
+  const objs=[], P=p=>[p[0]*K,p[1]*K];
+  if(rio) objs.push(mkObj(m,'path','river',{pts:rioPts.filter((_,i)=>i%2===0).map(P),closed:false,smooth:true,sw:Math.round(30*K),edge:'#2c5f94',edgew:3,label:'Rio'}));
+  ruas.forEach((r,i)=>objs.push(mkObj(m,'path','road',{pts:r.filter((_,n)=>n%2===0||n===r.length-1).map(P),closed:false,smooth:true,sw:Math.round((i<2?22:13)*K),label:i<2?'Rua principal':'Rua'})));
+  const px=cxm*K, py=cym*K;
+  objs.push(mkObj(m,'ellipse','plaza',{cx:px,cy:py,w:52*K*1.2,h:52*K*1.2,label:'Praça'}));
+  objs.push(mkObj(m,'ellipse','water',{cx:px,cy:py,w:16*K*1.2,h:16*K*1.2,fill:'#4b8fcf',stroke:'#2a1c12',sw:1.6,op:1,label:'Poço'}));
+  casas.forEach((c,n)=>objs.push(mkObj(m,'rect','house',{cx:c.x*K,cy:c.y*K,w:c.w*K,h:c.h*K,rot:Math.round(c.ang*180/Math.PI*10)/10,fill:c.cor,label:'Casa '+(n+1)})));
+  for(let k=0;k<170;k++){ const x=rnd()*OW, y=rnd()*OH; if(!casaOk(x,y,6)) continue;
+    const d=(5+rnd()*3)*2*K; objs.push(mkObj(m,'ellipse','tree',{cx:x*K,cy:y*K,w:d,h:d,fill:nat?'#2f6b3a':'#1c3a30',stroke:'#14301c',label:'Árvore'})); }
   const TIPOS=[['🍺','Taverna','Taverna'],['⚒️','Ferreiro','Forja'],['⛪','Templo','Templo'],['🏪','Mercado','Mercado'],['🏰','Mansão','Solar do senhor'],['📜','Guilda','Sede da guilda']];
-  const pins=[], usadas=new Set(), nota=['# Vila — semente '+o.seed,'', casas.length+' construções.',''];
+  const pins=[], usadas=new Set(), nota=['# Vila — semente '+o.seed,'',casas.length+' construções.',''];
   TIPOS.forEach(([ic,tipo,lbl])=>{ if(!casas.length) return; let c,t=0; do{ c=(rnd()*casas.length)|0; t++; }while(usadas.has(c)&&t<40); usadas.add(c);
     const p=newPin(casas[c].x/OW*100,casas[c].y/OH*100,ic); p.label=nomeProc(rnd,'cidade').replace(/^./,s=>s.toUpperCase())+' · '+lbl; p.note=tipo+' (gerado)'; pins.push(p); nota.push('- '+ic+' '+p.label); });
-  aplicarGerado(m,cv,{pins,note:nota.join('\n'),meta:{g:'vila',seed:o.seed},grid:{on:false}});
+  aplicarGerado(m,cv,{objs,pins,note:nota.join('\n'),meta:{g:'vila',seed:o.seed},grid:{on:false}});
 }
 
 /* ---------- Escolha do gerador conforme o tipo do mapa ---------- */

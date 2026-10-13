@@ -53,7 +53,7 @@ function statblockCard(sys, sb){
       onchange:e=>{sb.conds=e.target.value.split(',').map(s=>s.trim()).filter(Boolean);render();}})));
   const notas=field('Notas', h('textarea',{class:'in', rows:'2', onchange:e=>{sb.notes=e.target.value;render();}}, sb.notes||''));
 
-  return h('div',{class:'best-card'}, head, vida, attrs, ataques, meta, notas);
+  return h('div',{class:'best-card', id:'bx-'+sb.id}, head, vida, attrs, ataques, meta, notas, notasLigadas('enemy',sb.id));
 }
 function rolarAtaque(sb, at){
   const vars={}; (S.system.attributes||[]).forEach(a=>{ vars[a.name]=sb.attrs[a.id]||0; });
@@ -76,7 +76,7 @@ function npcCard(np){
   const relacoes=['aliado','neutro','hostil','misterioso'];
   const relSel=h('select',{class:'in', onchange:e=>{np.relacao=e.target.value;render();}},
     relacoes.map(r=>{const o=h('option',{value:r},r);if(np.relacao===r)o.selected=true;return o;}));
-  return h('div',{class:'best-card npc'},
+  return h('div',{class:'best-card npc', id:'bx-'+np.id},
     h('div',{class:'row wrapf', style:{alignItems:'center'}},
       imgBtn(np),
       h('input',{class:'in', style:{flex:'1',minWidth:'140px',fontWeight:'700'}, value:np.name, onchange:e=>{np.name=e.target.value;render();}}),
@@ -87,7 +87,8 @@ function npcCard(np){
       field('Local', h('input',{class:'in', style:{flex:'1'}, value:np.local, onchange:e=>{np.local=e.target.value;render();}})),
       field('Relação', relSel)),
     field('Personalidade', h('input',{class:'in', value:np.personalidade, placeholder:'traços, jeito de falar…', onchange:e=>{np.personalidade=e.target.value;render();}})),
-    field('Notas', h('textarea',{class:'in', rows:'2', onchange:e=>{np.notes=e.target.value;render();}}, np.notes||'')));
+    field('Notas', h('textarea',{class:'in', rows:'2', onchange:e=>{np.notes=e.target.value;render();}}, np.notes||'')),
+    notasLigadas('npc',np.id));
 }
 
 /* Botão de imagem reaproveitando readPhoto (mesma redução/base64 das fotos de ficha). */

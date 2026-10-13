@@ -5,14 +5,24 @@
 
 function defaultCampaign(){
   return {
-    name:'', summary:'', notes:'',
+    name:'', summary:'', notes:'', prep:'',
     players:[],                       /* {id,name,note,sheet|null,importedAt} */
     bestiary:{ enemies:[], npcs:[] }, /* Statblock[] e NpcCard[] */
     loot:[],                          /* {id,itemId|null,nome,qty,ownerPlayerId|null,note} */
     maps:[],                          /* coleção de mapas (mundo, região, local, interior…) */
     currentMapId:null,                /* mapa aberto no editor */
     diceLog:[],                       /* {id,ts,expr,total,detail,detalhes,by} */
-    sessions:[],                      /* {id,date,log} */
+    sessions:[],                      /* diário: {id,n,title,date,startedAt,endedAt,summary,decisions,xp,events:[{id,ts,text,kind}]} */
+    activeSessionId:null,             /* sessão em andamento (ou null) */
+    notebook:[],                      /* notas do Mestre ligáveis: {id,title,text,link:{type,id}|null,ts} */
+    handouts:[],                      /* {id,title,text,image,ts} — revelados via c.present.handoutId */
+    combat:{ on:false, round:1, turn:0, order:[], log:[], startedAt:null },  /* rastreador de iniciativa */
+    clocks:[],                        /* relógios de ameaça {id,name,segs,filled,shown} */
+    resources:[],                     /* recursos do grupo {id,name,icon,qty,shown} */
+    tables:[],                        /* tabelas aleatórias próprias {id,name,entries:[texto]} */
+    xp:{ total:0, history:[] },       /* XP do grupo */
+    present:{ live:false, handoutId:null, blank:false, showMap:true, showInit:true, showRoll:false, showTrackers:true, lastRoll:null },
+    meta:{ changes:0, lastBackup:0 }, /* lembrete de backup */
   };
 }
 
@@ -122,6 +132,8 @@ function newMap(kind,theme,name){
   return { id:uid(), name:name||'Novo mapa', kind:kind||'regiao', theme:theme||'rustico',
            image:null, terrain:null, showLabels:true,
            grid:{on:false,size:48,snap:true}, tokens:[], pins:[], props:[],
+           objs:[],                          /* objetos vetoriais editáveis (salas, paredes, estradas…) — ver map-editor.js */
+           bg:null, fx:null,                 /* cor de fundo e efeitos (hachuras/goo) dos geradores */
            world:{ continent:{shape:'none', color:'#3b6b4a', rot:0, scale:100}, kingdoms:[] },
            note:'' };
 }
@@ -151,7 +163,7 @@ function totalPins(){
 function sanitizeCampaign(c){
   const d=defaultCampaign();
   c=c||{};
-  c.name=c.name||''; c.summary=c.summary||''; c.notes=c.notes||'';
+  c.name=c.name||''; c.summary=c.summary||''; c.notes=c.notes||''; c.prep=c.prep||'';
   c.players=Array.isArray(c.players)?c.players:[];
   c.bestiary=c.bestiary||{}; c.bestiary.enemies=Array.isArray(c.bestiary.enemies)?c.bestiary.enemies:[];
   c.bestiary.npcs=Array.isArray(c.bestiary.npcs)?c.bestiary.npcs:[];
@@ -175,6 +187,9 @@ function sanitizeCampaign(c){
     mm.tokens=Array.isArray(mm.tokens)?mm.tokens:[];
     mm.pins=Array.isArray(mm.pins)?mm.pins:[];
     mm.props=Array.isArray(mm.props)?mm.props:[];
+    mm.objs=Array.isArray(mm.objs)?mm.objs:[];
+    if(mm.bg===undefined) mm.bg=null;
+    if(mm.fx===undefined) mm.fx=null;
     if(mm.terrain===undefined) mm.terrain=null;
     if(mm.showLabels==null) mm.showLabels=true;
     mm.kind=mm.kind||'regiao'; mm.theme=mm.theme||'rustico'; mm.note=mm.note||'';
@@ -194,6 +209,32 @@ function sanitizeCampaign(c){
   c.currentMapId = (c.currentMapId && c.maps.some(x=>x.id===c.currentMapId)) ? c.currentMapId : (c.maps[0]?c.maps[0].id:null);
   c.diceLog=Array.isArray(c.diceLog)?c.diceLog:[];
   c.sessions=Array.isArray(c.sessions)?c.sessions:[];
+  /* ---- Mesa ao vivo (sessões, notas, combate, tela dos jogadores…) ---- */
+  c.sessions=c.sessions.filter(x=>x&&typeof x==='object').map((x,i)=>{
+    x.id=x.id||uid(); x.n=x.n||(i+1);
+    x.title=x.title||('Sessão '+x.n); x.date=x.date||'';
+    x.startedAt=x.startedAt||null; x.endedAt=x.endedAt||null;
+    x.summary=typeof x.summary==='string'?x.summary:(Array.isArray(x.log)?x.log.join('\n'):(typeof x.log==='string'?x.log:''));
+    delete x.log;
+    x.decisions=x.decisions||''; x.xp=Number(x.xp)||0;
+    x.events=Array.isArray(x.events)?x.events.filter(e=>e&&e.text!=null):[];
+    return x; });
+  if(c.activeSessionId && !c.sessions.some(x=>x.id===c.activeSessionId)) c.activeSessionId=null;
+  if(c.activeSessionId===undefined) c.activeSessionId=null;
+  c.notebook=Array.isArray(c.notebook)?c.notebook:[];
+  c.handouts=Array.isArray(c.handouts)?c.handouts:[];
+  c.clocks=Array.isArray(c.clocks)?c.clocks:[];
+  c.resources=Array.isArray(c.resources)?c.resources:[];
+  c.tables=Array.isArray(c.tables)?c.tables:[];
+  const cb=c.combat&&typeof c.combat==='object'?c.combat:{};
+  c.combat=Object.assign({on:false,round:1,turn:0,order:[],log:[],startedAt:null}, cb);
+  if(!Array.isArray(c.combat.order)) c.combat.order=[];
+  if(!Array.isArray(c.combat.log)) c.combat.log=[];
+  c.xp=Object.assign({total:0,history:[]}, c.xp&&typeof c.xp==='object'?c.xp:{});
+  if(!Array.isArray(c.xp.history)) c.xp.history=[];
+  c.present=Object.assign(d.present, c.present&&typeof c.present==='object'?c.present:{});
+  c.present.live=false;   /* a transmissão sempre recomeça desligada ao abrir */
+  c.meta=Object.assign({changes:0,lastBackup:0}, c.meta&&typeof c.meta==='object'?c.meta:{});
   return c;
 }
 

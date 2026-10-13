@@ -270,20 +270,22 @@ function mestreView(){
   const grupoAtivo=S.ui.grupo=metaAtual.g;
 
   /* --- barra de grupos (item 1) --- */
-  const grupos=h('div',{class:'grupos'}, ...TAB_GRUPOS.map(g=>{
+  const grupos=h('div',{class:'grupos', role:'tablist', 'aria-label':'Áreas do sistema'}, ...TAB_GRUPOS.map(g=>{
     const abas=abasVisiveis().filter(t=>t.g===g.k);
     if(!abas.length) return null;
     const temAlerta=abas.some(t=>problemasDaAba(sys,t.k).length);
-    return h('button',{class:'grupo-b '+(grupoAtivo===g.k?'on':''),
+    return h('button',{class:'grupo-b '+(grupoAtivo===g.k?'on':''), role:'tab', 'aria-selected':grupoAtivo===g.k?'true':'false',
+      tabindex:grupoAtivo===g.k?'0':'-1', onkeydown:tabKeys('.grupos'),
       onclick:()=>{ S.tab=abas[0].k; render(); }},
       h('span',{}, g.ic+' '+g.nome, temAlerta?h('span',{class:'tab-alerta'}):null),
       h('small',{}, g.sub));
   }).filter(Boolean));
 
   /* --- sub-abas do grupo, com badge (item 3) e alerta (item 4) --- */
-  const subtabs=h('div',{class:'subtabs'}, ...abasVisiveis().filter(t=>t.g===grupoAtivo).map(t=>{
+  const subtabs=h('div',{class:'subtabs', role:'tablist', 'aria-label':'Seções de '+((TAB_GRUPOS.find(g=>g.k===grupoAtivo)||{}).nome||'')}, ...abasVisiveis().filter(t=>t.g===grupoAtivo).map(t=>{
     const n=contagemDaAba(sys,t.k), probs=problemasDaAba(sys,t.k);
-    return h('button',{class:'tab '+(S.tab===t.k?'on':'')+(t.adv?' tab-adv':''),
+    return h('button',{class:'tab '+(S.tab===t.k?'on':'')+(t.adv?' tab-adv':''), role:'tab', 'aria-selected':S.tab===t.k?'true':'false',
+      tabindex:S.tab===t.k?'0':'-1', onkeydown:tabKeys('.subtabs'),
       title:(t.adv?'Módulo avançado (opcional). ':'')+(probs.length?probs.join('\n'):''),
       onclick:()=>{S.tab=t.k;render();}},
       t.ic+' '+t.nome,
@@ -343,6 +345,21 @@ function mestreView(){
     prox?h('button',{class:'btn primary sm',onclick:()=>{S.tab=prox.k;render();window.scrollTo(0,0);}},'Próximo passo: '+prox.ic+' '+prox.nome+' →')
         :h('button',{class:'btn emerald sm',onclick:()=>{if(!S.draft)S.draft=initDraft(sys);S.view='jogador';render();window.scrollTo(0,0);}},'Testar como jogador 🎲'));
 
+  /* pendências no ponto de uso: o que está errado NESTA aba, com atalho para o próximo passo */
+  let aviso=null;
+  if(S.tab!=='inicio'){
+    const probs=problemasDaAba(sys,S.tab);
+    const falta=passosEssenciais(sys).find(p=>!p.ok && p.tab!==S.tab);
+    if(probs.length) aviso=h('div',{class:'aviso-aba', role:'status'},
+      h('b',{},'⚠ Falta acertar aqui:'),
+      h('ul',{}, probs.map(m=>h('li',{},m))),
+      falta?h('button',{class:'btn sm ghost',onclick:()=>irParaAba(falta.tab)},'Depois: '+falta.t+' →'):null);
+  }
+  if(S.ui.refocoAba){
+    const sel=S.ui.refocoAba+' [aria-selected="true"]'; S.ui.refocoAba=null;
+    setTimeout(()=>{ const el=document.querySelector(sel); if(el) try{ el.focus(); }catch(e){} },0);
+  }
+  content=h('div',{role:'tabpanel','aria-label':tabLabel(S.tab)}, aviso, content);
   return h('div',{class:'wrap'},
     crumb, barra, grupos, subtabs, content, rodape,
     S.ui.busca?buscaOverlay():null,
@@ -403,10 +420,10 @@ function progEditor(sys, prog, opts){
   const addCol=()=>{ pushUndo(); prog.cols.push({id:uid(), name:'Coluna '+(prog.cols.length+1), tipo:'num'}); render(); };
 
   /* preencher uma coluna inteira com uma fórmula (ex.: 2 + piso((Nível-1)/4) ) */
-  const preencher=col=>{
+  const preencher=async col=>{
     const exemplo = col.tipo==='num' ? '2 + piso((' + (sys.levelName||'Nível') + ' - 1) / 4)' : '';
-    const f=prompt('Preencher "'+col.name+'" com uma fórmula, aplicada em cada degrau.\n\n'+
-      'Use "'+(sys.levelName||'Nível')+'" como o número do degrau.\nEx.: '+exemplo, exemplo);
+    const f=await uiPrompt('Preencher "'+col.name+'" com uma fórmula, aplicada em cada degrau.\n\n'+
+      'Use "'+(sys.levelName||'Nível')+'" como o número do degrau.\nEx.: '+exemplo, exemplo, {titulo:'Preencher coluna', okText:'Preencher'});
     if(f==null) return;
     pushUndo();
     let erros=0;
@@ -421,9 +438,9 @@ function progEditor(sys, prog, opts){
   };
 
   /* colar direto de planilha: uma linha por degrau, colunas separadas por TAB ou ; */
-  const colar=()=>{
-    const txt=prompt('Cole os valores (uma linha por degrau, colunas separadas por TAB, ; ou ,).\n'+
-      'A ordem das colunas é a mesma da tabela. Começa no degrau '+de+'.');
+  const colar=async()=>{
+    const txt=await uiPrompt('Cole os valores (uma linha por degrau, colunas separadas por TAB, ; ou ,).\n'+
+      'A ordem das colunas é a mesma da tabela. Começa no degrau '+de+'.','',{titulo:'Colar tabela', multiline:true, okText:'Colar'});
     if(!txt) return;
     if(!prog.cols.length) return showToast('Crie ao menos uma coluna antes');
     pushUndo();
@@ -486,8 +503,9 @@ function progEditor(sys, prog, opts){
     h('div',{class:'row wrapf',style:{marginBottom:'10px'}},
       h('button',{class:'btn primary sm',onclick:addCol},'+ Coluna'),
       h('button',{class:'btn ghost sm',title:'Colar de uma planilha',onclick:colar},'📋 Colar tabela'),
-      prog.cols.length?h('button',{class:'btn ghost sm',onclick:()=>{
-        if(confirm('Limpar todos os valores desta tabela? As colunas continuam.')){ pushUndo(); prog.rows={}; render(); }}},'🧹 Limpar valores'):null),
+      prog.cols.length?h('button',{class:'btn ghost sm',onclick:async()=>{
+        if(await uiConfirm('Limpar todos os valores desta tabela? As colunas continuam.',{titulo:'Limpar valores',okText:'Limpar',perigo:true})){
+          pushUndo(); prog.rows={}; render(); uiToastUndo('Valores limpos', undo); }}},'🧹 Limpar valores'):null),
     prog.cols.length
       ? h('div',{style:{overflowX:'auto'}}, tabela)
       : h('div',{class:'hint'},'Nenhuma coluna ainda. Crie uma coluna — o nome dela vira uma variável que você pode usar nas fórmulas de recursos.'),
@@ -518,9 +536,19 @@ function tabProgressao(sys){
         numField('+ Perícias',sys.perLevel,'skillPoints'), numField('… a cada N degraus',sys.perLevel,'skillEveryN')),
       h('div',{class:'hint',style:{marginTop:'10px'}}, `Prévia: no degrau ${sys.maxLevel} o personagem terá ${p.attrPoints} pontos de atributo e ${p.skillCount} perícias no total.`)));
 }
+const SUGESTOES_ATRIBUTOS=['Força','Agilidade','Vigor','Mente','Presença','Destreza','Inteligência','Sabedoria','Carisma','Constituição'];
 function tabAtributos(sys){
+  const vazio=!sys.attributes.length;
+  const sug=vazio?h('div',{class:'vazio'},
+    h('div',{class:'vazio-t'},'Nenhum atributo ainda'),
+    h('div',{class:'hint'},'Atributos são o que o personagem é (Força, Mente…). Toque para adicionar rápido, ou use o botão “+ Atributo”.'),
+    h('div',{class:'row wrapf',style:{marginTop:'8px'}},
+      h('button',{class:'btn sm emerald',onclick:()=>{ ['Força','Agilidade','Vigor','Mente','Presença'].forEach(n=>sys.attributes.push({id:uid(),name:n,abbr:''})); render(); showToast('5 atributos adicionados'); }},'✨ Adicionar um conjunto de 5'),
+      ...SUGESTOES_ATRIBUTOS.map(n=>h('button',{class:'btn sm ghost',onclick:()=>{ sys.attributes.push({id:uid(),name:n,abbr:''}); render(); }},'+ '+n)))):null;
   return card('Atributos', 'Modo atual: '+(sys.attrMode==='modificador'?'Modificador':'Valor direto')+'. A sigla aparece na ficha estilizada.',
-    h('button',{class:'btn primary',onclick:()=>{sys.attributes.push({id:uid(),name:'Novo',abbr:''});render();}},'+ Atributo'),
+    h('button',{class:'btn primary',onclick:()=>{sys.attributes.push({id:uid(),name:'Novo',abbr:''});render();
+      setTimeout(()=>{ const ins=document.querySelectorAll('[role="tabpanel"] .row input.in[placeholder="Nome"]'); const u=ins[ins.length-1]; if(u){ u.focus(); u.select(); } },0);}},'+ Atributo'),
+    sug,
     ...sys.attributes.map(a=>h('div',{class:'row',style:{marginBottom:'8px'}},
       h('input',{class:'in',value:a.name,placeholder:'Nome',oninput:e=>{a.name=e.target.value;persist();},onchange:()=>render()}),
       h('input',{class:'in',style:{maxWidth:'110px',textAlign:'center',fontWeight:'800'},value:a.abbr||'',
@@ -533,6 +561,14 @@ function tabRecursos(sys){
   const sampleVars={'Nível':sys.maxLevel,'Nivel':sys.maxLevel}; sys.attributes.forEach(a=>sampleVars[a.name]=eff);
   return card(tit('Recursos','recursobarra'),'Barra = consumível (Vida, Mana). Valor = número fixo (Defesa). Use atributos e "Nível".',
     h('button',{class:'btn primary',onclick:()=>{sys.resources.push({id:uid(),name:'Novo Recurso',type:'barra',formula:'10',color:'#22d3ee'});render();}},'+ Recurso'),
+    sys.resources.length?null:h('div',{class:'vazio'},
+      h('div',{class:'vazio-t'},'Nenhum recurso ainda'),
+      h('div',{class:'hint'},'Recursos são o que o personagem gasta ou tem (Vida, Mana, Defesa). Toque para criar um já com valor inicial; depois ajuste a fórmula.'),
+      h('div',{class:'row wrapf',style:{marginTop:'8px'}},
+        ...[['Vida','barra','#ef4444','longo'],['Mana','barra','#3b82f6','longo'],['Estamina','barra','#22c55e','curto'],['Sanidade','barra','#a855f7','longo'],['Defesa','valor','#06b6d4','nunca']].map(([n,t,c,rc])=>
+          h('button',{class:'btn sm ghost',onclick:()=>{
+            const a0=(sys.attributes[0]||{}).name;
+            sys.resources.push({id:uid(),name:n,type:t,formula:a0?(a0+' * 5 + 10'):'10',color:c,recharge:{trig:rc,amt:'tudo',formula:''},perRound:''}); render(); }},'+ '+n)))),
     ...sys.resources.map(r=>{
       const typeSel=h('select',{class:'in',style:{maxWidth:'110px'},onchange:e=>{r.type=e.target.value;render();}});
       [['barra','Barra'],['valor','Valor']].forEach(([v,l])=>{const o=h('option',{value:v},l);if((r.type||'barra')===v)o.selected=true;typeSel.appendChild(o);});

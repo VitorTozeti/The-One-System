@@ -157,7 +157,23 @@ function tabInicio(sys){
   const linha=p=>h('button',{class:'chk-l '+(p.ok?'ok':''),onclick:()=>{irParaAba(p.tab);}},
     h('span',{class:'mk'}, p.ok?'✔':'○'),
     h('span',{}, h('b',{},p.t), h('span',{class:'sub'}, p.s+'  ·  abrir '+tabLabel(p.tab)+' →')));
+  /* "Próximo passo" em destaque: um clique leva ao que falta (o checklist completo fica logo abaixo) */
+  const proximo=passos.find(p=>!p.ok);
+  const vazio=!(sys.attributes||[]).length && !(sys.resources||[]).length && !(sys.skills||[]).length;
+  const hero = proximo
+    ? h('div',{class:'hero-passo'},
+        h('div',{class:'hero-txt'},
+          h('span',{class:'hero-k'},'Próximo passo · '+(feitos+1)+' de '+passos.length),
+          h('b',{},proximo.t), h('span',{class:'hint'},proximo.s)),
+        h('button',{class:'btn primary',onclick:()=>irParaAba(proximo.tab)},'Ir para '+tabLabel(proximo.tab)+' →'))
+    : h('div',{class:'hero-passo pronto'},
+        h('div',{class:'hero-txt'}, h('span',{class:'hero-k'},'Tudo essencial feito'), h('b',{},'Seu sistema está jogável 🎉'),
+          h('span',{class:'hint'},'Teste como um jogador veria, ou continue refinando as abas.')),
+        h('button',{class:'btn emerald',onclick:()=>{ if(!S.draft) S.draft=initDraft(sys); S.view='jogador'; render(); window.scrollTo(0,0); }},'🎲 Testar como jogador'));
+  const modeloCard = vazio ? card('Comece com um modelo','Seu sistema está vazio. Escolha um ponto de partida e ganhe atributos, recursos, perícias e classes em 3 passos.',null,
+      h('button',{class:'btn amber',onclick:aplicarModeloAoSistema},'✨ Escolher um modelo')) : null;
   return h('div',{},
+    hero, modeloCard,
     card('Por onde começar','Os 12 passos essenciais para o sistema ficar jogável. Clique em qualquer linha para ir direto ao lugar.',
       h('span',{class:'badge '+(feitos===passos.length?'ok':'warn')}, feitos+'/'+passos.length),
       ...passos.map(linha)),
@@ -180,6 +196,17 @@ function tabInicio(sys){
         h('span',{class:'keycap'},h('b',{},'Ctrl+Z / Ctrl+Y'),'desfazer/refazer no editor de ficha'),
         h('span',{class:'keycap'},h('b',{},'Tab'),'percorrer blocos da ficha'),
         h('span',{class:'keycap'},h('b',{},'Delete'),'remover bloco selecionado'))));
+}
+/* Assistente aplicado a um sistema já aberto (substitui; desfazível). */
+function aplicarModeloAoSistema(){
+  abrirAssistenteSistema({titulo:'Aplicar um modelo ao sistema', nomeInicial:S.system.campaignName||'', okRotulo:'✔ Aplicar modelo',
+    aoCriar:async novo=>{
+      const velho=S.system, tinha=(velho.attributes||[]).length||(velho.resources||[]).length||(velho.skills||[]).length||(velho.classes||[]).length;
+      if(tinha && !await uiConfirm('Aplicar o modelo substitui TODO o sistema atual (atributos, recursos, perícias, classes…). Continuar?',{titulo:'Substituir sistema',okText:'Substituir',perigo:true})) return;
+      const snap=JSON.stringify(velho);
+      S.system=novo; S.draft=initDraft(novo); S.ui.sel=null; undoStack.length=0; redoStack.length=0; render();
+      uiToastUndo('Modelo aplicado',()=>{ S.system=JSON.parse(snap); S.draft=initDraft(S.system); S.ui.sel=null; render(); },10000);
+    }});
 }
 /* pular para uma aba já abrindo o grupo dela (e ligando o Modo Avançado se preciso) */
 function irParaAba(k){
