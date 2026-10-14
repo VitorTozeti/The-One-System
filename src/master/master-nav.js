@@ -165,7 +165,9 @@ function tabInicio(sys){
         h('div',{class:'hero-txt'},
           h('span',{class:'hero-k'},'Próximo passo · '+(feitos+1)+' de '+passos.length),
           h('b',{},proximo.t), h('span',{class:'hint'},proximo.s)),
-        h('button',{class:'btn primary',onclick:()=>irParaAba(proximo.tab)},'Ir para '+tabLabel(proximo.tab)+' →'))
+        h('div',{class:'row wrapf'},
+          h('button',{class:'btn primary',onclick:()=>irParaAba(proximo.tab)},'Ir para '+tabLabel(proximo.tab)+' →'),
+          h('button',{class:'btn ghost',title:'Não precisa terminar para testar: o que falta usa valores padrão',onclick:()=>{ if(!S.draft) S.draft=initDraft(sys); S.view='jogador'; render(); window.scrollTo(0,0); }},'▶ Testar assim mesmo')))
     : h('div',{class:'hero-passo pronto'},
         h('div',{class:'hero-txt'}, h('span',{class:'hero-k'},'Tudo essencial feito'), h('b',{},'Seu sistema está jogável 🎉'),
           h('span',{class:'hint'},'Teste como um jogador veria, ou continue refinando as abas.')),
@@ -177,13 +179,13 @@ function tabInicio(sys){
     card('Por onde começar','Os 12 passos essenciais para o sistema ficar jogável. Clique em qualquer linha para ir direto ao lugar.',
       h('span',{class:'badge '+(feitos===passos.length?'ok':'warn')}, feitos+'/'+passos.length),
       ...passos.map(linha)),
-    card('Verificação','O que o app encontrou de errado nas abas visíveis agora.',
-      h('span',{class:'badge '+(problemas.length?'warn':'ok')}, problemas.length?(problemas.length+' problema(s)'):'tudo certo'),
+    card('Sugestões do app','Ajustes que deixariam o sistema mais redondo. Nenhum impede você de testar.',
+      h('span',{class:'badge '+(problemas.length?'warn':'ok')}, problemas.length?(problemas.length+' sugestão(ões)'):'tudo certo'),
       problemas.length
         ? h('div',{}, ...problemas.map(pr=>h('button',{class:'chk-l',onclick:()=>irParaAba(pr.tab)},
-            h('span',{class:'mk',style:{color:'#fb7185'}},'⚠'),
+            h('span',{class:'mk',style:{color:'var(--amber)'}},'💡'),
             h('span',{}, pr.msg, h('span',{class:'sub'},'em '+tabLabel(pr.tab)+' →')))))
-        : h('div',{class:'hint'},'Nenhum problema encontrado. '+(modoSimples()?'(As abas avançadas estão ocultas no Modo Simples e não foram verificadas.)':'')),
+        : h('div',{class:'hint'},'Nenhuma sugestão por enquanto. '+(modoSimples()?'(As abas avançadas estão ocultas no Modo Simples e não foram verificadas.)':'')),
       h('div',{class:'hint',style:{marginTop:'10px'}},'Dica: aperte Ctrl+K em qualquer lugar para procurar uma opção pelo nome.')),
     card('Não entendeu um termo?','Slot, tier, degrau, escopo, sintonização — o glossário explica cada um com exemplo. O mesmo texto aparece no “?” ao lado dos campos.',
       h('button',{class:'btn sm primary',onclick:()=>{S.ui.gloss={q:''};render();}},'📖 Abrir glossário'),
@@ -193,7 +195,8 @@ function tabInicio(sys){
     card('Atalhos','',null,
       h('div',{class:'keys'},
         h('span',{class:'keycap'},h('b',{},'Ctrl+K'),'buscar qualquer ajuste'),
-        h('span',{class:'keycap'},h('b',{},'Ctrl+Z / Ctrl+Y'),'desfazer/refazer no editor de ficha'),
+        h('span',{class:'keycap'},h('b',{},'Ctrl+Z / Ctrl+Y'),'desfazer/refazer em qualquer aba (ou use ↶ ↷)'),
+        h('span',{class:'keycap'},h('b',{},'🕘 Versões'),'volte a um ponto anterior do sistema'),
         h('span',{class:'keycap'},h('b',{},'Tab'),'percorrer blocos da ficha'),
         h('span',{class:'keycap'},h('b',{},'Delete'),'remover bloco selecionado'))));
 }

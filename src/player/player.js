@@ -21,8 +21,10 @@ function jogadorView(){
 
   const dots=h('div',{class:'dots'});
   labels.forEach((l,i)=>{
-    dots.appendChild(h('div',{class:'dot '+(i<S.step?'done':i===S.step?'cur':'')}, i<S.step?'✓':(i+1)));
-    dots.appendChild(h('span',{class:'dotlbl '+(i===S.step?'cur':'')},l));
+    const ir=()=>{ if(i!==S.step){ S.step=i; render(); window.scrollTo(0,0); } };
+    const kd=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); ir(); } };
+    dots.appendChild(h('div',{class:'dot '+(i<S.step?'done':i===S.step?'cur':''), role:'button', tabindex:'0', 'aria-label':'Ir para '+l, 'aria-current':i===S.step?'step':null, title:'Ir para '+l, style:{cursor:'pointer'}, onclick:ir, onkeydown:kd}, i<S.step?'✓':(i+1)));
+    dots.appendChild(h('span',{class:'dotlbl '+(i===S.step?'cur':''), style:{cursor:'pointer'}, onclick:ir},l));
     if(i<labels.length-1) dots.appendChild(h('div',{class:'dotline'}));
   });
 
@@ -177,18 +179,13 @@ function jogadorView(){
   }
   const avancar=()=>{
     const okAgora = atual==='id' ? !!(d.name.trim()&&d.classId&&d.originId) : canNext;   /* o nome é digitado sem render() */
-    if(!okAgora){
-      showToast(motivo);
-      const alvo=atual==='id'&&!d.name.trim()?document.querySelector('.wrap-sm input.in'):null;
-      if(alvo) setTimeout(()=>{ const i=document.querySelector('.wrap-sm input.in'); if(i) i.focus(); },30);
-      return;
-    }
+    if(!okAgora) showToast('💡 '+(atual==='id'&&!d.name.trim()?'Falta dar um nome ao personagem.':motivo)+' Você pode voltar e ajustar quando quiser.');
     S.step++; render(); window.scrollTo(0,0);
   };
   const nav=h('div',{class:'row between',style:{marginTop:'4px'}},
     h('button',{class:'btn ghost',disabled:S.step===0,onclick:()=>{if(S.step>0){S.step--;render();window.scrollTo(0,0);}}},'← Voltar'),
     !ultimo ? h('div',{class:'nav-av'},
-        motivo?h('span',{class:'nav-motivo', role:'status'},'⚠ '+motivo):h('span',{class:'nav-motivo ok', role:'status'},'✔ Tudo certo neste passo'),
+        motivo?h('span',{class:'nav-motivo', role:'status'},'💡 '+motivo):h('span',{class:'nav-motivo ok', role:'status'},'✔ Tudo certo neste passo'),
         h('button',{class:'btn primary'+(canNext?'':' meio'),'aria-disabled':canNext?null:'true',onclick:avancar},
           'Avançar: '+labels[S.step+1]+' →'))
       : h('span'));
@@ -196,6 +193,7 @@ function jogadorView(){
   const themeChips=(sys.themes||[]).map(t=>h('span',{class:'pill'},t));
   return h('div',{class:'wrap-sm'},
     h('div',{class:'row',style:{justifyContent:'flex-end',marginBottom:'12px'}},
+      h('button',{class:'btn ghost',title:'Sorteia nome, classe, origem, atributos e perícias — dá para ajustar depois',onclick:()=>surpreendaFicha(sys,d)},'🎲 Me surpreenda'),
       h('button',{class:'btn ghost',onclick:()=>{S.draft=initDraft(sys);S.step=0;render();}},'↻ Recomeçar ficha')),
     h('div',{class:'note',html:'🎲 Campanha <b>“'+esc(sys.campaignName||'')+'”</b> — sistema <b>“'+esc(sys.name)+'”</b>. O app te guia e impede erros.'}),
     themeChips.length?h('div',{class:'row wrapf',style:{marginBottom:'14px'}},...themeChips):null,
@@ -1272,5 +1270,23 @@ function sampleDraft(sys,level){
   d.inventory=(sys.items||[]).slice(0,4).map(it=>({iid:uid(),itemId:it.id,equipped:!!it.equipavel}));
   return d;
 }
-function saveCharacter(){ S.saved.push({...S.draft,id:uid(),system:S.system.name}); showToast('Ficha salva! ✔'); }
+const NOMES_SORTEIO=['Kára','Thorin','Lyra','Bram','Ysolde','Orik','Mira','Dante','Selene','Garrick','Nyx','Aldric','Iris','Rurik','Talia','Vesper'];
+/* Sorteia uma ficha completa dentro das regras do sistema (nome, classe, origem, atributos, perícias). */
+function surpreendaFicha(sys,d){
+  const pick=l=>l.length?l[Math.floor(Math.random()*l.length)]:null;
+  d.name=pick(NOMES_SORTEIO);
+  const c=pick(sys.classes), o=pick(sys.origins);
+  d.classId=c?c.id:null; d.originId=o?o.id:null;
+  const lp=levelPoints(sys,d.level);
+  d.attrs=Object.fromEntries(sys.attributes.map(a=>[a.id,sys.startAttrValue]));
+  let pts=lp.attrPoints, guard=0; const ids=sys.attributes.map(a=>a.id);
+  while(pts>0&&ids.length&&guard++<2000){ const id=pick(ids); if(d.attrs[id]<sys.attrMax){ d.attrs[id]++; pts--; } else if(ids.every(x=>d.attrs[x]>=sys.attrMax)) break; }
+  const esc=sys.skills.filter(s=>!s.auto).slice();
+  d.skills=[]; d.skillTier={};
+  while(d.skills.length<lp.skillCount&&esc.length){ const s=esc.splice(Math.floor(Math.random()*esc.length),1)[0]; d.skills.push(s.id);
+    if(sys.profMode!=='nenhum'){ const t=(sys.profTiers||[]).find(x=>(sys.profMode==='mult'?x.mult:x.bonus)>0); if(t) d.skillTier[s.id]=t.id; } }
+  showToast('🎲 Ficha sorteada — ajuste o que quiser');
+  S.step=Math.max(0,S.step); render();
+}
+function saveCharacter(){ if(S.draft&&!String(S.draft.name||'').trim()) S.draft.name='Sem nome'; S.saved.push({...S.draft,id:uid(),system:S.system.name}); showToast('Ficha salva! ✔'); }
 

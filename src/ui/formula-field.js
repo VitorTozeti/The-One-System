@@ -354,7 +354,7 @@ function mestreView(){
     const probs=problemasDaAba(sys,S.tab);
     const falta=passosEssenciais(sys).find(p=>!p.ok && p.tab!==S.tab);
     if(probs.length) aviso=h('div',{class:'aviso-aba', role:'status'},
-      h('b',{},'⚠ Falta acertar aqui:'),
+      h('b',{},'💡 Sugestões para esta aba:'),
       h('ul',{}, probs.map(m=>h('li',{},m))),
       falta?h('button',{class:'btn sm ghost',onclick:()=>irParaAba(falta.tab)},'Depois: '+falta.t+' →'):null);
   }
