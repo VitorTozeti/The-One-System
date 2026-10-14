@@ -301,6 +301,9 @@ function mestreView(){
     h('button',{onclick:()=>{const a=abasVisiveis().find(t=>t.g===gAtual.k);if(a){S.tab=a.k;render();}}}, gAtual.ic+' '+gAtual.nome),
     h('span',{class:'sep'},'›'), h('b',{},tabLabel(S.tab)),
     h('span',{style:{flex:'1'}}),
+    h('button',{class:'btn sm ghost',title:'Desfazer (Ctrl+Z)','aria-label':'Desfazer',onclick:()=>{undo();render();}},'↶'),
+    h('button',{class:'btn sm ghost',title:'Refazer (Ctrl+Shift+Z)','aria-label':'Refazer',onclick:()=>{redo();render();}},'↷'),
+    h('button',{class:'btn sm ghost',title:'Versões guardadas automaticamente: volte a um ponto anterior',onclick:()=>{S.ui.versoes=true;render();}},'🕘 Versões'),
     h('button',{class:'btn sm ghost',title:'Ctrl+K',onclick:()=>{S.ui.busca={q:''};render();}},'🔎 Buscar'),
     h('button',{class:'btn sm ghost',title:'Glossário: o que cada termo do app significa',
       onclick:()=>{S.ui.gloss={q:''};render();}},'📖 Glossário'),
@@ -363,6 +366,7 @@ function mestreView(){
   return h('div',{class:'wrap'},
     crumb, barra, grupos, subtabs, content, rodape,
     fichaVivaView(),
+    S.ui.versoes?versoesOverlay():null,
     S.ui.busca?buscaOverlay():null,
     S.ui.gloss?glossOverlay():null);
 }
