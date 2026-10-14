@@ -11,7 +11,7 @@
 const MTAB_META=[
   {k:'painel',    ic:'🧭', nome:'Painel'},
   {k:'sistema',   ic:'⚙️', nome:'Sistema'},
-  {k:'jogadores', ic:'🧑‍🤝‍🧑', nome:'Jogadores'},
+  {k:'jogadores', ic:'🤝', nome:'Jogadores'},
   {k:'bestiario', ic:'🐉', nome:'Bestiário'},
   {k:'itens',     ic:'🎒', nome:'Itens'},
   {k:'mapa',      ic:'🗺️', nome:'Mapa'},
@@ -97,7 +97,8 @@ function mpane(k){
   const head=h('div',{class:'mpane-head'},
     h('div',{class:'mpane-title'}, h('span',{class:'mpane-ic'},t.ic), t.nome),
     h('button',{class:'mpane-x', title:'Fechar painel', onclick:()=>fecharPainel(k)},'✕'));
-  return h('section',{class:'mpane '+lado},
+  /* o editor do Sistema precisa de largura: ocupa a linha inteira, no topo */
+  return h('section',{class:'mpane '+lado+(k==='sistema'?' wide':'')},
     head, h('div',{class:'mpane-body'}, secView(k)));
 }
 

@@ -328,8 +328,8 @@ function mestreView(){
   else if(S.tab==='atributos') content=tabAtributos(sys);
   else if(S.tab==='recursos') content=tabRecursos(sys);
   else if(S.tab==='pericias') content=tabPericias(sys);
-  else if(S.tab==='classes') content=featureCard(sys, sys.classes, 'Classes', 'Clique numa classe para editar descrição, habilidades e requisitos.', 'classe');
-  else if(S.tab==='racas') content=featureCard(sys, sys.origins, 'Origem / Raça', 'Efeitos, habilidades (com requisitos) e características físicas.', 'raca');
+  else if(S.tab==='classes') content=tabArquetipos(sys,'classe');   /* classes-origens.js */
+  else if(S.tab==='racas') content=tabArquetipos(sys,'origem');
   else if(S.tab==='escolhas') content=tabEscolhas(sys);
   else if(S.tab==='itens') content=tabItens(sys);
   else if(S.tab==='condicoes') content=tabCondicoes(sys);

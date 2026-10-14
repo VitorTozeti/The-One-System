@@ -319,7 +319,9 @@ function sanitizeSystem(sys){
   if(typeof sys.campaignName!=='string') sys.campaignName='Campanha';
   if(typeof sys.levelName!=='string'||!sys.levelName.trim()) sys.levelName='Nível';
   sys.progression=sanitizeProg(sys.progression);
-  sys.classes.forEach(c=>{ c.progression=sanitizeProg(c.progression); });
+  sys.classes.forEach(c=>{ c.progression=sanitizeProg(c.progression); sanitizeArquetipo(c,'classe'); });
+  sys.origins.forEach(o=>sanitizeArquetipo(o,'origem'));
+  if(typeof sys.codigoBloqueado!=='boolean') sys.codigoBloqueado=false;
   sys.resources.forEach(r=>{
     if(!r.recharge||typeof r.recharge!=='object') r.recharge={trig:'nunca',amt:'tudo',formula:''};
     if(typeof r.perRound!=='string') r.perRound='';
@@ -535,6 +537,7 @@ function initDraft(sys){
     skillTier:{},      /* peça 2: {skillId:tierId} */
     conditions:[],     /* peça 5: [{cid,condId,nivel}] */
     techniques:[],     /* peça 8: técnicas autorais do jogador */
+    classTechs:[],     /* técnicas de classe escolhidas (ids das opções) */
   };
 }
 /* Garante que um rascunho antigo (salvo antes destas peças) tenha os campos novos. */
@@ -544,6 +547,7 @@ function sanitizeDraft(d,sys){
   if(!d.skillTier||typeof d.skillTier!=='object') d.skillTier={};
   if(!Array.isArray(d.conditions)) d.conditions=[];
   if(!Array.isArray(d.techniques)) d.techniques=[];
+  if(!Array.isArray(d.classTechs)) d.classTechs=[];
   if(!Array.isArray(d.inventory)) d.inventory=[];
   d.inventory.forEach(e=>{
     if(!e.iid) e.iid=uid();
@@ -575,7 +579,15 @@ function applyEffectTo(ef, B, mult){
   const k=mult==null?1:mult;               /* trilha de níveis (exaustão) multiplica o valor */
   const v=(+ef.value||0)*k;
   if(ef.kind==='atributo'){ if(ef.targetId) B.attrBonus[ef.targetId]=(B.attrBonus[ef.targetId]||0)+v; }
-  else if(ef.kind==='recurso'){ if(ef.targetId) B.resBonus[ef.targetId]=(B.resBonus[ef.targetId]||0)+v; }
+  else if(ef.kind==='recurso'){ if(!ef.targetId) return;
+    /* com fórmula ("Nível * 2"), o valor só é conhecido no cálculo da ficha */
+    if(String(ef.formula||'').trim()) (B.resFormulas||(B.resFormulas=[])).push({resId:ef.targetId,formula:ef.formula,k});
+    else B.resBonus[ef.targetId]=(B.resBonus[ef.targetId]||0)+v; }
+  else if(ef.kind==='rolagem'){ const es=ef.escopo||'todos'; B.rollBonus[es]=(B.rollBonus[es]||0)+v; }
+  else if(ef.kind==='resistencia'){ const nm=String(ef.text||'').trim(); if(nm) registrarResist(B,nm,ef.modo||'reduz',v); }
+  else if(ef.kind==='capacidade'){ const nm=String(ef.text||'').trim(); if(nm) B.caps[nm]=Math.max(B.caps[nm]||0, v); }
+  else if(ef.kind==='tecnicas'){ B.techExtra+=v; }
+  else if(ef.kind==='codigo'){ rodarEfeitoCodigo(ef,B,k); }
   else if(ef.kind==='pericia'){ if(ef.targetId && !B.grantedSkills.includes(ef.targetId)) B.grantedSkills.push(ef.targetId); }
   else if(ef.kind==='caracteristica'){ const nm=(ef.text||'').trim(); if(nm){
     if(ef.charType==='num') B.charNum[nm]=(B.charNum[nm]||0)+v;
@@ -589,6 +601,7 @@ function diceModDe(B, escopo){ return (B.diceMod&&((B.diceMod.todos||0)+(B.diceM
 function attrOnlyTo(ef, tot1){
   if(!ef) return;
   if(ef.kind==='atributo'){ if(ef.targetId) tot1[ef.targetId]=(tot1[ef.targetId]||0)+(+ef.value||0); }
+  else if(ef.kind==='tecnicas'||ef.kind==='codigo') return;   /* não mexem em atributo na 1ª passagem */
   else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1)); }
 }
 /* efeitos com requisitos (2 passagens p/ liberar habilidades) */
@@ -627,8 +640,13 @@ function gatherEffects(sys,d){
   const cls=sys.classes.find(c=>c.id===d.classId);
   const org=sys.origins.find(o=>o.id===d.originId);
   const sources=[];
-  if(cls)(cls.abilities||[]).forEach(a=>sources.push({ab:a,src:'classe'}));
-  if(org)(org.abilities||[]).forEach(a=>sources.push({ab:a,src:'raça'}));
+  if(cls)(cls.abilities||[]).forEach(a=>sources.push({ab:a,src:'classe',tipo:'habilidade'}));
+  if(org)(org.abilities||[]).forEach(a=>sources.push({ab:a,src:'origem',tipo:'habilidade'}));
+  /* traços físicos da origem (Asas, Guelras…) agora carregam efeitos de verdade */
+  if(org)(org.traits||[]).forEach(t=>sources.push({ab:t,src:'traço',tipo:'traco'}));
+  /* técnicas de classe escolhidas pelo jogador */
+  if(cls){ const ops=((cls.tecnicas||{}).opcoes)||[];
+    (d.classTechs||[]).forEach(id=>{ const op=ops.find(o=>o.id===id); if(op) sources.push({ab:op,src:'técnica',tipo:'tecnica'}); }); }
   /* PEÇA 1 — cada opção escolhida entra como uma fonte igual às outras */
   const escolhidas=escolhasAtivas(sys,d);
   escolhidas.forEach(({ch,op})=>sources.push({ab:op,src:ch.name}));
@@ -656,11 +674,13 @@ function gatherEffects(sys,d){
       (sys.choices||[]).forEach(c=>(c.options||[]).forEach(o=>{ if(o.id===oid) nome=o.name; }));
       out.push('Requer: '+nome); } });
     return out; };
-  const B={attrBonus:{},resBonus:{},grantedSkills:[],charNum:{},charTags:[],diceMod:{}};
+  const B=novoBalde();
+  B.ctx={sys,d,tot1,level,fonte:''};
   const active=[],locked=[];
-  sources.forEach(({ab,src})=>{ const rs=reasonsFor(ab);
-    if(rs.length){ locked.push({ab,src,reasons:rs}); return; }
-    active.push({ab,src});
+  sources.forEach(({ab,src,tipo})=>{ const rs=reasonsFor(ab);
+    if(rs.length){ locked.push({ab,src,tipo,reasons:rs}); return; }
+    active.push({ab,src,tipo});
+    B.ctx.fonte=ab.name||src;
     (ab.effects||[]).forEach(ef=>applyEffectTo(ef,B));
   });
   /* itens equipados aplicam efeitos como qualquer outra fonte */
@@ -673,6 +693,7 @@ function gatherEffects(sys,d){
   return {cls,org,active,locked,equipped,escolhidas,condAtivas,
     attrBonus:B.attrBonus,resBonus:B.resBonus,grantedSkills:B.grantedSkills,
     charNum:B.charNum,charTags:B.charTags,diceMod:B.diceMod,B,
+    rollBonus:B.rollBonus,resist:B.resist,caps:B.caps,notas:B.notas,erros:B.erros,techExtra:B.techExtra,
     abilities:active.map(x=>x.ab)};
 }
 /* PEÇA 7 — relação direcional entre tags: multiplicador de dano + modificador de dados.
@@ -698,6 +719,12 @@ function effectLabel(sys,ef){
   if(ef.kind==='caracteristica'){const nm=(ef.text||'').trim()||'?'; return ef.charType==='num'?('◆ '+nm+' '+sign(+ef.value||0)):('🏷 '+nm);}
   if(ef.kind==='dados'){const e=(DICE_ESCOPOS.find(x=>x[0]===(ef.escopo||'todos'))||[,'?'])[1];
     return '🎲 '+sign(+ef.value||0)+'d em '+e;}
+  if(ef.kind==='recurso'&&String(ef.formula||'').trim()){const r=sys.resources.find(x=>x.id===ef.targetId);return '+('+ef.formula+') '+(r?r.name:'?');}
+  if(ef.kind==='rolagem'){const e=(DICE_ESCOPOS.find(x=>x[0]===(ef.escopo||'todos'))||[,'?'])[1]; return '⚔ '+sign(+ef.value||0)+' em '+e;}
+  if(ef.kind==='resistencia') return resistLabel(ef.text,ef.modo||'reduz',+ef.value||0);
+  if(ef.kind==='capacidade'){const c=capInfo(ef.text); return c.ic+' '+(ef.text||'?')+((+ef.value||0)>0?(' '+ef.value+(c.un||'')):'');}
+  if(ef.kind==='tecnicas') return '🌀 '+sign(+ef.value||0)+' técnica(s) de classe';
+  if(ef.kind==='codigo') return '⌨ '+(String(ef.text||'').trim()||'efeito por código');
   return '';
 }
 function reqTags(sys,ab){ const r=ab.req||{}; const out=[];
@@ -719,5 +746,7 @@ function importarSistemaTexto(texto){
   const sys=migrateSystem(o);
   if(!sys) return {erro:'Não foi possível migrar o sistema para a versão atual.'};
   if(!sys.sheet || !Array.isArray(sys.sheet.blocks)) return {erro:'O sistema está sem a ficha (arquivo corrompido).'};
+  /* efeito por código vindo de fora não roda até o Mestre ler e liberar */
+  if(sistemaTemCodigo(sys)) sys.codigoBloqueado=true;
   return {sys};
 }

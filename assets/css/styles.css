@@ -1,6 +1,6 @@
   :root{
     --bg:#0b1020; --panel:#141a2e; --panel2:#101527; --line:#2a3350;
-    --txt:var(--txt); --muted:#a9b6ca; --dim:#8696ad;
+    --txt:#e2e8f0; --muted:#a9b6ca; --dim:#8696ad;
     --indigo:#6366f1; --indigo2:#4f46e5; --emerald:#10b981; --amber:#d97706; --rose:#e11d48;
     --surf:#1e293b; --surf2:#0f1729; --line2:#334155;
     --acc-txt:#c7d2fe; --acc-txt2:#a5b4fc; --warn-txt:#fbbf24; --rose-txt:#fda4af; --ok-txt:#6ee7b7;
@@ -14,7 +14,7 @@
   ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px}
 
   header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--surf)}
-  .bar{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .bar{max-width:1700px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
   .logo{font-weight:900;letter-spacing:.5px}
   .logo span{color:var(--indigo)}
   .logo small{display:block;font-size:10px;color:var(--dim);font-weight:400;letter-spacing:1px}
@@ -158,10 +158,10 @@
   .tab.on{background:var(--indigo2);color:#fff}
   .tab:hover:not(.on){color:#fff;background:var(--surf)}
 
-  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
   .card h3{margin:0;font-size:15px;color:var(--acc-txt)}
-  .hint{font-size:12px;color:var(--muted);margin-top:3px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
 
   label.f{display:block}
   label.f > span{font-size:12px;color:var(--muted)}
@@ -173,14 +173,15 @@
   .g3{grid-template-columns:1fr 1fr 1fr}
   @media(max-width:560px){.g3{grid-template-columns:1fr 1fr}}
 
-  .btn{border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;background:var(--line2);color:#fff;transition:.15s}
+  .btn{border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;background:var(--surf);color:var(--txt);border:1px solid var(--line);transition:.15s;line-height:1.2}
   .btn:hover{filter:brightness(1.12)}
-  .btn.primary{background:var(--indigo2)}
-  .btn.emerald{background:var(--emerald);color:#04231a}
-  .btn.amber{background:var(--amber)}
-  .btn.danger{background:#9f1239}
-  .btn.ghost{background:transparent;border:1px solid var(--line)}
-  .btn.sm{padding:5px 9px;font-size:12px}
+  .btn.primary{background:var(--indigo2);border-color:var(--indigo2);color:#fff}
+  .btn.emerald{background:var(--emerald);border-color:var(--emerald);color:#04231a}
+  .btn.amber{background:var(--amber);border-color:var(--amber);color:#fff}
+  .btn.danger{background:#9f1239;border-color:#9f1239;color:#fff}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .btn.ghost:hover{background:color-mix(in srgb,var(--indigo) 10%,transparent);border-color:var(--indigo)}
+  .btn.sm{padding:6px 10px;font-size:12.5px}
   .btn.mini{padding:6px 0;width:38px;text-align:center}
   .btn[disabled]{opacity:.4;cursor:not-allowed}
 
@@ -274,7 +275,7 @@
 
   /* ---- Editor de layout em canvas (posição livre) ---- */
   .cv-fit{overflow:hidden;position:relative;width:100%}
-  .cv{position:relative;transform-origin:0 0;background:#0b1020;border-radius:14px}
+  .cv{position:relative;transform-origin:0 0;background:var(--bg);box-shadow:0 0 0 1px var(--line);border-radius:14px}  /* papel segue o tema (fundo fixo escuro deixava os blocos cinza-lama nos temas claros) */
   .cv.edit{border:1px solid var(--line)}
   /* a grade agora é opcional e tem tamanho configurável (--g) */
   .cv.edit.com-grade{background-image:linear-gradient(color-mix(in srgb,var(--indigo) 9%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--indigo) 9%,transparent) 1px,transparent 1px);background-size:var(--g,20px) var(--g,20px)}
@@ -475,7 +476,7 @@
   .mrail::-webkit-scrollbar, .mpane-body::-webkit-scrollbar{width:0;height:0;display:none}
 
   /* ---- menus laterais (rails) ---- */
-  .mrail{position:sticky;top:70px;flex:0 0 156px;width:156px;display:flex;flex-direction:column;gap:6px;
+  .mrail{position:sticky;top:76px;flex:0 0 172px;width:172px;display:flex;flex-direction:column;gap:6px;
          max-height:calc(100vh - 86px);overflow:auto;padding-bottom:8px}
   .mrail-dot{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:999px;background:currentColor;opacity:.9}
   .mrail-title{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);font-weight:800;padding:2px 6px 4px}
@@ -492,7 +493,7 @@
 
   /* ---- área central com os painéis (vários ao mesmo tempo, quebram em linha) ---- */
   .mpanes{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
-  .mpane{flex:1 1 360px;min-width:300px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+  .mpane{flex:1 1 420px;min-width:320px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
          display:flex;flex-direction:column;overflow:hidden;
          min-height:420px;max-height:calc(100vh - 104px)}
   .mpane.left{border-top:3px solid var(--indigo)}
@@ -503,7 +504,8 @@
   .mpane-ic{font-size:17px}
   .mpane-x{background:transparent;color:var(--dim);font-size:15px;font-weight:700;border-radius:8px;padding:4px 9px;line-height:1}
   .mpane-x:hover{background:rgba(255,255,255,.08);color:var(--txt)}
-  .mpane-body{flex:1;min-width:0;padding:16px;overflow:auto}
+  .mpane-body{flex:1;min-width:0;padding:20px 22px;overflow:auto}
+  .mpane.wide{flex:1 1 100%;order:-1}
   .mpane.empty{align-items:center;justify-content:center;border-top-color:var(--line);border-style:dashed}
   .mpane-empty{text-align:center;color:var(--muted);font-size:14px;padding:30px;line-height:1.6}
   .mpane-empty-ic{font-size:34px;margin-bottom:8px;opacity:.7}

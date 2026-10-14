@@ -4,6 +4,8 @@
    ciclo "ajustar → ver". Não bloqueia nada: se o sistema está incompleto, mostra o que há. */
 function fichaVivaAberta(){
   if(S.view!=='mestre'||S.tab==='ficha') return false;
+  /* sem preferência salva: em tela estreita começa recolhida (a gaveta cobriria o editor) */
+  if(S.ui.live==null) return window.innerWidth>=1380;
   return S.ui.live!==false;
 }
 function fichaVivaNivel(sys){
@@ -12,7 +14,7 @@ function fichaVivaNivel(sys){
   return Math.min(hi,Math.max(lo,Number.isNaN(n)?lo:n));
 }
 function fichaVivaAlternar(){
-  S.ui.live=!(S.ui.live!==false); store('nexus_live',!!S.ui.live); render();
+  S.ui.live=!fichaVivaAberta(); store('nexus_live',!!S.ui.live); render();
 }
 function fichaVivaCorpo(sys){
   const lvl=fichaVivaNivel(sys), lo=sys.startLevel||1, hi=Math.max(lo,sys.maxLevel||lo);

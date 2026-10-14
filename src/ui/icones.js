@@ -86,7 +86,8 @@ const ICONES={
   '🧰':['kit','<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'],
 };
 const _icRx=new RegExp('('+Object.keys(ICONES).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\uFE0F?','g');
-const _icSkip='input,textarea,select,option,script,style,svg,.blk-body,.cond-chip,[data-noicon]';
+/* ícones de classe/origem/traço e rótulos de efeito são CONTEÚDO escolhido pelo Mestre: ficam como emoji */
+const _icSkip='input,textarea,select,option,script,style,svg,.blk-body,.cond-chip,[data-noicon],.arq-ic,.arq-ic-b,.arq-pick-t,.car-chip,.pv-chip,.tg-fx,.hab-res,.arq-l';
 function iconSvg(emoji){
   const d=ICONES[emoji]; if(!d) return null;
   const s=document.createElement('span'); s.className='ic'; s.setAttribute('aria-hidden','true');

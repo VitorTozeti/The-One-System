@@ -778,76 +778,14 @@ function grupoBox(sh,sels){
     h('div',{class:'hint',style:{marginTop:'6px'}},'O "mesmo tamanho" usa o bloco principal (borda cheia) como referência.'));
 }
 
-/* ---------- Editor de Classes / Raças (acordeão) ---------- */
-function featureCard(sys, list, title, hint, kind){
-  const isRace = kind==='raca';
-  const addLabel = isRace?'Raça':'Classe';
-  return card(title, hint,
-    h('button',{class:'btn primary',onclick:()=>{const it={id:uid(),name:'Nova '+addLabel,description:'',abilities:[]}; if(isRace)it.traits=[]; list.push(it); S.ui.open[it.id]=true; render();}},'+ '+addLabel),
-    isRace?bibliotecaOrigens(sys):bibliotecaClasses(sys),
-    ...list.map(c=>featureItem(sys,list,c,kind)));
-}
-function featureItem(sys,list,c,kind){
-  const isRace=kind==='raca';
-  const open=!!S.ui.open[c.id];
-  const nAb=(c.abilities||[]).length, nTr=isRace?((c.traits||[]).length):0;
-  const header=h('div',{class:'acc-head',onclick:()=>{S.ui.open[c.id]=!open;render();}},
-    h('div',{class:'row'}, h('span',{class:'acc-caret'},open?'▼':'▶'), h('span',{class:'acc-title'},c.name||'(sem nome)')),
-    h('div',{class:'row'}, h('span',{class:'acc-meta'}, nAb+' hab.'+(isRace?(' · '+nTr+' traços'):'')),
-      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();comDesfazer((isRace?'Origem':'Classe')+' “'+(c.name||'sem nome')+'” excluída',()=>{const i=list.indexOf(c);list.splice(i,1);delete S.ui.open[c.id];});}},'✕')));
-  if(!open) return h('div',{class:'acc'}, header);
-  const body=h('div',{class:'acc-body'},
-    h('div',{style:{marginTop:'12px'}}, field('Nome', h('input',{class:'in',value:c.name,oninput:e=>{c.name=e.target.value;persist();},onchange:()=>render()}))),
-    h('div',{style:{marginTop:'8px'}}, field('Descrição', h('textarea',{class:'in',rows:'2',value:c.description||'',oninput:e=>{c.description=e.target.value;persist();}}))),
-    isRace?traitEditor(c):null,
-    h('div',{class:'sub-h'}, isRace?'Efeitos / Habilidades da raça':'Habilidades da classe'),
-    abilityEditor(sys,c),
-    /* tabela própria: as colunas daqui valem só para quem tem esta classe e
-       sobrescrevem as do sistema quando o nome coincide */
-    isRace?null:h('div',{},
-      h('div',{class:'sub-h'},'Tabela de progressão desta classe'),
-      h('div',{class:'hint',style:{marginTop:'-4px',marginBottom:'8px'}},
-        'Só vale para quem escolher esta classe. Serve para recursos que mudam de fórmula por classe (PV/PE por nível, espaços de magia, dado de ataque).'),
-      progEditor(sys, (c.progression=sanitizeProg(c.progression)), {})));
-  return h('div',{class:'acc'}, header, body);
-}
-function traitEditor(c){
-  if(!c.traits) c.traits=[];
-  return h('div',{},
-    h('div',{class:'sub-h'},'Características físicas'),
-    h('div',{class:'hint',style:{marginTop:'-4px',marginBottom:'8px'}},'Traços do corpo — ex.: Asas, Cauda, Chifres. Nem toda raça tem.'),
-    ...c.traits.map(t=>h('div',{class:'trait-row'},
-      h('input',{class:'in',style:{maxWidth:'150px'},value:t.name,placeholder:'Ex.: Asas',oninput:e=>{t.name=e.target.value;persist();}}),
-      h('input',{class:'in',value:t.description||'',placeholder:'Descrição/efeito',oninput:e=>{t.description=e.target.value;persist();}}),
-      h('button',{class:'btn danger sm',onclick:()=>{c.traits=c.traits.filter(x=>x.id!==t.id);render();}},'✕'))),
-    h('button',{class:'btn ghost sm',onclick:()=>{c.traits.push({id:uid(),name:'Nova característica',description:''});render();}},'+ Característica'));
-}
-function abilityEditor(sys, owner){
-  if(!owner.abilities) owner.abilities=[];
-  const wrap=h('div',{});
-  owner.abilities.forEach(ab=>{
-    if(!ab.effects) ab.effects=[];
-    if(!ab.req) ab.req={level:0,attrs:[]};
-    wrap.appendChild(h('div',{class:'ability-card'},
-      h('div',{class:'row'},
-        h('input',{class:'in',value:ab.name,placeholder:'Nome da habilidade',oninput:e=>{ab.name=e.target.value;persist();},onchange:()=>render()}),
-        h('button',{class:'btn danger sm',onclick:()=>{owner.abilities=owner.abilities.filter(x=>x.id!==ab.id);render();}},'✕')),
-      h('input',{class:'in',style:{marginTop:'6px'},value:ab.description,placeholder:'O que ela faz (descrição)',oninput:e=>{ab.description=e.target.value;persist();}}),
-      reqEditor(sys,ab),
-      h('div',{class:'sub-h2'},'Efeitos mecânicos'),
-      ...ab.effects.map(ef=>effectRow(sys,ab.effects,ef,0)),
-      h('button',{class:'btn ghost sm',onclick:()=>{ab.effects.push(newEffect(sys));render();}},'+ Efeito'),
-      h('div',{class:'tags'}, ...reqTags(sys,ab).map(t=>h('span',{class:'tg-req'},'🔒 '+t)), ...ab.effects.map(ef=>h('span',{class:'tg-fx'},effectLabel(sys,ef))))));
-  });
-  wrap.appendChild(h('button',{class:'btn sm',onclick:()=>{owner.abilities.push({id:uid(),name:'Nova Habilidade',description:'',req:{level:0,attrs:[]},effects:[]});render();}},'+ Habilidade'));
-  return wrap;
-}
-function reqEditor(sys,ab){
+/* ---------- Requisitos e efeitos (usados por classes, origens, escolhas, itens e condições) ---------- */
+/* semNivel: o nível já é editado no cabeçalho do cartão (linha do tempo de classes/origens) */
+function reqEditor(sys,ab,semNivel){
   if(!ab.req) ab.req={level:0,attrs:[]};
   return h('div',{class:'req-box'},
-    h('div',{class:'lbl'},'REQUISITOS PARA LIBERAR'),
+    h('div',{class:'lbl'},semNivel?'REQUISITOS EXTRAS (ATRIBUTO)':'REQUISITOS PARA LIBERAR'),
     h('div',{class:'row wrapf',style:{alignItems:'flex-end'}},
-      field('Requer nível', h('input',{class:'in',type:'number',style:{width:'90px'},value:ab.req.level||0,onchange:e=>{ab.req.level=parseInt(e.target.value)||0;render();}})),
+      semNivel?null:field('Requer nível', h('input',{class:'in',type:'number',style:{width:'90px'},value:ab.req.level||0,onchange:e=>{ab.req.level=parseInt(e.target.value)||0;render();}})),
       h('button',{class:'btn ghost sm',onclick:()=>{ab.req.attrs.push({id:uid(),attrId:(sys.attributes[0]||{}).id,min:1});render();}},'+ Requisito de atributo')),
     ...ab.req.attrs.map(r=>{
       const sel=h('select',{class:'in',style:{maxWidth:'150px'},onchange:e=>{r.attrId=e.target.value;persist();}});
@@ -863,20 +801,64 @@ function newEffect(sys){ return {id:uid(),kind:'atributo',targetId:(sys.attribut
    de um efeito único (não aninha outro efeito único). */
 function effectRow(sys,arr,ef,depth){
   depth=depth||0;
-  const kinds=[['atributo','Bônus de Atributo'],['recurso','Bônus de Recurso'],['pericia','Concede Perícia'],
-    ['caracteristica','Característica'],['dados','🎲 Modificador de DADOS']];
-  if(depth===0) kinds.push(['livre','Efeito único (texto + mods)']);
-  const kindSel=h('select',{class:'in',style:{maxWidth:'190px'},onchange:e=>{
+  const grupos=[
+    ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],
+    ['Defesa e corpo',[['resistencia','🛡 Resistência / imunidade / vulnerabilidade'],['capacidade','🪽 Capacidade (voo, natação, visão no escuro…)'],['caracteristica','🏷 Característica (etiqueta ou número)']]],
+    ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra']]],
+    ['Especial',depth===0?[['livre','✨ Efeito único (texto + várias modificações)'],['codigo','⌨ Efeito por código (JavaScript)']]:[['codigo','⌨ Efeito por código (JavaScript)']]],
+  ];
+  const kindSel=h('select',{class:'in ef-kind',onchange:e=>{
     ef.kind=e.target.value;
     if(ef.kind==='atributo')ef.targetId=(sys.attributes[0]||{}).id;
     else if(ef.kind==='recurso')ef.targetId=(sys.resources[0]||{}).id;
     else if(ef.kind==='pericia')ef.targetId=(sys.skills[0]||{}).id;
     else if(ef.kind==='caracteristica'){ if(!ef.charType)ef.charType='tag'; }
     else if(ef.kind==='livre'){ if(!Array.isArray(ef.mods))ef.mods=[]; }
+    else if(ef.kind==='rolagem'){ if(!ef.escopo)ef.escopo='ataque'; if(!ef.value)ef.value=1; }
+    else if(ef.kind==='resistencia'){ if(!ef.modo)ef.modo='reduz'; if(ef.value==null||ef.value<0)ef.value=2; }
+    else if(ef.kind==='capacidade'){ if(!ef.text)ef.text='Voo'; }
+    else if(ef.kind==='tecnicas'){ ef.value=1; }
+    else if(ef.kind==='codigo'){ if(ef.code==null) ef.code=CODIGO_EXEMPLO; }
     render();
   }});
-  kinds.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===ef.kind)o.selected=true;kindSel.appendChild(o);});
+  grupos.forEach(([g,l])=>{ const og=h('optgroup',{label:g});
+    l.forEach(([v,t])=>{const o=h('option',{value:v},t);if(v===ef.kind)o.selected=true;og.appendChild(o);}); kindSel.appendChild(og); });
   const del=h('button',{class:'btn danger sm',onclick:()=>{const i=arr.indexOf(ef);if(i>=0)arr.splice(i,1);render();}},'✕');
+
+  const numIn=(w,title)=>h('input',{class:'in',type:'number',style:{width:w||'76px'},value:ef.value==null?0:ef.value,title:title||'',
+    onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}});
+  const escSel=()=>{ const s2=h('select',{class:'in',style:{maxWidth:'170px'},onchange:e=>{ef.escopo=e.target.value;render();}});
+    DICE_ESCOPOS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.escopo||'todos'))o.selected=true;s2.appendChild(o);}); return s2; };
+
+  /* BÔNUS EM ROLAGEM — "mais força": +2 nos ataques, +1 no dano, +2 na defesa */
+  if(ef.kind==='rolagem'){
+    return h('div',{class:'ef-row'}, kindSel, numIn('76px','Bônus fixo somado ao total'), h('span',{class:'hint'},'em'), escSel(), del);
+  }
+  /* RESISTÊNCIA — tipo de dano livre (ou tag do sistema) + modo */
+  if(ef.kind==='resistencia'){
+    const lid='dl-tipos-'+ef.id;
+    const tipos=[...new Set([...(sys.tags||[]).map(t=>t.name),'Fogo','Frio','Ácido','Elétrico','Veneno','Necrótico','Psíquico','Físico','Corte','Perfuração','Impacto','Sono','Medo','Doença'])];
+    const modoSel=h('select',{class:'in',style:{maxWidth:'210px'},onchange:e=>{ef.modo=e.target.value;render();}});
+    RESIST_MODOS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.modo||'reduz'))o.selected=true;modoSel.appendChild(o);});
+    return h('div',{class:'ef-row'}, kindSel, modoSel,
+      (ef.modo||'reduz')==='reduz'?numIn('70px','Quanto de dano é reduzido'):null,
+      h('input',{class:'in',style:{maxWidth:'170px'},list:lid,value:ef.text||'',placeholder:'Tipo (ex.: Fogo)',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}),
+      h('datalist',{id:lid},...tipos.map(t=>h('option',{value:t}))), del);
+  }
+  /* CAPACIDADE — movimento/sentido; valor opcional (metros) */
+  if(ef.kind==='capacidade'){
+    const lid='dl-cap-'+ef.id;
+    return h('div',{class:'ef-row'}, kindSel,
+      h('input',{class:'in',style:{maxWidth:'190px'},list:lid,value:ef.text||'',placeholder:'Ex.: Voo',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}),
+      h('datalist',{id:lid},...CAPACIDADES.map(c=>h('option',{value:c.n}))),
+      numIn('76px','Alcance/deslocamento (0 = só a capacidade)'), h('span',{class:'hint'},'m (0 = sem valor)'), del);
+  }
+  /* TÉCNICA EXTRA — quantas técnicas de classe a mais o personagem escolhe */
+  if(ef.kind==='tecnicas'){
+    return h('div',{class:'ef-row'}, kindSel, numIn('70px'), h('span',{class:'hint'},'técnica(s) de classe a mais para escolher'), del);
+  }
+  /* CÓDIGO — JavaScript do Mestre; recebe `fx` */
+  if(ef.kind==='codigo') return codigoEditor(sys,ef,kindSel,del);
 
   /* CANAL DE DADOS — mexe na QUANTIDADE de dados, não no total (peça 4).
      É o "−1d20" do Ordem: não se converte em número e não some com bônus fixo. */
@@ -923,9 +905,16 @@ function effectRow(sys,arr,ef,depth){
   const listp=ef.kind==='atributo'?sys.attributes:ef.kind==='recurso'?sys.resources:sys.skills;
   const targetCtrl=h('select',{class:'in',onchange:e=>{ef.targetId=e.target.value;render();}});
   listp.forEach(it=>{const o=h('option',{value:it.id},it.name);if(it.id===ef.targetId)o.selected=true;targetCtrl.appendChild(o);});
-  const valInput=(ef.kind==='atributo'||ef.kind==='recurso')
-    ? h('input',{class:'in',type:'number',style:{width:'72px'},value:ef.value,onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}) : null;
-  return h('div',{class:'row wrapf',style:{marginBottom:'6px'}}, kindSel, targetCtrl, valInput, del);
+  const usaFormula=ef.kind==='recurso'&&ef.formula!=null;
+  const valInput=(ef.kind==='atributo'||(ef.kind==='recurso'&&!usaFormula))
+    ? h('input',{class:'in',type:'number',style:{width:'76px'},value:ef.value,onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}) : null;
+  /* recurso: valor fixo OU fórmula que cresce ("Nível * 2" = +2 de Vida por nível) */
+  const fBtn=ef.kind==='recurso'?h('button',{class:'btn sm ghost',type:'button',title:usaFormula?'Voltar a um número fixo':'Usar uma fórmula (ex.: Nível * 2)',
+    onclick:()=>{ if(usaFormula) delete ef.formula; else ef.formula='Nível * 2'; render(); }}, usaFormula?'123 fixo':'ƒ fórmula'):null;
+  return h('div',{},
+    h('div',{class:'ef-row'}, kindSel, targetCtrl, valInput, fBtn, del),
+    usaFormula?h('div',{class:'ef-sub'}, h('span',{class:'hint'},'Soma ao máximo: '),
+      campoFormula(sys,ef,'formula',{tipo:'recarga',placeholder:'Nível * 2',aoMudar:()=>render()})):null);
 }
 
 function portCard(){

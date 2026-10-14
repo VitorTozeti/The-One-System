@@ -1,0 +1,123 @@
+/* classes.css — editor de Classes/Origens (classes-origens.js) e blocos da ficha ligados a eles */
+
+/* ---------- efeitos: linha padrão ---------- */
+.ef-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.ef-row .in{margin-top:0}
+.ef-kind{max-width:250px}
+.ef-sub{margin:-2px 0 10px 12px;padding-left:10px;border-left:2px solid var(--line)}
+.rec-sel{max-width:210px;margin-top:0}
+
+/* ---------- master-detail ---------- */
+.arq-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:900px){.arq-wrap{grid-template-columns:1fr}}
+.arq-lista{display:flex;flex-direction:column;gap:10px;position:sticky;top:8px}
+.arq-lista .in{margin-top:0}
+.arq-cards{display:flex;flex-direction:column;gap:8px}
+@media(max-width:900px){.arq-lista{position:static}.arq-cards{flex-direction:row;flex-wrap:wrap}.arq-card{flex:1 1 180px}}
+.arq-card{--arq:var(--indigo);display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:12px;
+  background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--arq);color:var(--txt);transition:.12s}
+.arq-card:hover{border-color:var(--arq);transform:translateX(2px)}
+.arq-card.sel{background:color-mix(in srgb,var(--arq) 14%,var(--panel));border-color:var(--arq);box-shadow:0 0 0 1px var(--arq) inset}
+.arq-ic{flex:0 0 38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:color-mix(in srgb,var(--arq) 22%,transparent)}
+.arq-txt{display:flex;flex-direction:column;min-width:0}
+.arq-txt b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arq-txt small{font-size:11.5px;color:var(--muted)}
+
+.arq-edit{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
+.arq-edit.vazio{padding:30px;text-align:center;color:var(--muted)}
+.arq-cab{--arq:var(--indigo);display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--arq) 20%,var(--panel)),var(--panel));border-bottom:1px solid var(--line)}
+.arq-ic-g{display:flex;flex-direction:column;align-items:center;gap:6px}
+.arq-ic-in{width:56px;height:56px;font-size:28px;text-align:center;padding:0;margin:0;border-radius:14px;border:2px solid var(--arq)}
+.arq-cor{width:56px;height:22px;border:none;background:transparent;padding:0;cursor:pointer}
+.arq-cab-t{flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px}
+.arq-nome{font-size:20px;font-weight:800;margin:0;background:transparent;border-color:transparent;padding:6px 8px}
+.arq-nome:hover,.arq-nome:focus{border-color:var(--line);background:var(--surf2)}
+.arq-ics{display:flex;flex-wrap:wrap;gap:4px}
+.arq-ic-b{background:transparent;border:1px solid transparent;border-radius:8px;font-size:16px;padding:3px 5px;line-height:1}
+.arq-ic-b:hover{border-color:var(--line)}
+.arq-ic-b.on{border-color:var(--arq);background:color-mix(in srgb,var(--arq) 18%,transparent)}
+.arq-tabs{display:flex;gap:4px;flex-wrap:wrap;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--panel2)}
+.arq-tab{background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:9px 12px;border-radius:10px 10px 0 0;border:1px solid transparent;border-bottom:none;margin-bottom:-1px}
+.arq-tab:hover{color:var(--txt)}
+.arq-tab.on{background:var(--panel);color:var(--txt);border-color:var(--line)}
+.arq-corpo{padding:18px 20px 22px}
+.arq-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:1100px){.arq-grid2{grid-template-columns:1fr}}
+.arq-mapa{margin-top:14px}
+.arq-l{font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);line-height:1.45}
+.arq-l:last-child{border-bottom:none}
+.arq-l code,.arq-corpo .hint code{background:var(--surf2);border:1px solid var(--line);border-radius:6px;padding:0 5px;font-size:12px}
+.arq-rec{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--panel2)}
+.arq-rec .in{margin-top:0}
+
+/* prévia */
+.pv{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--panel2);display:flex;flex-direction:column;gap:10px}
+.pv-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pv-chip{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--txt)}
+.pv-chip.res,.pv-chip.imune{border-color:var(--emerald)}
+.pv-chip.vuln{border-color:var(--rose);color:var(--rose-txt)}
+
+/* habilidade (cartão recolhível) */
+.hab{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2);transition:border-color .12s}
+.hab.on{border-color:var(--indigo);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.hab-cab{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer}
+.hab-cab .in{margin-top:0}
+.hab-nome{flex:1;min-width:120px;font-weight:700;background:transparent;border-color:transparent}
+.hab-nome:hover,.hab-nome:focus{background:var(--surf2);border-color:var(--line)}
+.hab-ic{width:46px;text-align:center;font-size:17px;padding:6px 2px}
+.hab-nv{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);font-weight:700}
+.hab-nv .in{width:62px;padding:6px 8px}
+.hab-res{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px 34px;align-items:center}
+.hab-d{font-size:12.5px;color:var(--muted);flex:1 1 100%}
+.hab-corpo{padding:4px 14px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.hab-corpo > textarea{margin-top:10px}
+
+/* linha do tempo por nível */
+.tl{display:flex;flex-direction:column;gap:4px;position:relative}
+.tl-nv{position:relative;padding-left:26px}
+.tl-nv::before{content:'';position:absolute;left:11px;top:26px;bottom:-4px;width:2px;background:var(--line)}
+.tl-nv:last-child::before{display:none}
+.tl-marca{display:flex;align-items:center;gap:10px;margin:6px 0 8px -26px}
+.tl-bola{flex:0 0 24px;height:24px;border-radius:50%;background:var(--indigo2);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.tl-marca b{font-size:13.5px}
+.tl-add{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px;font-size:13px}
+.tl-add .in{margin-top:0}
+
+/* técnicas: quantas por nível */
+.tec-tab{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.tec-c{display:flex;flex-direction:column;align-items:center;min-width:64px;padding:6px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
+.tec-c small{font-size:10.5px;color:var(--muted)}
+.tec-c b{font-size:17px}
+
+/* código */
+.cod{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:color-mix(in srgb,var(--indigo) 4%,transparent)}
+.cod-in{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.5;tab-size:2;margin:4px 0 8px}
+.cod-out{white-space:pre-wrap;font-size:12.5px;margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--emerald) 10%,transparent);border:1px solid color-mix(in srgb,var(--emerald) 40%,transparent)}
+.cod-out.erro{background:color-mix(in srgb,var(--rose) 10%,transparent);border-color:color-mix(in srgb,var(--rose) 40%,transparent);color:var(--rose-txt)}
+.cod-api summary{cursor:pointer;font-size:12.5px;color:var(--muted);padding:6px 4px}
+.cod-api-l{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;padding:6px 4px}
+.cod-api-l div{display:contents}
+.cod-api-l code{font-size:11.5px;color:var(--acc-txt)}
+.cod-api-l span{color:var(--muted)}
+
+/* ---------- jogador: escolha de classe/origem e técnicas ---------- */
+.arq-pick{--arq:var(--indigo);display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:12px;
+  background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--arq);color:var(--txt)}
+.arq-pick:hover{border-color:var(--arq)}
+.arq-pick.on{background:color-mix(in srgb,var(--arq) 14%,var(--panel));border-color:var(--arq);box-shadow:0 0 0 1px var(--arq) inset}
+.arq-pick .arq-ic{flex-basis:42px;height:42px;font-size:22px}
+.arq-pick-t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.arq-pick-t b{font-size:15px}
+.arq-pick-t .d{font-size:12.5px;color:var(--muted)}
+.arq-pick-t .fx{font-size:12px;color:var(--acc-txt2)}
+.arq-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+
+/* ---------- ficha: blocos de características ---------- */
+.car-g{margin-bottom:8px}
+.car-t{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sheet-accent,var(--muted));margin-bottom:4px}
+.car-chips{display:flex;flex-wrap:wrap;gap:5px}
+.car-chip{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--surf2) 60%,transparent)}
+.car-chip.vuln{border-color:var(--rose);color:var(--rose-txt)}
+.abil .nv{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--surf);margin-right:6px}

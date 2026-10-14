@@ -6,6 +6,9 @@ function jogadorView(){
      escolha liberados no degrau do personagem. */
   const escolhasDisp=(sys.choices||[]).filter(c=>(c.level||1)<=d.level);
   const passos=[{k:'id',l:'Identidade'},{k:'attr',l:'Atributos'},{k:'skill',l:'Perícias'}];
+  const clsAtual=sys.classes.find(c=>c.id===d.classId);
+  const temTec=!!(clsAtual&&((clsAtual.tecnicas||{}).opcoes||[]).length);
+  if(temTec) passos.push({k:'tech',l:(clsAtual.tecnicas.nome||'Técnicas')});
   if(escolhasDisp.length) passos.push({k:'choice',l:'Escolhas'});
   passos.push({k:'sheet',l:'Ficha'});
   if(S.step>=passos.length) S.step=passos.length-1;
@@ -34,10 +37,23 @@ function jogadorView(){
     canNext=!!(d.name.trim() && d.classId && d.originId);
     const levelSel=h('select',{class:'in',onchange:e=>{d.level=parseInt(e.target.value);d.attrs=Object.fromEntries(sys.attributes.map(a=>[a.id,sys.startAttrValue]));d.skills=[];render();}});
     for(let lv=sys.startLevel;lv<=sys.maxLevel;lv++){const o=h('option',{value:lv},levelLabel(sys,lv));if(lv===d.level)o.selected=true;levelSel.appendChild(o);}
-    const featBtns=(listp,selKey,isRace)=>listp.map(c=>h('button',{class:'selectable '+(d[selKey]===c.id?'sel-i':''),style:{marginBottom:'8px'},onclick:()=>{d[selKey]=c.id;render();}},
-      h('div',{class:'t'},c.name), h('div',{class:'d'},c.description),
-      (c.abilities&&c.abilities.length)?h('div',{class:'fx'},'★ '+c.abilities.map(a=>a.name).join(' • ')):null,
-      (isRace&&c.traits&&c.traits.length)?h('div',{class:'tr'},'✦ '+c.traits.map(t=>t.name).join(' • ')):null));
+    /* cartão com ícone/cor e o que a classe/origem dá de verdade */
+    const featBtns=(listp,selKey,isRace)=>h('div',{class:'arq-picks'}, ...listp.map(c=>{
+      const on=d[selKey]===c.id;
+      const habs=(c.abilities||[]).slice().sort((a,b)=>((a.req||{}).level||0)-((b.req||{}).level||0))
+        .map(a=>(((a.req||{}).level||0)>1?('Nv'+a.req.level+' '):'')+a.name);
+      const recs=(c.recursos||[]).map(x=>{const r=sys.resources.find(q=>q.id===x.resId);return r?(r.name+(x.modo==='soma'?' +':' = ')+x.formula):null;}).filter(Boolean);
+      const tec=!isRace&&((c.tecnicas||{}).opcoes||[]).length?('🌀 '+c.tecnicas.opcoes.length+' '+(c.tecnicas.nome||'técnicas').toLowerCase()+' para escolher'):null;
+      return h('button',{type:'button',class:'arq-pick'+(on?' on':''),style:{'--arq':c.color||'var(--indigo)'},'aria-pressed':on?'true':'false',
+        onclick:()=>{ if(d[selKey]!==c.id){ d[selKey]=c.id; if(selKey==='classId') d.classTechs=[]; } render(); }},
+        h('span',{class:'arq-ic'},c.icon||'✦'),
+        h('span',{class:'arq-pick-t'}, h('b',{},(on?'✓ ':'')+c.name), c.description?h('span',{class:'d'},c.description):null,
+          (isRace&&c.visual&&c.visual.aparencia)?h('span',{class:'d'},'👁 '+c.visual.aparencia):null,
+          (isRace&&(c.traits||[]).length)?h('span',{class:'fx'},c.traits.map(t=>(t.icon||'✦')+' '+t.name).join('  ')):null,
+          habs.length?h('span',{class:'fx'},'★ '+habs.join(' • ')):null,
+          recs.length?h('span',{class:'fx'},'❤️ '+recs.join(' · ')):null,
+          tec?h('span',{class:'fx'},tec):null));
+    }));
     /* P7 — sistema sem classe ou origem travava o jogador em silêncio */
     const faltando=[];
     if(!sys.classes.length) faltando.push('nenhuma classe');
@@ -47,10 +63,10 @@ function jogadorView(){
         ' cadastrada(s). Peça ao mestre para criar na aba correspondente — sem isso não dá para avançar.'):null,
       field('Nome do personagem', h('input',{class:'in',value:d.name,placeholder:'Ex: Kára, a andarilha',oninput:e=>{d.name=e.target.value;persist();}})),
       h('div',{style:{marginTop:'10px'}}, field('Nível inicial deste personagem', levelSel)),
-      h('div',{class:'hint',style:{margin:'14px 0 6px',color:'#c7d2fe'}},'Classe:'),
-      ...featBtns(sys.classes,'classId',false),
-      h('div',{class:'hint',style:{margin:'10px 0 6px',color:'#c7d2fe'}},'Origem / Raça:'),
-      ...featBtns(sys.origins,'originId',true));
+      h('div',{class:'hint',style:{margin:'14px 0 6px',color:'var(--acc-txt)'}},'Classe:'),
+      featBtns(sys.classes,'classId',false),
+      h('div',{class:'hint',style:{margin:'10px 0 6px',color:'var(--acc-txt)'}},'Origem / Raça:'),
+      featBtns(sys.origins,'originId',true));
   }
   else if(atual==='attr'){
     canNext=left===0;
@@ -62,7 +78,7 @@ function jogadorView(){
       ...sys.attributes.map(a=>{const val=d.attrs[a.id]??sys.startAttrValue;const bonus=eff.attrBonus[a.id]||0;const raw=val+bonus;
         return h('div',{class:'attrrow'},
           h('span',{style:{fontWeight:'600'}}, a.name,
-            bonus?h('span',{style:{color:'#34d399',fontSize:'12px',marginLeft:'6px'}},'(+'+bonus+' hab.)'):null,
+            bonus?h('span',{style:{color:'var(--ok-txt)',fontSize:'12px',marginLeft:'6px'}},'(+'+bonus+' hab.)'):null,
             sys.attrMode==='modificador'?h('span',{class:'attrmod'},'mod '+sign(effAttr(sys,raw))):null),
           h('div',{class:'row'},
             h('button',{class:'btn mini',onclick:()=>setAttr(a,-1)},'−'),
@@ -75,7 +91,7 @@ function jogadorView(){
           '⚠ O mestre deu '+lp.attrPoints+' pontos, mas o máximo que cabe é '+teto+
           ' ('+sys.attributes.length+' atributos × '+(sys.attrMax-sys.startAttrValue)+'). Avise o mestre: a regra está impossível.');
         if(left<0) return h('div',{class:'aviso'},'⚠ Você gastou '+(-left)+' ponto(s) a mais.');
-        return h('div',{class:'hint',style:{color:'#fbbf24',marginTop:'8px'}},'Distribua todos os pontos para continuar.');
+        return h('div',{class:'hint',style:{color:'var(--warn-txt)',marginTop:'8px'}},'Distribua todos os pontos para continuar.');
       })());
   }
   else if(atual==='skill'){
@@ -97,7 +113,7 @@ function jogadorView(){
       : null;
     /* peça 2: seletor de grau para cada perícia que o personagem tem */
     const tierBox=(sys.profMode==='nenhum'||!(sys.profTiers||[]).length)?null:h('div',{style:{marginTop:'14px'}},
-      h('div',{class:'hint',style:{marginBottom:'6px',color:'#c7d2fe'}},'Grau de treino:'),
+      h('div',{class:'hint',style:{marginBottom:'6px',color:'var(--acc-txt)'}},'Grau de treino:'),
       ...skillRows(sys,d,computeSheet(sys,d)).map(r=>{
         const sel=h('select',{class:'in',style:{maxWidth:'160px'},onchange:e=>{d.skillTier[r.s.id]=e.target.value;render();}});
         sel.appendChild(h('option',{value:''},'— destreinado —'));
@@ -115,6 +131,31 @@ function jogadorView(){
       autoNames.length?h('div',{class:'hint',style:{marginTop:'10px'}},'Automáticas (todos têm): '+autoNames.join(', ')):null,
       grantedNames.length?h('div',{class:'hint',style:{marginTop:'4px'}},'Concedidas por classe/raça: '+grantedNames.join(', ')):null,
       tierBox);
+  }
+  /* técnicas de classe: escolhe N do banco da classe (N = fórmula da classe + extras) */
+  else if(atual==='tech'){
+    const t=clsAtual.tecnicas, max=tecnicasPermitidas(sys,d,eff);
+    const sel=d.classTechs=(d.classTechs||[]).filter(id=>t.opcoes.some(o=>o.id===id));
+    canNext=sel.length===max;
+    body=card(t.nome+' de '+clsAtual.name,'Escolha '+max+'. '+(eff.techExtra?('(inclui +'+eff.techExtra+' de outras fontes) '):'')+'Elas entram na ficha com os efeitos.',
+      h('div',{class:'badge '+(canNext?'ok':'warn')}, sel.length+'/'+max),
+      ...t.opcoes.slice().sort((a,b)=>((a.req||{}).level||0)-((b.req||{}).level||0)).map(op=>{
+        const on=sel.includes(op.id);
+        const lv=(op.req||{}).level||0, trav=lv>d.level;
+        const faltaAttr=((op.req||{}).attrs||[]).filter(rq=>((d.attrs[rq.attrId]||0)+(eff.attrBonus[rq.attrId]||0))<rq.min)
+          .map(rq=>{const a=sys.attributes.find(x=>x.id===rq.attrId);return (a?a.name:'?')+' '+rq.min+'+';});
+        const bloq=trav||faltaAttr.length;
+        const fx=(op.effects||[]).map(ef=>effectLabel(sys,ef)).filter(Boolean);
+        return h('button',{class:'selectable '+(on?'sel-i':'')+(bloq?' opt-locked':''),style:{marginBottom:'8px'},disabled:bloq&&!on,
+          onclick:()=>{ if(bloq&&!on) return;
+            if(on) d.classTechs=sel.filter(x=>x!==op.id);
+            else { if(sel.length>=max) return showToast('Você já escolheu '+max+'. Desmarque uma para trocar.'); d.classTechs=[...sel,op.id]; }
+            render(); }},
+          h('div',{class:'t'},(on?'✓ ':'')+(bloq?'🔒 ':'')+op.name+(lv>1?('  · '+levelLabel(sys,lv)):'')),
+          op.description?h('div',{class:'d'},op.description):null,
+          fx.length?h('div',{class:'fx'},fx.join('  •  ')):null,
+          bloq?h('div',{class:'tr',style:{color:'var(--warn-txt)'}},'Requer: '+[trav?levelLabel(sys,lv):null,...faltaAttr].filter(Boolean).join(', ')):null);
+      }));
   }
   /* PEÇA 1 — passo de pontos de escolha */
   else if(atual==='choice'){
@@ -159,13 +200,13 @@ function jogadorView(){
             h('div',{class:'t'},(on?'✓ ':'')+(rs.length?'🔒 ':'')+op.name),
             op.description?h('div',{class:'d'},op.description):null,
             fx.length?h('div',{class:'fx'},fx.join('  •  ')):null,
-            rs.length?h('div',{class:'tr',style:{color:'#fbbf24'}},'Requer: '+rs.join(', ')):null);
+            rs.length?h('div',{class:'tr',style:{color:'var(--warn-txt)'}},'Requer: '+rs.join(', ')):null);
         }),
         (ch.options||[]).length?null:h('div',{class:'hint'},'O mestre não cadastrou nenhuma opção para esta escolha.'));
     });
     canNext=pend.length===0;
     body=h('div',{}, ...blocos,
-      pend.length?h('div',{class:'hint',style:{color:'#fbbf24',marginTop:'8px'}},'Falta escolher: '+pend.join(', ')):null);
+      pend.length?h('div',{class:'hint',style:{color:'var(--warn-txt)',marginTop:'8px'}},'Falta escolher: '+pend.join(', ')):null);
   }
   else body=finalSheet(sys,d);
 
@@ -174,6 +215,7 @@ function jogadorView(){
   if(!canNext){
     if(atual==='id') motivo=!d.name.trim()?'Falta dar um nome ao personagem.':!d.classId?'Falta escolher uma classe.':'Falta escolher uma origem/raça.';
     else if(atual==='attr') motivo=left>0?('Ainda sobram '+left+' ponto(s) de atributo para distribuir.'):('Você usou '+(-left)+' ponto(s) a mais do que tem — baixe algum atributo.');
+    else if(atual==='tech'){ const mx=tecnicasPermitidas(sys,d,eff), n=(d.classTechs||[]).length; motivo=n<mx?('Escolha mais '+(mx-n)+' '+(clsAtual.tecnicas.nome||'técnica').toLowerCase()+'.'):('Escolha só '+mx+' — remova '+(n-mx)+'.'); }
     else if(atual==='skill') motivo=(d.skills.length<lp.skillCount)?('Escolha mais '+(lp.skillCount-d.skills.length)+' perícia(s).'):('Escolha só '+lp.skillCount+' perícias — remova '+(d.skills.length-lp.skillCount)+'.');
     else motivo='Falta fazer todas as escolhas deste passo.';
   }
@@ -198,7 +240,7 @@ function jogadorView(){
     h('div',{class:'note',html:'🎲 Campanha <b>“'+esc(sys.campaignName||'')+'”</b> — sistema <b>“'+esc(sys.name)+'”</b>. O app te guia e impede erros.'}),
     themeChips.length?h('div',{class:'row wrapf',style:{marginBottom:'14px'}},...themeChips):null,
     dots, body, nav,
-    S.saved.length?h('div',{style:{textAlign:'center',fontSize:'11px',color:'#64748b',marginTop:'14px'}},S.saved.length+' ficha(s) salva(s) neste dispositivo.'):null);
+    S.saved.length?h('div',{style:{textAlign:'center',fontSize:'11px',color:'var(--dim)',marginTop:'14px'}},S.saved.length+' ficha(s) salva(s) neste dispositivo.'):null);
 }
 
 /* ---------- Cálculo + montagem da ficha (dirigida pelo layout do mestre) ---------- */
@@ -215,6 +257,8 @@ function computeSheet(sys,d){
   /* características numéricas (Deslocamento, Resist. a fogo…) também viram variáveis,
      sem sobrescrever nada que já exista (atributo/coluna com mesmo nome vence) */
   for(const k in eff.charNum){ if(!(k in varsTotal)) varsTotal[k]=eff.charNum[k]; }
+  /* capacidades com valor (Voo 9) também viram variável */
+  for(const k in (eff.caps||{})){ if(!(k in varsTotal)) varsTotal[k]=eff.caps[k]; }
   /* PEÇA 2 — valor de proficiência do degrau atual, disponível como variável */
   let profVal=0;
   if(sys.profMode!=='nenhum' && (sys.profFormula||'').trim()){
@@ -238,7 +282,9 @@ function computeSheet(sys,d){
 
   const allRes=sys.resources.map(r=>{
     const arm=armaduras[r.id];
-    let v = arm ? arm.v : evalFormula(r.formula,varsTotal);
+    /* classe/origem podem trocar ou somar na fórmula do sistema */
+    const fa=formulaRecursoArquetipo(sys,r,eff,varsTotal);
+    let v = arm ? arm.v : fa.v;
     if(!Number.isNaN(v))v+=(eff.resBonus[r.id]||0);
     let cur=d.resCurrent[r.id];
     /* o valor atual nunca passa do máximo (P3): se o mestre baixar a fórmula,
@@ -246,11 +292,11 @@ function computeSheet(sys,d){
     if(cur!=null && !Number.isNaN(v)) cur=Math.max(0,Math.min(cur,v));
     let pr=null;
     if(r.perRound&&r.perRound.trim()){ const x=evalFormula(r.perRound,varsTotal); if(!Number.isNaN(x)) pr=x; }
-    return {...r,max:v,cur:cur==null?v:cur,perRoundVal:pr,armadura:arm?arm.it.name:null};});
+    return {...r,max:v,cur:cur==null?v:cur,perRoundVal:pr,armadura:arm?arm.it.name:null,formulaDe:fa.origem};});
 
   /* PEÇA 2 — valor final de cada perícia, já com o multiplicador de proficiência */
   const skillVal=(s)=>{
-    const base=s.linkedAttrId?(effById[s.linkedAttrId]||0):0;
+    const base=(s.linkedAttrId?(effById[s.linkedAttrId]||0):0)+rollBonusDe(eff,'pericia');
     if(sys.profMode==='nenhum') return base+(s.trainedBonus||0);
     const tier=(sys.profTiers||[]).find(t=>t.id===(d.skillTier||{})[s.id]);
     if(!tier) return base;
@@ -266,11 +312,11 @@ function computeSheet(sys,d){
   /* PEÇA 6 — ataques vindos das armas equipadas */
   const ataques=eff.equipped.filter(({it})=>it.attack&&it.attack.on).map(({it})=>{
     const at=it.attack;
-    let bonus=0; const partes=[];
+    let bonus=rollBonusDe(eff,'ataque'); const partes=[];
     if(at.attrId){ const a=sys.attributes.find(x=>x.id===at.attrId);
       if(a){ bonus+=(effById[a.id]||0); partes.push(a.name); } }
     if(at.skillId){ const s=(sys.skills||[]).find(x=>x.id===at.skillId);
-      if(s){ bonus+=skillVal(s); partes.push(s.name); } }
+      if(s){ bonus+=skillVal(s)-rollBonusDe(eff,'pericia'); partes.push(s.name); } }  /* sem contar o bônus de perícia duas vezes */
     return {it, at, bonus, partes, tags:at.tags||[]};
   });
 
@@ -306,7 +352,7 @@ function recursosInner(sys,d,ctx,b,mode){
   return h('div',{}, barraDescanso, ...bars.map(r=>h('div',{style:{marginBottom:'12px'}},
     h('div',{class:'row between',style:{fontSize:'13px',marginBottom:'4px'}},
       h('span',{style:{fontWeight:'600'}},r.name,
-        (ctx.eff.resBonus[r.id]?h('span',{style:{color:'#34d399',fontSize:'11px',marginLeft:'6px'}},'(+'+ctx.eff.resBonus[r.id]+' hab.)'):null),
+        (ctx.eff.resBonus[r.id]?h('span',{style:{color:'var(--ok-txt)',fontSize:'11px',marginLeft:'6px'}},'(+'+ctx.eff.resBonus[r.id]+' hab.)'):null),
         (r.perRoundVal!=null?h('span',{class:'hint',style:{marginLeft:'6px'}},'· máx '+r.perRoundVal+'/rodada'):null)),
       h('span',{class:'hint'}, r.cur+' / '+(Number.isNaN(r.max)?'—':r.max))),
     h('div',{class:'bar-t'}, h('div',{class:'bar-f',style:{width:((Number.isNaN(r.max)||r.max<=0)?0:Math.min(100,(r.cur/r.max)*100))+'%',background:r.color}})),
@@ -371,7 +417,7 @@ function inventarioInner(sys,d,ctx,b,mode){
             onclick:()=>{entry.equipped=!entry.equipped;render();}}, equ?'✓ Equipado':'Equipar'):null,
           h('button',{class:'btn sm danger',onclick:()=>{const i=inv.indexOf(entry);if(i>=0)inv.splice(i,1);render();}},'✕'))),
       it.description?h('div',{class:'hint',style:{marginTop:'2px'}},it.description):null,
-      (equ&&semSintonia)?h('div',{class:'hint',style:{color:'#fbbf24',marginTop:'2px'}},'⚠ Equipado, mas sem sintonia — os efeitos não se aplicam.'):null,
+      (equ&&semSintonia)?h('div',{class:'hint',style:{color:'var(--warn-txt)',marginTop:'2px'}},'⚠ Equipado, mas sem sintonia — os efeitos não se aplicam.'):null,
       fx.length?h('div',{class:'tags',style:{marginTop:'4px'}}, ...fx.map(t=>h('span',{class:'tg-fx'},(equ&&!semSintonia)||!it.equipavel?t:('· '+t)))):null);
   }).filter(Boolean);
 
@@ -543,23 +589,37 @@ function periciasInner(sys,d,ctx,b){
     h('span',{class:'vl'}, sign(r.value)))));
 }
 function habilidadesInner(sys,ctx){
-  const active=ctx.eff.active.map(x=>h('div',{class:'abil'},
-    h('div',{class:'t'},x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'#64748b'}},'('+x.src+')')),
+  /* traços físicos aparecem em Características; aqui ficam habilidades e técnicas */
+  const nomeFonte=x=>x.tipo==='tecnica'?(((ctx.eff.cls||{}).tecnicas||{}).nome||'técnica'):x.src==='classe'?((ctx.eff.cls||{}).name||'classe'):x.src==='origem'?((ctx.eff.org||{}).name||'origem'):x.src;
+  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>h('div',{class:'abil'},
+    h('div',{class:'t'},((x.ab.req||{}).level>1?h('span',{class:'nv'},'Nv '+x.ab.req.level):null),x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
     x.ab.description?h('div',{class:'d'},x.ab.description):null,
     (x.ab.effects&&x.ab.effects.length)?h('div',{class:'fx'},x.ab.effects.map(ef=>effectLabel(sys,ef)).join('  •  ')):null));
-  const locked=ctx.eff.locked.map(x=>h('div',{class:'abil locked'},
-    h('div',{class:'t'},'🔒 '+x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'#64748b'}},'('+x.src+')')),
+  const locked=ctx.eff.locked.filter(x=>x.tipo!=='tecnica').map(x=>h('div',{class:'abil locked'},
+    h('div',{class:'t'},'🔒 '+x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
     x.ab.description?h('div',{class:'d'},x.ab.description):null,
     h('div',{class:'lk'},'Requer: '+x.reasons.join(', '))));
   if(!active.length&&!locked.length) return h('div',{class:'hint'},'Nenhuma habilidade.');
   return h('div',{}, ...active, ...locked);
 }
 function caracteristicasInner(ctx){
-  const race=ctx.eff.org; const traits=(race&&race.traits)||[];
-  const tags=ctx.eff.charTags||[]; const nums=ctx.eff.charNum||{}; const numKeys=Object.keys(nums);
-  if(!traits.length && !tags.length && !numKeys.length) return h('div',{class:'hint'},'Nenhuma característica.');
+  const e=ctx.eff, race=e.org; const traits=(race&&race.traits)||[];
+  const tags=e.charTags||[]; const nums=e.charNum||{}; const numKeys=Object.keys(nums);
+  const caps=Object.keys(e.caps||{}), res=Object.keys(e.resist||{}), rol=Object.keys(e.rollBonus||{}).filter(k=>e.rollBonus[k]);
+  const notas=e.notas||[], erros=e.erros||[];
+  const vis=race&&race.visual;
+  if(!traits.length && !tags.length && !numKeys.length && !caps.length && !res.length && !rol.length && !notas.length && !erros.length && !(vis&&vis.aparencia))
+    return h('div',{class:'hint'},'Nenhuma característica.');
+  const grupo=(t,itens)=>itens.length?h('div',{class:'car-g'},h('div',{class:'car-t'},t),h('div',{class:'car-chips'},...itens)):null;
+  const tam=vis&&vis.tamanho&&vis.tamanho!=='medio'?((TAMANHOS.find(x=>x[0]===vis.tamanho)||[])[1]):null;
   return h('div',{},
-    ...traits.map(t=>h('div',{class:'trait'}, h('div',{class:'t'},t.name), t.description?h('div',{class:'d'},t.description):null)),
+    (vis&&(vis.aparencia||tam))?h('div',{class:'trait'},h('div',{class:'d'},'👁 '+[vis.aparencia,tam?('Tamanho '+tam.toLowerCase()):null].filter(Boolean).join(' · '))):null,
+    grupo('Movimento e sentidos',caps.map(k=>h('span',{class:'car-chip'},capInfo(k).ic+' '+k+(e.caps[k]?' '+e.caps[k]+(capInfo(k).un||''):'')))),
+    grupo('Resistências',res.map(k=>{const r=resistResumo(k,e.resist[k]); return h('span',{class:'car-chip '+r.cls},r.ic+' '+r.t);})),
+    grupo('Bônus',rol.map(k=>h('span',{class:'car-chip'},'⚔ '+sign(e.rollBonus[k])+' '+(((DICE_ESCOPOS.find(x=>x[0]===k)||[])[1])||k).toLowerCase()))),
+    ...traits.map(t=>h('div',{class:'trait'}, h('div',{class:'t'},(t.icon?t.icon+' ':'')+t.name), t.description?h('div',{class:'d'},t.description):null)),
+    ...notas.map(n=>h('div',{class:'trait'},h('div',{class:'d'},'📝 '+n.t+(n.fonte?' ('+n.fonte+')':'')))),
+    ...erros.map(m=>h('div',{class:'trait'},h('div',{class:'d',style:{color:'var(--rose-txt)'}},'⚠ '+m))),
     ...tags.map(nm=>h('div',{class:'trait'}, h('div',{class:'t'},'🏷 '+nm))),
     ...numKeys.map(k=>h('div',{class:'trait'}, h('div',{class:'row between'}, h('span',{class:'t'},'◆ '+k), h('span',{style:{fontWeight:'800',fontSize:'15px'}},nums[k])))));
 }
@@ -778,7 +838,7 @@ function escolhasInner(sys,d,ctx){
   const feitas=ctx.eff.escolhidas||[];
   if(!feitas.length) return h('div',{class:'hint'},'Nenhuma escolha feita ainda.');
   return h('div',{}, ...feitas.map(({ch,op})=>h('div',{class:'abil'},
-    h('div',{class:'t'},op.name+'  ', h('span',{style:{fontSize:'10px',color:'#64748b'}},'('+ch.name+')')),
+    h('div',{class:'t'},op.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+ch.name+')')),
     op.description?h('div',{class:'d'},op.description):null,
     (op.effects||[]).length?h('div',{class:'fx'},op.effects.map(ef=>effectLabel(sys,ef)).join('  •  ')):null)));
 }
@@ -1265,6 +1325,7 @@ function sampleDraft(sys,level){
     if(!moved) break;
   }
   d.skills=sys.skills.filter(s=>!s.auto).slice(0,lp.skillCount).map(s=>s.id);
+  escolherTecnicas(sys,d,false);
   d.notes='Exemplo de anotações do jogador.';
   /* inventário de exemplo: os primeiros itens do catálogo, equipando os equipáveis */
   d.inventory=(sys.items||[]).slice(0,4).map(it=>({iid:uid(),itemId:it.id,equipped:!!it.equipavel}));
@@ -1285,8 +1346,18 @@ function surpreendaFicha(sys,d){
   d.skills=[]; d.skillTier={};
   while(d.skills.length<lp.skillCount&&esc.length){ const s=esc.splice(Math.floor(Math.random()*esc.length),1)[0]; d.skills.push(s.id);
     if(sys.profMode!=='nenhum'){ const t=(sys.profTiers||[]).find(x=>(sys.profMode==='mult'?x.mult:x.bonus)>0); if(t) d.skillTier[s.id]=t.id; } }
+  escolherTecnicas(sys,d,true);
   showToast('🎲 Ficha sorteada — ajuste o que quiser');
   S.step=Math.max(0,S.step); render();
+}
+/* preenche as técnicas de classe disponíveis (em ordem ou sorteadas) */
+function escolherTecnicas(sys,d,sortear){
+  const cls=sys.classes.find(c=>c.id===d.classId); d.classTechs=[];
+  if(!cls||!((cls.tecnicas||{}).opcoes||[]).length) return;
+  const n=tecnicasPermitidas(sys,d,gatherEffects(sys,d));
+  const ok=cls.tecnicas.opcoes.filter(o=>!((o.req||{}).level>d.level));
+  if(sortear) ok.sort(()=>Math.random()-.5);
+  d.classTechs=ok.slice(0,n).map(o=>o.id);
 }
 function saveCharacter(){ if(S.draft&&!String(S.draft.name||'').trim()) S.draft.name='Sem nome'; S.saved.push({...S.draft,id:uid(),system:S.system.name}); showToast('Ficha salva! ✔'); }
 

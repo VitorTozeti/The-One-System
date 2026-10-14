@@ -96,7 +96,7 @@ textarea.dlg-campo{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
 .attr-add .in{flex:1 1 220px}
 button.chip{cursor:pointer;color:var(--txt);font-size:12px;font-weight:600}
 button.chip:hover{border-color:var(--indigo)}
-button.chip.on{background:rgba(16,185,129,.18);border-color:var(--emerald);color:#a7f3d0}
+button.chip.on{background:color-mix(in srgb,var(--emerald) 16%,transparent);border-color:var(--emerald);color:var(--ok-txt)}
 .attr-list{display:flex;flex-direction:column;gap:8px}
 .attr-row{display:flex;align-items:flex-start;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px}
 .attr-n{flex:0 0 22px;height:22px;margin-top:6px;border-radius:50%;background:var(--indigo2);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
