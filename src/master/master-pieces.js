@@ -71,6 +71,7 @@ function tabCondicoes(sys){
       sys.conditions.push(c); S.ui.open[c.id]=true; render();}},'+ Condição'),
     sys.conditions.length?null:h('div',{class:'hint'},
       'Nenhuma condição ainda. Exemplos: Envenenado (−1d em todas as rolagens), Fraco (−2 Força), Fatigado (= Fraco + Vulnerável), Exaustão (6 níveis cumulativos).'),
+    bibliotecaCondicoes(sys),
     ...sys.conditions.map(c=>condicaoEditor(sys,c)));
 }
 function condicaoEditor(sys,c){

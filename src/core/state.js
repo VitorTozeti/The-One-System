@@ -5,7 +5,7 @@ let S = {
   view:'mestre', tab:'inicio',
   ui:{open:{}, sel:null, stack:(window.innerWidth||1024)<640,
       live:load('nexus_live')!==false,  /* gaveta Ficha ao vivo */
-      modo:load('nexus_modo')||'avancado',  /* simples esconde os módulos avançados */
+      modo:load('nexus_modo')||'simples',  /* simples esconde os módulos avançados */
       grupo:'fundacao',  /* grupo de abas aberto no modo mestre */
       busca:null,        /* {q} enquanto a paleta Ctrl+K está aberta */
       gloss:null,        /* {termo} ou {q} enquanto o glossário está aberto */
