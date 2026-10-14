@@ -254,9 +254,10 @@ function tabPericias(sys){
       h('div',{class:'per-c-d'}, s.description||'Sem descrição — clique para editar.'),
       h('div',{class:'per-c-rod'}, h('span',{},'+'+(s.trainedBonus||0)+' treinada'), h('span',{}, s.auto?'⚡ automática':'✋ escolha')));
   };
-  /* agrupa por atributo ligado (na ordem dos atributos); sem atributo vai para o fim */
-  const grupos=sys.attributes.map(a=>({t:a.name+' ('+attrAbbr(a)+')',l:sys.skills.filter(s=>s.linkedAttrId===a.id)}));
-  grupos.push({t:'Sem atributo',l:sys.skills.filter(s=>!sys.attributes.some(a=>a.id===s.linkedAttrId))});
+  /* agrupa por atributo ligado (na ordem dos atributos); sem atributo vai para o fim; dentro do grupo, ordem alfabética */
+  const alfa=l=>l.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'','pt-BR',{sensitivity:'base'}));
+  const grupos=sys.attributes.map(a=>({t:a.name+' ('+attrAbbr(a)+')',l:alfa(sys.skills.filter(s=>s.linkedAttrId===a.id))}));
+  grupos.push({t:'Sem atributo',l:alfa(sys.skills.filter(s=>!sys.attributes.some(a=>a.id===s.linkedAttrId)))});
   const visao=sys.skills.length
     ? h('div',{class:'per-grupos'}, ...grupos.filter(g=>g.l.length).map(g=>
         h('div',{class:'per-gp'}, h('div',{class:'per-gp-t'},g.t,h('span',{class:'hint'},' · '+g.l.length)),
