@@ -207,33 +207,66 @@ function bibliotecaPericias(sys){
       faltamTodas?('✨ Adicionar todas ('+faltamTodas+' de '+total+')'):'✓ Todas adicionadas'),
     busca, lib);
 }
+/* Painel de detalhes da perícia selecionada (gaveta à direita). Clique no cartão abre; ✕/Esc fecha. */
+function painelPericia(sys,s){
+  const fechar=()=>{ S.ui.perSel=null; render(); };
+  const idx=sys.skills.indexOf(s);
+  const linkSel=h('select',{class:'in','aria-label':'Atributo de '+s.name,onchange:e=>{s.linkedAttrId=e.target.value||null;render();}});
+  linkSel.appendChild(h('option',{value:''},'— sem atributo —'));
+  sys.attributes.forEach(a=>{const o=h('option',{value:a.id},a.name);if(a.id===s.linkedAttrId)o.selected=true;linkSel.appendChild(o);});
+  const nome=h('input',{class:'in',value:s.name,maxlength:'40','aria-label':'Nome da perícia',
+    oninput:e=>{s.name=e.target.value;persist();},
+    onchange:e=>{ const v=e.target.value.trim(); const j=periciaExiste(sys,v);
+      if(!v||(j>=0&&j!==idx)){ showToast(!v?'O nome não pode ficar vazio.':'Já existe uma perícia com esse nome.'); s.name=s.name||'Perícia'; }
+      render(); }});
+  const desc=h('textarea',{class:'in',rows:'5',placeholder:'O que a perícia faz? Quando o jogador deve rolá-la?','aria-label':'Descrição de '+s.name,
+    oninput:e=>{s.description=e.target.value;persist();},onchange:()=>render()});
+  desc.value=s.description||'';
+  return h('aside',{class:'per-painel',role:'dialog','aria-label':'Detalhes da perícia '+s.name},
+    h('div',{class:'per-p-cab'}, h('b',{},'Detalhes da perícia'),
+      h('button',{class:'btn ghost sm',type:'button',title:'Fechar (Esc)',onclick:fechar},'✕')),
+    field('Nome',nome),
+    field('Atributo ligado',linkSel),
+    field('Descrição',desc),
+    field('Bônus ao treinar',h('input',{class:'in',type:'number',value:s.trainedBonus||0,onchange:e=>{s.trainedBonus=parseInt(e.target.value)||0;render();}}),'bonustreino'),
+    field('Disponibilidade',h('button',{class:'in',type:'button',style:{cursor:'pointer',textAlign:'left'},onclick:()=>{s.auto=!s.auto;render();}},
+      s.auto?'⚡ Automática (todo personagem tem)':'✋ Jogador escolhe'),'periciaauto'),
+    h('div',{class:'hint',style:{marginTop:'6px'}}, skillExplain(sys,s)),
+    h('div',{class:'row',style:{marginTop:'14px',justifyContent:'space-between'}},
+      h('button',{class:'btn danger sm',type:'button',onclick:()=>{ S.ui.perSel=null; removePericia(sys,idx); }},'🗑 Remover'),
+      h('button',{class:'btn primary sm',type:'button',onclick:fechar},'Pronto')));
+}
 function tabPericias(sys){
   const novo=h('input',{class:'in',id:'per-nova',maxlength:'40',placeholder:'Criar uma perícia própria: digite o nome e aperte Enter','aria-label':'Nome da nova perícia',
     onkeydown:e=>{ if(e.key!=='Enter') return; e.preventDefault();
       const v=novo.value.trim(); if(!v) return;
       if(periciaExiste(sys,v)>=0){ showToast('Já existe uma perícia com esse nome.'); return; }
-      sys.skills.push({id:uid(),name:v,description:'',linkedAttrId:null,trainedBonus:2,auto:false}); render();
-      setTimeout(()=>{ const i=document.getElementById('per-nova'); if(i) i.focus(); },0); }});
-  const linhas=sys.skills.map((s,i)=>{
-    const linkSel=h('select',{class:'in','aria-label':'Atributo de '+s.name,onchange:e=>{s.linkedAttrId=e.target.value||null;render();}});
-    linkSel.appendChild(h('option',{value:''},'— sem atributo —'));
-    sys.attributes.forEach(a=>{const o=h('option',{value:a.id},a.name);if(a.id===s.linkedAttrId)o.selected=true;linkSel.appendChild(o);});
-    return h('div',{class:'item per-item'},
-      h('div',{class:'row'},
-        h('input',{class:'in',value:s.name,placeholder:'Nome','aria-label':'Nome da perícia '+(i+1),oninput:e=>{s.name=e.target.value;persist();}}),
-        h('div',{class:'per-attr'},linkSel),
-        h('button',{class:'btn danger sm',type:'button',title:'Remover '+s.name,onclick:()=>removePericia(sys,i)},'✕')),
-      h('input',{class:'in',style:{marginTop:'6px'},value:s.description||'',placeholder:'Descrição (o que a perícia faz)','aria-label':'Descrição de '+s.name,
-        oninput:e=>{s.description=e.target.value;persist();}}),
-      h('div',{class:'grid g2',style:{marginTop:'8px'}},
-        field('Bônus ao treinar', h('input',{class:'in',type:'number',value:s.trainedBonus||0,onchange:e=>{s.trainedBonus=parseInt(e.target.value)||0;render();}}), 'bonustreino'),
-        field('Disponibilidade', h('button',{class:'in',type:'button',style:{cursor:'pointer',textAlign:'left'},onclick:()=>{s.auto=!s.auto;render();}}, s.auto?'⚡ Automática (todo personagem tem)':'✋ Jogador escolhe'), 'periciaauto')),
-      h('div',{class:'hint',style:{marginTop:'6px'}}, skillExplain(sys,s)));
-  });
-  return h('div',{}, bibliotecaPericias(sys), profCard(sys),
-    card('Perícias do seu sistema', sys.skills.length?(sys.skills.length+' perícia(s). Ajuste o atributo, a descrição e quem recebe automaticamente.'):'Nenhuma perícia ainda — use a biblioteca acima ou crie a sua.',
-      null, novo,
-      sys.skills.length?null:h('div',{class:'vazio'},h('div',{class:'vazio-t'},'Nenhuma perícia ainda'),
-        h('div',{class:'hint'},'Adicione da biblioteca (um clique) ou digite um nome acima.')),
-      ...linhas));
+      const nova={id:uid(),name:v,description:'',linkedAttrId:null,trainedBonus:2,auto:false};
+      sys.skills.push(nova); S.ui.perSel=nova.id; render(); }});
+  const sel=sys.skills.find(x=>x.id===S.ui.perSel)||null;
+  if(!sel) S.ui.perSel=null;
+  const cartao=s=>{
+    const a=sys.attributes.find(x=>x.id===s.linkedAttrId);
+    return h('button',{type:'button',class:'per-card'+(s===sel?' sel':''),'aria-pressed':s===sel?'true':'false',
+      onclick:()=>{ S.ui.perSel=(s===sel)?null:s.id; render(); }},
+      h('div',{class:'per-c-top'}, h('b',{class:'per-c-n'},s.name||'(sem nome)'),
+        h('span',{class:'per-c-at'+(a?'':' vz')}, a?attrAbbr(a):'—')),
+      h('div',{class:'per-c-d'}, s.description||'Sem descrição — clique para editar.'),
+      h('div',{class:'per-c-rod'}, h('span',{},'+'+(s.trainedBonus||0)+' treinada'), h('span',{}, s.auto?'⚡ automática':'✋ escolha')));
+  };
+  /* agrupa por atributo ligado (na ordem dos atributos); sem atributo vai para o fim */
+  const grupos=sys.attributes.map(a=>({t:a.name+' ('+attrAbbr(a)+')',l:sys.skills.filter(s=>s.linkedAttrId===a.id)}));
+  grupos.push({t:'Sem atributo',l:sys.skills.filter(s=>!sys.attributes.some(a=>a.id===s.linkedAttrId))});
+  const visao=sys.skills.length
+    ? h('div',{class:'per-grupos'}, ...grupos.filter(g=>g.l.length).map(g=>
+        h('div',{class:'per-gp'}, h('div',{class:'per-gp-t'},g.t,h('span',{class:'hint'},' · '+g.l.length)),
+          h('div',{class:'per-grid'}, ...g.l.map(cartao)))))
+    : h('div',{class:'vazio'},h('div',{class:'vazio-t'},'Nenhuma perícia ainda'),
+        h('div',{class:'hint'},'Adicione da biblioteca (um clique) ou digite um nome acima.'));
+  return h('div',{class:sel?'per-com-painel':''},
+    bibliotecaPericias(sys), profCard(sys),
+    card('Perícias do seu sistema', sys.skills.length?(sys.skills.length+' perícia(s), agrupadas por atributo. Clique numa para editar descrição, atributo e bônus.'):'Nenhuma perícia ainda — use a biblioteca acima ou crie a sua.',
+      null, novo, visao),
+    sel?painelPericia(sys,sel):null);
 }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&typeof S!=='undefined'&&S.ui&&S.ui.perSel){ S.ui.perSel=null; render(); } });

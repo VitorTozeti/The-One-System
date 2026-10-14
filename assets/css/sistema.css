@@ -111,3 +111,21 @@ button.chip.on{background:rgba(16,185,129,.18);border-color:var(--emerald);color
 .per-g-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .per-item .per-attr{flex:0 0 190px;max-width:45%}
 .per-item .per-attr .in{width:100%}
+
+/* ---------- Perícias: grade de cartões + painel de detalhes ---------- */
+.per-grupos{display:flex;flex-direction:column;gap:16px;margin-top:12px}
+.per-gp-t{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--indigo);margin-bottom:6px}
+.per-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.per-card{text-align:left;cursor:pointer;color:var(--txt);font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,transform .15s}
+.per-card:hover{border-color:var(--indigo);transform:translateY(-1px)}
+.per-card.sel{border-color:var(--emerald);box-shadow:0 0 0 2px rgba(16,185,129,.3)}
+.per-c-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.per-c-n{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.per-c-at{flex:0 0 auto;background:var(--indigo2);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800}
+.per-c-at.vz{background:transparent;border:1px dashed var(--line);color:var(--txt)}
+.per-c-d{font-size:12px;opacity:.75;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
+.per-c-rod{display:flex;justify-content:space-between;font-size:11px;opacity:.7}
+.per-painel{position:fixed;top:0;right:0;bottom:0;width:min(380px,100vw);z-index:400;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.45);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.per-p-cab{display:flex;align-items:center;justify-content:space-between}
+.per-painel textarea.in{resize:vertical;font-family:inherit}
+@media(min-width:1000px){.per-com-painel{padding-right:392px}}
