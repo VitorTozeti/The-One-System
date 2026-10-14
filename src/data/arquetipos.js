@@ -178,3 +178,44 @@ function formulaRecursoArquetipo(sys,r,eff,vars){
 }
 /* bônus fixo de rolagem num escopo ("todos" sempre entra junto) */
 function rollBonusDe(eff,escopo){ const r=(eff&&eff.rollBonus)||{}; return (r.todos||0)+(escopo&&escopo!=='todos'?(r[escopo]||0):0); }
+
+/* ---------- validação: o que está errado/estranho numa classe ou origem ----------
+   Devolve frases curtas (vazio = tudo certo). Alimenta o cartão da lista, a aba Visão
+   e o aviso da aba (problemasDaAba). */
+function efeitosDoArquetipo(c){
+  const out=[]; const ve=l=>(l||[]).forEach(ef=>{ out.push(ef); if(ef.mods) ve(ef.mods); });
+  (c.abilities||[]).forEach(a=>ve(a.effects)); (c.traits||[]).forEach(t=>ve(t.effects));
+  (((c.tecnicas||{}).opcoes)||[]).forEach(o=>ve(o.effects));
+  return out;
+}
+function arqProblemas(sys,kind,c){
+  const p=[]; if(!c) return p;
+  const lo=sys.startLevel||1, hi=Math.max(lo,sys.maxLevel||lo);
+  const v=(typeof sysVarsSample==='function')?sysVarsSample(sys):{'Nível':hi};
+  if(!String(c.name||'').trim()) p.push('Sem nome.');
+  (c.recursos||[]).forEach(x=>{
+    const r=(sys.resources||[]).find(q=>q.id===x.resId);
+    if(!r){ p.push('Um ajuste de recurso aponta para um recurso que não existe mais.'); return; }
+    if(String(x.formula||'').trim() && Number.isNaN(evalFormula(x.formula,{...v,Base:1}))) p.push('Recurso “'+r.name+'”: fórmula inválida.');
+  });
+  (c.abilities||[]).forEach(a=>{
+    const lv=(a.req&&a.req.level)||0;
+    if(!String(a.name||'').trim()) p.push('Há uma habilidade sem nome.');
+    if(lv>hi) p.push('“'+(a.name||'habilidade')+'” só chega no '+(sys.levelName||'nível').toLowerCase()+' '+lv+', acima do máximo ('+hi+').');
+  });
+  if(kind==='classe'){
+    const t=c.tecnicas||{};
+    if((t.opcoes||[]).length){
+      if(String(t.formula||'').trim() && Number.isNaN(evalFormula(t.formula,{...v}))) p.push('Fórmula de quantas técnicas escolher é inválida.');
+      const mais=t.opcoes.filter(o=>((o.req||{}).level||0)>hi);
+      if(mais.length) p.push(mais.length+' técnica(s) abrem acima do '+(sys.levelName||'nível').toLowerCase()+' máximo.');
+      if(!String(t.formula||'').trim()) p.push('Há técnicas, mas a fórmula de quantas escolher está vazia.');
+    }
+  }
+  efeitosDoArquetipo(c).forEach(ef=>{
+    if(ef.kind==='codigo'&&String(ef.code||'').trim()){ const cc=compilarCodigo(ef.code); if(cc.erro) p.push('Código “'+(ef.text||'efeito')+'”: '+cc.erro); }
+    if(ef.kind==='resistencia'&&!String(ef.text||'').trim()) p.push('Há uma resistência sem tipo de dano.');
+    if(ef.kind==='capacidade'&&!String(ef.text||'').trim()) p.push('Há uma capacidade sem nome.');
+  });
+  return p;
+}

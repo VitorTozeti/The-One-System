@@ -81,9 +81,12 @@ function problemasDaAba(sys,k){
   }
   if(k==='classes'){
     if(!(sys.classes||[]).length) p.push('Nenhuma classe cadastrada — o jogador não consegue criar personagem.');
-    (sys.classes||[]).forEach(c=>{ if(!String(c.name||'').trim()) p.push('Há uma classe sem nome.'); });
+    (sys.classes||[]).forEach(c=>arqProblemas(sys,'classe',c).forEach(m=>p.push('Classe “'+(c.name||'?')+'”: '+m)));
   }
-  if(k==='racas' && !(sys.origins||[]).length) p.push('Nenhuma origem/raça cadastrada — o jogador não consegue criar personagem.');
+  if(k==='racas'){
+    if(!(sys.origins||[]).length) p.push('Nenhuma origem/raça cadastrada — o jogador não consegue criar personagem.');
+    (sys.origins||[]).forEach(o=>arqProblemas(sys,'origem',o).forEach(m=>p.push('Origem “'+(o.name||'?')+'”: '+m)));
+  }
   if(k==='escolhas'){
     (sys.choices||[]).forEach(c=>{
       if(!(c.options||[]).length) p.push('“'+c.name+'” não tem nenhuma opção.');
@@ -96,6 +99,9 @@ function problemasDaAba(sys,k){
     (sys.items||[]).forEach(it=>{
       if(it.armor&&it.armor.on&&formulaRuim(it.armor.formula,v)) p.push('Armadura “'+it.name+'”: fórmula inválida.');
       if(it.armor&&it.armor.on&&!it.armor.resId) p.push('Armadura “'+it.name+'” não aponta para nenhum recurso.');
+      if(it.uso&&it.uso.on&&it.uso.resId&&String(it.uso.formula||'').trim()&&Number.isNaN(mediaExpr(it.uso.formula,v))) p.push('Uso de “'+it.name+'”: fórmula inválida.');
+      if(it.uso&&it.uso.on&&it.uso.resId&&!String(it.uso.formula||'').trim()) p.push('Uso de “'+it.name+'” escolhe um recurso mas não tem fórmula de quanto.');
+      if(!it.equipavel&&(it.effects||[]).length&&!(it.uso&&it.uso.on)) p.push('“'+it.name+'” tem efeitos mas não é equipável nem usável — eles nunca entram na ficha.');
     });
   }
   if(k==='condicoes'){

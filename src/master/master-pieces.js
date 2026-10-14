@@ -202,45 +202,6 @@ function tabDados(sys){
    O diferencial do projeto: o jogador cria a habilidade autoral preenchendo
    campos fixos, e o sistema impõe um TETO por tier — o dano não passa do
    permitido e o custo sai de uma fórmula. */
-function tabTecnicas(sys){
-  const resSel=h('select',{class:'in',style:{maxWidth:'200px'},onchange:e=>{sys.techRecursoId=e.target.value;render();}});
-  resSel.appendChild(h('option',{value:''},'— nenhum (custo só informativo) —'));
-  (sys.resources||[]).forEach(r=>{const o=h('option',{value:r.id},r.name);if(r.id===sys.techRecursoId)o.selected=true;resSel.appendChild(o);});
-  return h('div',{},
-    card('Construtor de Técnicas Autorais',
-      'Liga o módulo que deixa o JOGADOR criar habilidades próprias dentro de um orçamento que você define. Cada tier tem um teto de dano e uma fórmula de custo.',
-      h('button',{class:'btn sm '+(sys.techAtivo?'emerald':'ghost'),onclick:()=>{sys.techAtivo=!sys.techAtivo;render();}},
-        (sys.techAtivo?'✓ Ativo':'Desativado')),
-      h('div',{class:'grid g2',style:{marginTop:'12px'}},
-        field('Como se chama neste sistema', h('input',{class:'in',value:sys.techNome||'Técnicas',
-          placeholder:'Técnicas, Rituais, Feitiços, Dons…',oninput:e=>{sys.techNome=e.target.value;persist();},onchange:()=>render()})),
-        field('Recurso que paga o custo', resSel, 'tier'))),
-    sys.techAtivo?card('Custo por Componente','Somados à fórmula base do tier.',null,
-      h('div',{class:'grid g3'},
-        numField('Ação complexa',sys,'techCustoAcaoComplexa'),
-        numField('Ação simples',sys,'techCustoAcaoSimples'),
-        numField('Cada característica extra',sys,'techCustoExtra')),
-      h('div',{class:'hint',style:{marginTop:'8px'}},
-        'Custo final = fórmula do tier + (ação complexa × '+sys.techCustoAcaoComplexa+') + (ação simples × '+sys.techCustoAcaoSimples+') + (extras × '+sys.techCustoExtra+').')):null,
-    sys.techAtivo?card('Tiers','Cada degrau de poder: o que libera, o teto de dano e o custo base.',
-      h('button',{class:'btn primary',onclick:()=>{
-        sys.techTiers.push({id:uid(),tier:sys.techTiers.length,name:'Tier '+sys.techTiers.length,
-          danoMax:'1d8',custoFormula:'1',reqLevel:0}); render();}},'+ Tier'),
-      sys.techTiers.length?null:h('div',{class:'hint'},
-        'Ex.: Tier 0 — dano até 1d8, custo 1 · Tier 5 — dano até 40d12 + 2*('+(sys.levelName||'Nível')+' + Maestria), custo 20.'),
-      ...sys.techTiers.map(t=>h('div',{class:'item',style:{marginBottom:'10px'}},
-        h('div',{class:'row'},
-          h('input',{class:'in',style:{maxWidth:'150px'},value:t.name,placeholder:'Nome',oninput:e=>{t.name=e.target.value;persist();},onchange:()=>render()}),
-          field('Libera no degrau', h('input',{class:'in',type:'number',style:{width:'90px'},value:t.reqLevel||0,
-            onchange:e=>{t.reqLevel=parseInt(e.target.value)||0;render();}})),
-          h('button',{class:'btn danger sm',onclick:()=>{sys.techTiers=sys.techTiers.filter(x=>x.id!==t.id);render();}},'✕')),
-        h('div',{class:'grid g2',style:{marginTop:'8px'}},
-          field('Teto de dano (expressão)', h('input',{class:'in mono',value:t.danoMax||'',placeholder:'Ex.: 6d10',
-            title:'O jogador não pode passar deste dano médio',oninput:e=>{t.danoMax=e.target.value;persist();},onchange:()=>render()})),
-          field('Custo base (fórmula)', campoFormula(sys,t,'custoFormula',{tipo:'custo',
-            placeholder:'Ex.: 2 + '+(sys.levelName||'Nível')+' / 5',aoMudar:()=>render()}))),
-        h('div',{class:'hint',style:{marginTop:'6px'}}, tetoInfo(sys,t))))):null);
-}
 /* Média de uma expressão de dados, para comparar teto sem precisar rolar.
    NÃO passa por evalFormula: ele arredonda para baixo no fim, e a média de
    1d8 (4,5) viraria 4 — o que afrouxa o teto do tier em meio ponto. */
@@ -799,7 +760,33 @@ function newEffect(sys){ return {id:uid(),kind:'atributo',targetId:(sys.attribut
 /* arr = a lista de efeitos que contém ef (para remover no lugar).
    depth 0 = efeito de topo (oferece "efeito único"); depth 1 = modificação dentro
    de um efeito único (não aninha outro efeito único). */
+/* Envolve a linha do efeito com o controle "Quando vale" (só efeitos de topo). */
 function effectRow(sys,arr,ef,depth){
+  const core=effectRowCore(sys,arr,ef,depth);
+  if((depth||0)>0) return core;
+  return h('div',{class:'ef-wrap'}, core, quandoEditor(sys,ef));
+}
+function quandoEditor(sys,ef){
+  const q=(ef.quando&&typeof ef.quando==='object')?ef.quando:null;
+  const tipo=q?q.tipo:'sempre';
+  const sel=h('select',{class:'in ef-quando','aria-label':'Quando este efeito vale',onchange:e=>{
+    const t=e.target.value;
+    if(t==='sempre') delete ef.quando;
+    else ef.quando={tipo:t,n:t==='nivel'?Math.max(1,(sys.startLevel||1)+1):1,m:0,attrId:(sys.attributes[0]||{}).id||''};
+    render(); }});
+  QUANDO_TIPOS.forEach(([v,l])=>{ const o=h('option',{value:v},l); if(v===tipo) o.selected=true; sel.appendChild(o); });
+  const num=(k,w,tit)=>h('input',{class:'in',type:'number',min:'0',style:{width:w||'74px'},title:tit||'',value:q[k]||0,
+    onchange:e=>{ q[k]=Math.max(0,parseInt(e.target.value)||0); render(); }});
+  let extra=null;
+  if(q&&q.tipo==='nivel') extra=[h('span',{class:'hint'},'a partir do'),num('n','74px'),h('span',{class:'hint'},'até o'),num('m','74px','0 = sem limite'),h('span',{class:'hint'},'(0 = sem fim)')];
+  if(q&&q.tipo==='atributo'){
+    const as=h('select',{class:'in',style:{maxWidth:'150px'},onchange:e=>{ q.attrId=e.target.value; render(); }});
+    (sys.attributes||[]).forEach(a=>{ const o=h('option',{value:a.id},a.name); if(a.id===q.attrId) o.selected=true; as.appendChild(o); });
+    extra=[as,h('span',{class:'hint'},'≥'),num('n','70px')];
+  }
+  return h('div',{class:'ef-quando-l'+(q?' on':'')}, h('span',{class:'hint'},'⏱ Vale:'), sel, extra);
+}
+function effectRowCore(sys,arr,ef,depth){
   depth=depth||0;
   const grupos=[
     ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],

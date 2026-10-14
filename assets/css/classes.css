@@ -121,3 +121,17 @@
 .car-chip{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--surf2) 60%,transparent)}
 .car-chip.vuln{border-color:var(--rose);color:var(--rose-txt)}
 .abil .nv{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--surf);margin-right:6px}
+
+/* ---------- efeito condicional (⏱ Vale) ---------- */
+.ef-wrap{margin-bottom:10px}
+.ef-wrap > .ef-row,.ef-wrap > div > .ef-row{margin-bottom:4px}
+.ef-quando-l{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 4px 12px;font-size:12px}
+.ef-quando-l .in{margin-top:0;padding:4px 8px;font-size:12px;width:auto}
+.ef-quando-l:not(.on){opacity:.55}
+.ef-quando-l:not(.on):hover,.ef-quando-l:focus-within{opacity:1}
+.ef-quando-l.on .ef-quando{border-color:var(--amber,#f59e0b)}
+
+/* ---------- editor master-detail: peças novas ---------- */
+.arq-ic-fixo{display:flex;align-items:center;justify-content:center;background:var(--panel2)}
+.arq-lista .chip{font-size:12px}
+.tec-c{border-width:1px}

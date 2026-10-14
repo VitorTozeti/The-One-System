@@ -543,35 +543,6 @@ function tabProgressao(sys){
         numField('+ Perícias',sys.perLevel,'skillPoints'), numField('… a cada N degraus',sys.perLevel,'skillEveryN')),
       h('div',{class:'hint',style:{marginTop:'10px'}}, `Prévia: no degrau ${sys.maxLevel} o personagem terá ${p.attrPoints} pontos de atributo e ${p.skillCount} perícias no total.`)));
 }
-function tabRecursos(sys){
-  const eff=effAttr(sys,sys.attrMax);
-  const sampleVars={'Nível':sys.maxLevel,'Nivel':sys.maxLevel}; sys.attributes.forEach(a=>sampleVars[a.name]=eff);
-  return card(tit('Recursos','recursobarra'),'Barra = consumível (Vida, Mana). Valor = número fixo (Defesa). Use atributos e "Nível".',
-    h('button',{class:'btn primary',onclick:()=>{sys.resources.push({id:uid(),name:'Novo Recurso',type:'barra',formula:'10',color:'#22d3ee'});render();}},'+ Recurso'),
-    sys.resources.length?null:h('div',{class:'vazio'},
-      h('div',{class:'vazio-t'},'Nenhum recurso ainda'),
-      h('div',{class:'hint'},'Recursos são o que o personagem gasta ou tem (Vida, Mana, Defesa). Toque para criar um já com valor inicial; depois ajuste a fórmula.'),
-      h('div',{class:'row wrapf',style:{marginTop:'8px'}},
-        ...[['Vida','barra','#ef4444','longo'],['Mana','barra','#3b82f6','longo'],['Estamina','barra','#22c55e','curto'],['Sanidade','barra','#a855f7','longo'],['Defesa','valor','#06b6d4','nunca']].map(([n,t,c,rc])=>
-          h('button',{class:'btn sm ghost',onclick:()=>{
-            const a0=(sys.attributes[0]||{}).name;
-            sys.resources.push({id:uid(),name:n,type:t,formula:a0?(a0+' * 5 + 10'):'10',color:c,recharge:{trig:rc,amt:'tudo',formula:''},perRound:''}); render(); }},'+ '+n)))),
-    ...sys.resources.map(r=>{
-      const typeSel=h('select',{class:'in',style:{maxWidth:'110px'},onchange:e=>{r.type=e.target.value;render();}});
-      [['barra','Barra'],['valor','Valor']].forEach(([v,l])=>{const o=h('option',{value:v},l);if((r.type||'barra')===v)o.selected=true;typeSel.appendChild(o);});
-      return h('div',{class:'item',style:{marginBottom:'12px'}},
-        h('div',{class:'row'},
-          h('input',{type:'color',value:r.color,style:{width:'38px',height:'38px',background:'transparent',border:'none',padding:'0',cursor:'pointer'},oninput:e=>{r.color=e.target.value;persist();}}),
-          h('input',{class:'in',value:r.name,placeholder:'Nome',oninput:e=>{r.name=e.target.value;persist();}}),
-          typeSel,
-          h('button',{class:'btn danger',onclick:()=>{sys.resources=sys.resources.filter(x=>x.id!==r.id);render();}},'✕')),
-        h('div',{style:{marginTop:'8px'}},
-          h('span',{class:'hint'},(r.type==='valor'?'valor =':'máx ='), aj(r.type==='valor'?'recursovalor':'recursobarra')),
-          campoFormula(sys,r,'formula',{tipo:(r.type==='valor'?'defesa':'recurso'),
-            placeholder:'Vigor * 10 + 15', aoMudar:()=>render()})),
-        (r.type||'barra')!=='valor' ? rechargeEditor(sys,r,sampleVars) : null);
-    }));
-}
 /* ---------- Recarga: o recurso declara quando e quanto volta ---------- */
 const REST_TRIGS=[['nunca','Nunca (só na mão)'],['curto','Descanso curto'],['longo','Descanso longo']];
 function rechargeEditor(sys,r,sampleVars){
@@ -699,48 +670,4 @@ function slotsCard(sys){
       field('Máximo de itens sintonizados (0 = sem sintonização)',
         h('input',{class:'in',type:'number',min:'0',value:sys.sintoniaMax||0,
           onchange:e=>{sys.sintoniaMax=Math.max(0,parseInt(e.target.value)||0);render();}}), 'sintonia')));
-}
-function tabItens(sys){
-  if(!Array.isArray(sys.items)) sys.items=[];
-  return h('div',{}, slotsCard(sys),
-   card('Itens & Equipamento',
-    'Itens equipáveis (armas, armaduras, acessórios, ferramentas) aplicam seus efeitos quando equipados. Cada item tem peso, que alimenta a carga.',
-    h('button',{class:'btn primary',onclick:()=>{const it={id:uid(),name:'Novo Item',description:'',categoria:'outro',weight:0,equipavel:true,effects:[]};sys.items.push(it);S.ui.open[it.id]=true;render();}},'+ Item'),
-    field('Fórmula da Carga Máxima (opcional)',
-      campoFormula(sys,sys,'cargaFormula',{tipo:'carga',
-        placeholder:'Ex.: Força * 5 — vazio = sem limite de carga', aoMudar:()=>render()}), 'carga'),
-    h('div',{class:'hint',style:{margin:'6px 0 14px'}},'Se preenchida, a ficha mostra a barra de carga (peso total / limite). Pode usar atributos e características numéricas nas fórmulas.'),
-    bibliotecaItens(sys),
-    sys.items.length?null:h('div',{class:'hint'},'Nenhum item ainda. Crie o primeiro em "+ Item".'),
-    ...sys.items.map(it=>itemEditor(sys,it))));
-}
-function itemEditor(sys,it){
-  if(!it.effects) it.effects=[];
-  const open=!!S.ui.open[it.id];
-  const meta=itemCatLabel(it.categoria)+' · '+(it.weight||0)+' peso · '+it.effects.length+' efeito(s)'+(it.equipavel?'':' · não equipável');
-  const header=h('div',{class:'acc-head',onclick:()=>{S.ui.open[it.id]=!open;render();}},
-    h('div',{class:'row'}, h('span',{class:'acc-caret'},open?'▼':'▶'), h('span',{class:'acc-title'},it.name||'(sem nome)')),
-    h('div',{class:'row'}, h('span',{class:'acc-meta'},meta),
-      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();comDesfazer('Item “'+(it.name||'sem nome')+'” excluído',()=>{sys.items=sys.items.filter(x=>x.id!==it.id);delete S.ui.open[it.id];});}},'✕')));
-  if(!open) return h('div',{class:'acc'}, header);
-  const catSel=h('select',{class:'in',onchange:e=>{it.categoria=e.target.value;render();}});
-  ITEM_CATS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===it.categoria)o.selected=true;catSel.appendChild(o);});
-  const body=h('div',{class:'acc-body'},
-    h('div',{class:'grid g3',style:{marginTop:'12px'}},
-      field('Nome', h('input',{class:'in',value:it.name,oninput:e=>{it.name=e.target.value;persist();},onchange:()=>render()})),
-      field('Categoria', catSel),
-      field('Peso', h('input',{class:'in',type:'number',step:'0.1',value:it.weight||0,onchange:e=>{it.weight=parseFloat(e.target.value)||0;render();}}))),
-    h('div',{style:{marginTop:'8px'}}, field('Descrição', h('textarea',{class:'in',rows:'2',value:it.description||'',oninput:e=>{it.description=e.target.value;persist();}}))),
-    h('div',{style:{marginTop:'8px'}}, h('button',{class:'btn sm '+(it.equipavel?'emerald':'ghost'),onclick:()=>{it.equipavel=!it.equipavel;render();}}, (it.equipavel?'✓ ':'')+'Equipável (efeitos só valem quando equipado)')),
-    h('div',{class:'hint',style:{marginTop:'4px'}}, it.equipavel
-      ? 'Equipável: os efeitos abaixo entram na ficha ao equipar o item.'
-      : 'Não-equipável (consumível/carregado): os efeitos ficam como referência e NÃO entram automaticamente na ficha.'),
-    itemSlotBox(sys,it),
-    itemAtaqueBox(sys,it),
-    itemArmaduraBox(sys,it),
-    h('div',{class:'sub-h'},'Efeitos do item'),
-    ...it.effects.map(ef=>effectRow(sys,it.effects,ef,0)),
-    h('button',{class:'btn ghost sm',onclick:()=>{it.effects.push(newEffect(sys));render();}},'+ Efeito'),
-    it.effects.length?h('div',{class:'tags',style:{marginTop:'8px'}}, ...it.effects.map(ef=>h('span',{class:'tg-fx'},effectLabel(sys,ef)))):null);
-  return h('div',{class:'acc'}, header, body);
 }

@@ -398,7 +398,7 @@ function inventarioInner(sys,d,ctx,b,mode){
     const slot=(sys.slots||[]).find(s=>s.id===it.slotId);
     return h('div',{class:'item',style:{marginBottom:'6px',opacity:(it.equipavel&&!entry.equipped)?'.72':'1'}},
       h('div',{class:'row between'},
-        h('div',{}, h('span',{style:{fontWeight:'700'}},it.name),
+        h('div',{}, h('span',{style:{fontWeight:'700',color:it.raridade&&it.raridade!=='comum'?raridadeInfo(it.raridade)[2]:null}},(it.icon?it.icon+' ':'')+it.name),
           (entry.qtd>1)?h('span',{class:'tg-fx',style:{marginLeft:'6px'}},'×'+entry.qtd):null,
           h('span',{class:'hint',style:{marginLeft:'6px'}},
             itemCatLabel(it.categoria)+(it.weight?(' · '+(Math.round(it.weight*Math.max(1,entry.qtd||1)*10)/10)+' peso'):'')+
@@ -413,6 +413,8 @@ function inventarioInner(sys,d,ctx,b,mode){
             onclick:()=>{
               if(!entry.attuned && ctx.sintonizados>=sys.sintoniaMax) return showToast('Limite de sintonização atingido ('+sys.sintoniaMax+')');
               entry.attuned=!entry.attuned;render();}},entry.attuned?'✦ Sintonizado':'✦ Sintonizar'):null,
+          (it.uso&&it.uso.on)?h('button',{class:'btn sm primary',title:usoResumo(sys,it),
+            onclick:()=>usarItem(sys,d,ctx,entry,it)},'🧪 Usar'):null,
           it.equipavel?h('button',{class:'btn sm '+(equ?'emerald':'ghost'),
             onclick:()=>{entry.equipped=!entry.equipped;render();}}, equ?'✓ Equipado':'Equipar'):null,
           h('button',{class:'btn sm danger',onclick:()=>{const i=inv.indexOf(entry);if(i>=0)inv.splice(i,1);render();}},'✕'))),

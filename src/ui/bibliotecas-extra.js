@@ -1,13 +1,4 @@
-/* ---------- Itens prontos (só identidade; efeitos o Mestre liga depois) ---------- */
-/* classes e origens prontas (com mecânica) ficam em classes-origens.js */
-const CATALOGO_ITENS=[
-  {n:'Espada longa',c:'arma',w:1.5,e:true,d:'Lâmina versátil de uma mão.'},{n:'Arco curto',c:'arma',w:1,e:true,d:'Leve, para disparos rápidos.'},
-  {n:'Adaga',c:'arma',w:0.5,e:true,d:'Pequena e fácil de esconder.'},{n:'Cajado',c:'arma',w:2,e:true,d:'Foco de magia e apoio de viagem.'},
-  {n:'Armadura de couro',c:'armadura',w:5,e:true,d:'Proteção leve.'},{n:'Cota de malha',c:'armadura',w:10,e:true,d:'Proteção média, barulhenta.'},
-  {n:'Escudo',c:'armadura',w:3,e:true,d:'Desvia golpes.'},{n:'Anel simples',c:'acessorio',w:0.1,e:true,d:'Um anel sem poder aparente.'},
-  {n:'Mochila',c:'ferramenta',w:1,e:false,d:'Carrega o equipamento da aventura.'},{n:'Corda (15 m)',c:'ferramenta',w:2.5,e:false,d:'Útil para escalar e amarrar.'},
-  {n:'Tocha',c:'ferramenta',w:0.5,e:false,d:'Ilumina por algumas horas.'},{n:'Poção de cura',c:'consumivel',w:0.2,e:false,d:'Restaura ferimentos ao beber.'},
-  {n:'Ração de viagem',c:'consumivel',w:0.5,e:false,d:'Comida para um dia.'}];
+/* itens prontos (com mecânica) ficam em itens-editor.js; classes e origens em classes-origens.js */
 /* Excluir com rede de proteção: guarda o sistema antes e oferece "Desfazer" por toast. */
 function comDesfazer(msg,acao){
   const snap=JSON.stringify(S.system);
@@ -28,7 +19,3 @@ function bibliotecaGenerica(titulo,lista,jaTem,adicionar){
     })));
 }
 const _tem=(l,n)=>(l||[]).some(x=>semAcento(x.name||'')===semAcento(n));
-function bibliotecaItens(sys){
-  return bibliotecaGenerica('📚 Itens prontos',CATALOGO_ITENS,p=>_tem(sys.items,p.n),
-    p=>sys.items.push({id:uid(),name:p.n,description:p.d,categoria:p.c,weight:p.w,equipavel:p.e,effects:[]}));
-}

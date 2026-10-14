@@ -151,11 +151,21 @@ const CATALOGO_CLASSES2=[
    tec:['Instintos','piso(Nível / 2)'],
    hab:s=>[[1,'Fúria','Entra em fúria: mais dano e resistência física (efeito por código).',[{kind:'codigo',text:'Fúria',code:CODIGO_EXEMPLO.replace('fx.nivel >= 5','fx.nivel >= 1')}]],[5,'Movimento rápido','Corre mais que todos.',[{kind:'caracteristica',charType:'num',text:'Deslocamento',value:3}]]],
    opc:s=>[['Totem do urso','Aguenta quase tudo em fúria.',[_res('Físico','metade')]],['Totem da águia','Vê longe e salta alto.',[_cap('Visão no escuro',9)]]]},
-  {n:'Arqueiro',ic:'🏹',c:'#15803d',d:'Mestre do combate à distância.',tec:['Tiros especiais','Nível'],hab:s=>[[1,'Olho de águia','',[_rol('ataque',2)]]],opc:s=>[['Tiro preciso','',[_dad('ataque',1)]]]},
-  {n:'Bardo',ic:'🎻',c:'#be185d',d:'Inspira aliados e encanta com palavras e música.'},
-  {n:'Druida',ic:'🌿',c:'#4d7c0f',d:'Fala com a natureza e muda de forma.'},
-  {n:'Paladino',ic:'🛡️',c:'#0369a1',d:'Guerreiro sagrado movido por um juramento.'},
-  {n:'Detetive',ic:'🕵️',c:'#57534e',d:'Investiga pistas e desvenda mistérios.'},
+  {n:'Arqueiro',ic:'🏹',c:'#15803d',d:'Mestre do combate à distância.',tec:['Tiros especiais','Nível'],
+   hab:s=>[[1,'Olho de águia','Pontaria afiada.',[_rol('ataque',2)]],[5,'Passo leve','Move-se sem ser notado na mata.',[_cap('Escalada',6)]],[9,'Chuva de flechas','Dois disparos por ação.',[_txt('Dois disparos por ação')]]],
+   opc:s=>[['Tiro preciso','Mira com calma e acerta o ponto fraco.',[_dad('ataque',1)]],['Flecha explosiva','Estoura no alvo e em quem está perto.',[_txt('Dano em área pequena')]],['Disparo atordoante','Derruba o equilíbrio do alvo.',[_txt('Alvo perde o próximo movimento')],3]]},
+  {n:'Bardo',ic:'🎻',c:'#be185d',d:'Inspira aliados e encanta com palavras e música.',rec:[[_M,'soma','Nível * 2']],tec:['Canções','1 + piso(Nível / 2)'],
+   hab:s=>[[1,'Inspiração','Aliados ouvindo você ficam mais certeiros.',[_rol('todos',1)]],[5,'Voz de comando','Suas palavras pesam.',[_dad('pericia',1)]],[10,'Mestre da arte','Domina qualquer instrumento.',[_rol('pericia',2)]]],
+   opc:s=>[['Canção de coragem','Afasta o medo do grupo.',[_res('Medo','metade')]],['Melodia de cura','Acalma e fecha feridas.',[_txt('Cura aliados próximos')]],['Acorde discordante','Machuca quem escuta.',[_rol('tecnica',2)]]]},
+  {n:'Druida',ic:'🌿',c:'#4d7c0f',d:'Fala com a natureza e muda de forma.',rec:[[_V,'soma','Nível']],tec:['Formas e magias','1 + piso(Nível / 2)'],
+   hab:s=>[[1,'Elo com a natureza','Animais não o atacam sem motivo.',[]],[4,'Forma selvagem','Assume a forma de um animal.',[_txt('Transforma-se em animal')]],[8,'Pele de casca','Madeira viva protege o corpo.',[_res('Físico','reduz',2)]]],
+   opc:s=>[['Garras de urso','Forma de combate.',[_rol('dano',2)]],['Asas de águia','Forma voadora.',[_cap('Voo',12)],4],['Cura das folhas','Folhas fecham feridas.',[_txt('Cura um aliado')]]]},
+  {n:'Paladino',ic:'🛡️',c:'#0369a1',d:'Guerreiro sagrado movido por um juramento.',rec:[[_V,'substitui','Base + Nível * 2']],tec:['Juramentos','piso(Nível / 2)'],
+   hab:s=>[[1,'Aura de proteção','Aliados próximos se sentem seguros.',[_rol('defesa',1)]],[3,'Mãos sagradas','Cura com o toque.',[_txt('Cura um aliado')]],[6,'Aura de coragem','Imune ao medo.',[_res('Medo','imune')]]],
+   opc:s=>[['Golpe divino','O ataque brilha.',[_rol('dano',2)]],['Escudo sagrado','Uma luz bloqueia o golpe.',[_rol('defesa',2)]],['Punir o mal','Mais dano contra o profano.',[_rol('ataque',2)]]]},
+  {n:'Detetive',ic:'🕵️',c:'#57534e',d:'Investiga pistas e desvenda mistérios.',tec:['Métodos','1 + piso(Nível / 3)'],
+   hab:s=>[[1,'Olho clínico','Nota o que ninguém notou.',[_dad('pericia',1)]],[5,'Dedução','Liga os pontos e acerta o alvo.',[_rol('pericia',2)]],[9,'Mente fria','Nada o abala.',[_res('Medo','metade'),_res('Psíquico','metade')]]],
+   opc:s=>[['Interrogatório','Pressão certeira.',[_rol('pericia',1)]],['Reconstituição','Revive a cena do crime.',[_txt('Pergunta ao Mestre sobre a cena')]]]},
 ];
 const CATALOGO_ORIGENS2=[
   {n:'Humano',ic:'🧑',c:'#b45309',d:'Versátil e adaptável, de qualquer lugar do mundo.',hab:s=>[[0,'Versátil','Aprende de tudo um pouco.',[{kind:'tecnicas',value:1}]]]},
@@ -176,8 +186,8 @@ const CATALOGO_ORIGENS2=[
   {n:'Halfling',ic:'🍀',c:'#65a30d',d:'Pequeno, sortudo e difícil de pegar desprevenido.',tam:'pequeno',hab:s=>[[0,'Sortudo','Rerrola um 1 natural.',[]],[0,'Corajoso','',[_res('Medo','metade')]]]},
   {n:'Autômato',ic:'🤖',c:'#64748b',d:'Corpo construído, mente desperta.',ap:'Placas de metal e olhos que brilham.',
    tr:s=>[['⚙️','Corpo de metal','',[_rol('defesa',2)]],['🔩','Sem carne','',[_res('Veneno','imune'),_res('Doença','imune'),_res('Elétrico','vulneravel')]]]},
-  {n:'Nobre',ic:'👑',c:'#7c3aed',d:'Cresceu entre privilégios, etiqueta e intrigas.'},
-  {n:'Órfão das ruas',ic:'🏚️',c:'#57534e',d:'Aprendeu a sobreviver sozinho nas vielas.'},
+  {n:'Nobre',ic:'👑',c:'#7c3aed',d:'Cresceu entre privilégios, etiqueta e intrigas.',hab:s=>[[0,'Educação refinada','Domina etiqueta e idiomas.',[_dad('pericia',1)]],[0,'Contatos','Conhece gente poderosa.',[_txt('Pode pedir favores a nobres')]]]},
+  {n:'Órfão das ruas',ic:'🏚️',c:'#57534e',d:'Aprendeu a sobreviver sozinho nas vielas.',hab:s=>[[0,'Malandragem','Conhece os becos e os truques.',[_rol('pericia',1)]],[0,'Estômago forte','Come o que aparecer.',[_res('Doença','metade'),_res('Veneno','reduz',1)]]]},
 ];
 function _ef(o){ return o?Object.assign({id:uid(),targetId:'',value:0,text:'',charType:'tag',mods:[]},o):null; }
 function _hab(sys,[lv,n,d,efs]){ return {id:uid(),name:n,description:d||'',req:{level:lv||0,attrs:[]},effects:(efs||[]).map(_ef).filter(Boolean)}; }
@@ -208,39 +218,31 @@ function tabArquetipos(sys,kind){
   const lista=ehC?sys.classes:sys.origins;
   lista.forEach(c=>sanitizeArquetipo(c,kind));
   const chave=ehC?'clsSel':'orgSel';
-  let sel=lista.find(x=>x.id===S.ui[chave]);
-  if(!sel&&lista.length){ sel=lista[0]; S.ui[chave]=sel.id; }
   const cat=ehC?CATALOGO_CLASSES2:CATALOGO_ORIGENS2;
   const nova=p=>{ const x=ehC?novaClasseDe(sys,p):novaOrigemDe(sys,p); lista.push(x); S.ui[chave]=x.id; return x; };
   const biblioteca=bibliotecaGenerica(ehC?'📚 Classes prontas (já vêm com habilidades, técnicas e fórmulas)':'📚 Origens prontas (traços com efeito, visual e resistências)',
     cat.map(p=>({...p,n:p.n,d:p.d})), p=>_tem(lista,p.n), p=>nova(p));
-  const criar=h('input',{class:'in',maxlength:'40',placeholder:ehC?'+ Nova classe: digite o nome e Enter':'+ Nova origem: digite o nome e Enter',
-    onkeydown:e=>{ if(e.key!=='Enter') return; e.preventDefault(); const v=e.target.value.trim(); if(!v) return;
-      if(_tem(lista,v)) return showToast('Já existe uma com esse nome.'); nova({n:v,ic:ehC?'⚔️':'🧬',c:ehC?'#7c3aed':'#0d9488'}); S.ui.arqAba='visao'; render(); }});
-  const cartao=c=>{
-    const nTec=ehC?(((c.tecnicas||{}).opcoes)||[]).length:0;
-    const nRec=(c.recursos||[]).length;
-    return h('button',{type:'button',class:'arq-card'+(c===sel?' sel':''),style:{'--arq':c.color},'aria-pressed':c===sel?'true':'false',
-      onclick:()=>{ S.ui[chave]=c.id; render(); }},
-      h('span',{class:'arq-ic'},c.icon||'✦'),
-      h('span',{class:'arq-txt'}, h('b',{},c.name||'(sem nome)'),
-        h('small',{}, [ (c.abilities||[]).length+' hab.', ehC?(nTec+' técn.'):(((c.traits||[]).length)+' traços'), nRec?('ƒ '+nRec+' rec.'):null ].filter(Boolean).join(' · '))));
-  };
   const banner=(sys.codigoBloqueado&&sistemaTemCodigo(sys))?h('div',{class:'aviso-aba'},
     h('b',{},'⚠ Efeitos por código bloqueados. '),'Este sistema foi importado de um arquivo e tem efeitos em JavaScript. Leia o código nas habilidades antes de liberar — código roda no seu navegador.',
     h('div',{style:{marginTop:'8px'}},h('button',{class:'btn sm amber',onclick:async()=>{
       if(await uiConfirm('Liberar a execução dos efeitos por código deste sistema? Só faça isso se você confia em quem criou o arquivo.',{titulo:'Liberar código',okText:'Liberar'})){ sys.codigoBloqueado=false; render(); } }},'Li o código — liberar'))):null;
-  return h('div',{class:'arq'},
-    banner,
-    card(ehC?'Classes':'Origens / Raças',
-      ehC?'A classe define como os recursos crescem, o que o personagem ganha sozinho em cada nível e o banco de técnicas que ele escolhe.'
-         :'A origem dá a aparência e o corpo (asas, guelras, escamas), com efeitos de verdade: voo, resistências, visão no escuro…',
-      null, biblioteca),
-    h('div',{class:'arq-wrap'},
-      h('aside',{class:'arq-lista'}, criar,
-        lista.length?h('div',{class:'arq-cards'}, ...lista.map(cartao))
-          :h('div',{class:'vazio'},h('div',{class:'vazio-t'},ehC?'Nenhuma classe ainda':'Nenhuma origem ainda'),h('div',{class:'hint'},'Adicione da biblioteca acima ou digite um nome.'))),
-      sel?arqEditor(sys,kind,lista,sel):h('div',{class:'arq-edit vazio'},'Selecione ou crie para editar.')));
+  return mdLayout({
+    extraTopo:banner,
+    titulo:ehC?'Classes':'Origens / Raças',
+    dica:ehC?'A classe define como os recursos crescem, o que o personagem ganha sozinho em cada nível e o banco de técnicas que ele escolhe.'
+            :'A origem dá a aparência e o corpo (asas, guelras, escamas), com efeitos de verdade: voo, resistências, visão no escuro…',
+    biblioteca, lista, selKey:chave,
+    texto:c=>c.name+' '+(c.description||''),
+    phCriar:ehC?'+ Nova classe: digite o nome e Enter':'+ Nova origem: digite o nome e Enter',
+    aoCriar:v=>{ if(_tem(lista,v)){ showToast('Já existe uma com esse nome.'); return null; } S.ui.arqAba='visao'; return nova({n:v,ic:ehC?'⚔️':'🧬',c:ehC?'#7c3aed':'#0d9488'}); },
+    vazioTitulo:ehC?'Nenhuma classe ainda':'Nenhuma origem ainda', vazioDica:'Adicione da biblioteca acima ou digite um nome.',
+    cartao:(c,sel)=>{
+      const nTec=ehC?(((c.tecnicas||{}).opcoes)||[]).length:0, nRec=(c.recursos||[]).length;
+      const pr=arqProblemas(sys,kind,c).length;
+      return mdCartao({sel,cor:c.color,icone:c.icon,nome:c.name,onclick:()=>{ S.ui[chave]=c.id; render(); },
+        sub:[(c.abilities||[]).length+' hab.', ehC?(nTec+' técn.'):(((c.traits||[]).length)+' traços'), nRec?('ƒ '+nRec+' rec.'):null, pr?('⚠ '+pr):null].filter(Boolean).join(' · ')});
+    },
+    editor:c=>arqEditor(sys,kind,lista,c)});
 }
 function arqEditor(sys,kind,lista,c){
   const ehC=kind==='classe';
@@ -255,11 +257,10 @@ function arqEditor(sys,kind,lista,c){
     h('div',{class:'arq-cab-t'},
       h('input',{class:'in arq-nome',value:c.name||'',placeholder:'Nome',oninput:e=>{c.name=e.target.value;persist();},onchange:()=>render()}),
       h('div',{class:'arq-ics'}, ...icones.map(ic=>h('button',{type:'button',class:'arq-ic-b'+(c.icon===ic?' on':''),onclick:()=>{c.icon=ic;render();}},ic)))),
-    h('div',{class:'row'},
-      h('button',{class:'btn sm ghost',title:'Duplicar',onclick:()=>{ const x=JSON.parse(JSON.stringify(c)); x.id=uid(); x.name=c.name+' (cópia)'; lista.push(x); S.ui[ehC?'clsSel':'orgSel']=x.id; render(); }},'⧉ Duplicar'),
-      h('button',{class:'btn sm danger',onclick:()=>comDesfazer((ehC?'Classe':'Origem')+' “'+(c.name||'')+'” excluída',()=>{ lista.splice(lista.indexOf(c),1); })},'✕ Excluir')));
-  const tabs=h('div',{class:'arq-tabs',role:'tablist'}, ...abas.map(([k,l])=>h('button',{class:'arq-tab'+(aba===k?' on':''),role:'tab','aria-selected':aba===k?'true':'false',
-    onclick:()=>{S.ui.arqAba=k;render();}}, l, arqContagem(c,k))));
+    h('div',{class:'row wrapf'}, ...mdBotoes(lista,c,ehC?'classe':'origem',
+      ()=>{ const x=clonarComIds(c); x.name=c.name+' (cópia)'; lista.splice(lista.indexOf(c)+1,0,x); S.ui[ehC?'clsSel':'orgSel']=x.id; render(); },
+      ()=>comDesfazer((ehC?'Classe':'Origem')+' “'+(c.name||'')+'” excluída',()=>{ lista.splice(lista.indexOf(c),1); }))));
+  const tabs=mdAbas(abas,'arqAba',k=>arqContagem(c,k));
   let corpo;
   if(aba==='visao') corpo=arqVisao(sys,kind,c);
   else if(aba==='recursos') corpo=arqRecursos(sys,kind,c);
@@ -314,10 +315,16 @@ function arqVisao(sys,kind,c){
       vis?h('div',{class:'row wrapf',style:{marginTop:'12px',alignItems:'flex-end'}},
         field('Tamanho',tamSel),
         h('div',{class:'hint',style:{flex:'1'}},'Traços como Asas e Guelras ficam na aba 🪽 Traços físicos e dão capacidades de verdade (Voo, Respirar na água…).')):null,
+      arqProblemasBox(sys,kind,c),
       h('div',{class:'arq-mapa'},
         h('div',{class:'sub-h'},'Resumo'),
         ...arqResumo(sys,kind,c))),
     arqPrevia(sys,kind,c));
+}
+function arqProblemasBox(sys,kind,c){
+  const p=arqProblemas(sys,kind,c);
+  if(!p.length) return null;
+  return h('div',{class:'aviso-aba',style:{marginTop:'12px'}},h('b',{},'💡 Para ajustar nesta '+(kind==='classe'?'classe':'origem')+':'),h('ul',{},p.map(m=>h('li',{},m))));
 }
 function arqResumo(sys,kind,c){
   const out=[];
@@ -349,8 +356,19 @@ function arqRecursos(sys,kind,c){
       const pontos=pontosPadrao(sys).map(p=>({rot:p.rot,vars:{...p.vars,Base:evalFormula(r.formula,p.vars)||0}}));
       return h('div',{class:'arq-rec',style:{borderLeftColor:r.color}},
         h('div',{class:'row between wrapf'}, h('b',{},r.name), h('span',{class:'hint'},'sistema: ',h('code',{},r.formula||'—')), sel),
-        x?h('div',{style:{marginTop:'8px'}}, campoFormula(sys,x,'formula',{tipo:'recurso',pontos,placeholder:'Base + Nível * 2',aoMudar:()=>render()})):null);
+        x?h('div',{style:{marginTop:'8px'}}, campoFormula(sys,x,'formula',{tipo:'recurso',pontos,placeholder:'Base + Nível * 2',aoMudar:()=>render()}), arqRecComparar(sys,r,x)):null);
     }));
+}
+/* "sistema → com esta classe" em alguns degraus, para ver a diferença sem abrir a Prévia */
+function arqRecComparar(sys,r,x){
+  const lo=sys.startLevel||1, hi=Math.max(lo,sys.maxLevel||lo);
+  const pts=[...new Set([lo,Math.round((lo+hi)/2),hi])];
+  return h('div',{class:'tec-tab'},...pts.map(lv=>{
+    const vars=varsNoDegrau(sys,lv); const b=evalFormula(r.formula,vars);
+    const v=evalFormula(x.formula,{...vars,Base:Number.isNaN(b)?0:b});
+    const fim=Number.isNaN(v)?NaN:(x.modo==='soma'?(Number.isNaN(b)?v:b+v):v);
+    return h('div',{class:'tec-c',style:{borderColor:r.color}},h('small',{},levelLabel(sys,lv)),
+      h('b',{},Number.isNaN(fim)?'?':String(fim)),h('small',{},'sistema '+(Number.isNaN(b)?'?':b)));}));
 }
 function arqNiveis(sys,kind,c){
   const lista=c.abilities;
@@ -362,16 +380,29 @@ function arqNiveis(sys,kind,c){
     h('div',{class:'hint',style:{marginBottom:'12px'}}, kind==='classe'
       ?'Habilidades de classe chegam SOZINHAS: todo personagem desta classe ganha ao atingir o nível. As que o jogador ESCOLHE ficam em 🌀 Técnicas.'
       :'Habilidades da origem. Nível 0 = desde a criação. Para corpo (asas, guelras) use 🪽 Traços físicos.'),
+    lista.length?mdAbrirTudo(lista):null,
     niveis.length?null:h('div',{class:'vazio'},h('div',{class:'vazio-t'},'Nenhuma habilidade ainda'),h('div',{class:'hint'},'Ex.: Guerreiro — Nv 1 “Treino de combate” (+1 ataque), Nv 5 “Ataque extra”.')),
     h('div',{class:'tl'}, ...niveis.map(lv=>h('div',{class:'tl-nv'},
       h('div',{class:'tl-marca'}, h('span',{class:'tl-bola'},lv||'★'), h('b',{},lv?levelLabel(sys,lv):'Desde o início'),
         h('button',{class:'btn sm ghost',onclick:()=>add(lv)},'+ aqui')),
       h('div',{class:'tl-itens'}, ...lista.filter(a=>nivelDe(a)===lv).map(a=>habCard(sys,lista,a,{nivel:true,ph:'Nome da habilidade'})))))),
+    arqCopiarDe(sys,kind,c),
     h('div',{class:'row wrapf tl-add'},
       h('span',{},'Nova habilidade no'),
       h('input',{class:'in',type:'number',min:'0',style:{width:'80px'},value:novoLv,onchange:e=>{S.ui.arqNovoLv=Math.max(0,parseInt(e.target.value)||0);}}),
       h('span',{},'('+(sys.levelName||'nível').toLowerCase()+')'),
       h('button',{class:'btn primary sm',onclick:()=>add(S.ui.arqNovoLv!=null?S.ui.arqNovoLv:novoLv)},'+ Adicionar')));
+}
+/* copia as habilidades de outra classe/origem (com ids novos) — ponto de partida para variações */
+function arqCopiarDe(sys,kind,c){
+  const outros=(kind==='classe'?sys.classes:sys.origins).filter(x=>x!==c&&(x.abilities||[]).length);
+  if(!outros.length) return null;
+  const sel=h('select',{class:'in',style:{maxWidth:'230px'},'aria-label':'Copiar habilidades de',onchange:e=>{
+    const o=outros.find(x=>x.id===e.target.value); if(!o) return;
+    const novas=clonarComIds(o.abilities); c.abilities.push(...novas);
+    showToast(novas.length+' habilidade(s) copiada(s) de '+o.name); render(); }},
+    h('option',{value:''},'⧉ Copiar habilidades de…'), ...outros.map(o=>h('option',{value:o.id},o.icon+' '+o.name+' ('+o.abilities.length+')')));
+  return h('div',{class:'row wrapf',style:{marginTop:'12px'}},sel,h('span',{class:'hint'},'Traz todas, com os mesmos níveis e efeitos; depois ajuste.'));
 }
 function arqTecnicas(sys,c){
   const t=c.tecnicas;
@@ -388,6 +419,7 @@ function arqTecnicas(sys,c){
     h('div',{class:'hint',style:{margin:'8px 0 4px'}},'Por nível: ',h('code',{},'Nível'),' = 1 por nível · ',h('code',{},'Nível + 1'),' = uma a mais · ',h('code',{},'1 + piso(Nível / 2)'),' = a cada 2 níveis. Efeitos “🌀 técnica extra” (ex.: origem Humano) somam a isso.'),
     tabela,
     h('div',{class:'sub-h'},'Opções ('+t.opcoes.length+')'),
+    t.opcoes.length?mdAbrirTudo(t.opcoes):null,
     t.opcoes.length?null:h('div',{class:'vazio'},h('div',{class:'vazio-t'},'Nenhuma opção ainda'),h('div',{class:'hint'},'Crie as técnicas que o jogador pode escolher. O nível no cartão é a partir de quando ela fica disponível.')),
     ...t.opcoes.slice().sort((a,b)=>((a.req||{}).level||0)-((b.req||{}).level||0)).map(o=>habCard(sys,t.opcoes,o,{nivel:true,ph:'Nome da técnica'})),
     h('button',{class:'btn primary sm',style:{marginTop:'8px'},onclick:()=>{ const o={id:uid(),name:'Nova técnica',description:'',req:{level:0,attrs:[]},effects:[]}; t.opcoes.push(o); S.ui.open[o.id]=true; render(); }},'+ Técnica'));

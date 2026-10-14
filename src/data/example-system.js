@@ -35,6 +35,8 @@ const BLOCK_TYPES = {
 };
 /* categorias de item — descritivas (não limitam quantos cabem nesta rodada) */
 const ITEM_CATS=[['arma','⚔ Arma'],['armadura','🛡 Armadura'],['acessorio','💍 Acessório'],['ferramenta','🔧 Ferramenta'],['consumivel','🧪 Consumível'],['outro','📦 Outro']];
+const RARIDADES=[['comum','Comum','#94a3b8'],['incomum','Incomum','#22c55e'],['raro','Raro','#3b82f6'],['epico','Épico','#a855f7'],['lendario','Lendário','#f59e0b']];
+function raridadeInfo(k){ return RARIDADES.find(r=>r[0]===k)||RARIDADES[0]; }
 function itemCatLabel(c){const f=ITEM_CATS.find(x=>x[0]===c);return f?f[1]:'📦 Outro';}
 /* Estilo do modo "formas": tudo livre — forma, arranjo, cores, moldura e fonte. */
 function styleOpts(){
@@ -262,6 +264,8 @@ function sanitizeSystem(sys){
     if(typeof t.danoMax!=='string') t.danoMax='';
     if(typeof t.custoFormula!=='string') t.custoFormula='';
     if(typeof t.reqLevel!=='number'||Number.isNaN(t.reqLevel)) t.reqLevel=0;
+    if(typeof t.icon!=='string') t.icon='';
+    if(typeof t.desc!=='string') t.desc='';
   });
   if(typeof sys.techAtivo!=='boolean') sys.techAtivo=false;
   if(typeof sys.techNome!=='string') sys.techNome='Técnicas';
@@ -294,6 +298,19 @@ function sanitizeSystem(sys){
     if(typeof it.slotId!=='string') it.slotId='';
     if(typeof it.empilhavel!=='boolean') it.empilhavel=false;
     if(typeof it.sintonia!=='boolean') it.sintonia=false;
+    if(typeof it.icon!=='string') it.icon='';
+    if(!RARIDADES.some(r=>r[0]===it.raridade)) it.raridade='comum';
+    /* uso (consumível / habilidade ativa): gasta quantidade e mexe num recurso por fórmula */
+    if(!it.uso||typeof it.uso!=='object') it.uso={on:false};
+    const us=it.uso;
+    if(typeof us.on!=='boolean') us.on=false;
+    if(typeof us.resId!=='string') us.resId='';
+    if(typeof us.formula!=='string') us.formula='';
+    if(typeof us.consome!=='boolean') us.consome=true;
+    if(typeof us.texto!=='string') us.texto='';
+    /* efeitos condicionais: garante a forma de cada `quando` */
+    const fixQ=l=>(l||[]).forEach(ef=>{ if(ef.quando&&typeof ef.quando!=='object') delete ef.quando; if(ef.mods) fixQ(ef.mods); });
+    fixQ(it.effects);
     /* ataque estruturado (arma) */
     if(!it.attack||typeof it.attack!=='object') it.attack={on:false};
     const at=it.attack;
@@ -323,6 +340,8 @@ function sanitizeSystem(sys){
   sys.origins.forEach(o=>sanitizeArquetipo(o,'origem'));
   if(typeof sys.codigoBloqueado!=='boolean') sys.codigoBloqueado=false;
   sys.resources.forEach(r=>{
+    if(typeof r.icon!=='string') r.icon='';
+    if(typeof r.desc!=='string') r.desc='';
     if(!r.recharge||typeof r.recharge!=='object') r.recharge={trig:'nunca',amt:'tudo',formula:''};
     if(typeof r.perRound!=='string') r.perRound='';
   });
@@ -574,8 +593,26 @@ function levelPoints(sys, level){
    applyEffectTo despeja o efeito nos baldes; attrOnlyTo extrai só o atributo
    (usado na 1ª passagem que libera requisitos), recursando nos mods. */
 const DICE_ESCOPOS=[['todos','Todas as rolagens'],['ataque','Ataques'],['pericia','Testes de perícia'],['defesa','Defesa'],['dano','Dano'],['tecnica','Técnicas']];
+/* "Quando vale": qualquer efeito pode ser condicional (a partir do nível N, até o nível M,
+   ou só se um atributo estiver em N+). Usa o contexto da ficha em B.ctx; o atributo
+   é lido da 1ª passagem (base + fontes incondicionais) para não depender de ordem. */
+const QUANDO_TIPOS=[['sempre','Sempre'],['nivel','Por nível…'],['atributo','Se o atributo for…']];
+function quandoOk(q,B,primeiraPassada){
+  if(!q||!q.tipo||q.tipo==='sempre') return true;
+  const ctx=(B&&B.ctx)||{};
+  if(q.tipo==='nivel'){ const lv=ctx.level||0; return lv>=(+q.n||0) && (!(+q.m>0) || lv<=+q.m); }
+  if(q.tipo==='atributo'){ if(primeiraPassada) return false; return ((ctx.tot1||{})[q.attrId]||0)>=(+q.n||0); }
+  return true;
+}
+function quandoTexto(sys,q){
+  if(!q||!q.tipo||q.tipo==='sempre') return '';
+  if(q.tipo==='nivel') return ' ⏱ '+(sys.levelName||'Nível')+' '+(+q.n||0)+((+q.m>0)?('–'+q.m):'+');
+  const a=(sys.attributes||[]).find(x=>x.id===q.attrId);
+  return ' ⏱ se '+(a?a.name:'?')+' ≥ '+(+q.n||0);
+}
 function applyEffectTo(ef, B, mult){
   if(!ef) return;
+  if(ef.quando && !quandoOk(ef.quando,B)) return;
   const k=mult==null?1:mult;               /* trilha de níveis (exaustão) multiplica o valor */
   const v=(+ef.value||0)*k;
   if(ef.kind==='atributo'){ if(ef.targetId) B.attrBonus[ef.targetId]=(B.attrBonus[ef.targetId]||0)+v; }
@@ -598,11 +635,12 @@ function applyEffectTo(ef, B, mult){
 }
 /* Quantos dados somar/tirar num escopo (o "todos" sempre entra junto). */
 function diceModDe(B, escopo){ return (B.diceMod&&((B.diceMod.todos||0)+(B.diceMod[escopo]||0)))||0; }
-function attrOnlyTo(ef, tot1){
+function attrOnlyTo(ef, tot1, level){
   if(!ef) return;
+  if(ef.quando && !quandoOk(ef.quando,{ctx:{level,tot1}},true)) return;
   if(ef.kind==='atributo'){ if(ef.targetId) tot1[ef.targetId]=(tot1[ef.targetId]||0)+(+ef.value||0); }
   else if(ef.kind==='tecnicas'||ef.kind==='codigo') return;   /* não mexem em atributo na 1ª passagem */
-  else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1)); }
+  else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1,level)); }
 }
 /* efeitos com requisitos (2 passagens p/ liberar habilidades) */
 /* Expande as condições ativas: resolve composição (Fatigado = Fraco + Vulnerável),
@@ -663,8 +701,8 @@ function gatherEffects(sys,d){
   const condAtivas=expandirCondicoes(sys,d);
   /* 1ª passagem: base + fontes incondicionais + itens equipados alimentam os requisitos */
   const tot1={}; sys.attributes.forEach(a=>tot1[a.id]=(d.attrs[a.id]??0));
-  sources.forEach(({ab})=>{ if(isUncond(ab))(ab.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1)); });
-  equipped.forEach(({it})=>(it.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1)));
+  sources.forEach(({ab})=>{ if(isUncond(ab))(ab.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level)); });
+  equipped.forEach(({it})=>(it.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level)));
   const reasonsFor=ab=>{ const r=ab.req||{}; const out=[];
     if(r.level&&level<r.level) out.push((sys.levelName||'Nível')+' '+r.level);
     (r.attrs||[]).forEach(rq=>{ if((tot1[rq.attrId]||0)<rq.min){const a=sys.attributes.find(x=>x.id===rq.attrId);out.push((a?a.name:'?')+' '+rq.min+'+');} });
@@ -684,10 +722,11 @@ function gatherEffects(sys,d){
     (ab.effects||[]).forEach(ef=>applyEffectTo(ef,B));
   });
   /* itens equipados aplicam efeitos como qualquer outra fonte */
-  equipped.forEach(({it})=>(it.effects||[]).forEach(ef=>applyEffectTo(ef,B)));
+  equipped.forEach(({it})=>{ B.ctx.fonte=it.name||'item'; (it.effects||[]).forEach(ef=>applyEffectTo(ef,B)); });
   /* condições aplicam por último (é o que o mestre liga e desliga na mesa) */
   condAtivas.forEach(({cond,nivel})=>{
     const k=(cond.niveis>0)?Math.max(1,nivel):1;
+    B.ctx.fonte=cond.name||'condição';
     (cond.effects||[]).forEach(ef=>applyEffectTo(ef,B,k));
   });
   return {cls,org,active,locked,equipped,escolhidas,condAtivas,
@@ -711,7 +750,8 @@ function interacaoTags(sys, tagsOrigem, tagsAlvo){
   });
   return {mult, dice, notas};
 }
-function effectLabel(sys,ef){
+function effectLabel(sys,ef){ return effectLabelBase(sys,ef)+(ef.quando?quandoTexto(sys,ef.quando):''); }
+function effectLabelBase(sys,ef){
   if(ef.kind==='livre'){ const n=(ef.mods||[]).length; return (ef.text||'efeito único')+(n?(' ('+n+' mod.)'):''); }
   if(ef.kind==='atributo'){const a=sys.attributes.find(x=>x.id===ef.targetId);return sign(ef.value)+' '+(a?a.name:'?');}
   if(ef.kind==='recurso'){const r=sys.resources.find(x=>x.id===ef.targetId);return sign(ef.value)+' '+(r?r.name:'?')+' (máx)';}
