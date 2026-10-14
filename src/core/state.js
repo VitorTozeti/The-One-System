@@ -152,7 +152,7 @@ function render(){
      Segurar a altura antiga durante a reconstrução evita isso. */
   if(mesma) r.style.minHeight=r.offsetHeight+'px';
   r.innerHTML='';
-  try{ r.appendChild(App()); a11yPass(r); }
+  try{ r.appendChild(App()); a11yPass(r); iconPass(r); }
   catch(err){ r.style.minHeight=''; console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
   /* avisa o CSS para abrir espaço à direita quando o painel flutuante está aberto */
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);

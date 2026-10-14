@@ -41,3 +41,8 @@
 .bv-c{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surf2);color:var(--txt);cursor:pointer}
 .bv-c:hover{border-color:var(--indigo)}
 .bv-c b{font-size:15px}.bv-c span{font-size:12px;color:var(--muted)}
+
+/* ---------- Ícones SVG (icones.js) ---------- */
+.ic{display:inline-flex;vertical-align:-.2em;line-height:0}
+.ic svg{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button .ic,.btn .ic{margin-right:.15em}
