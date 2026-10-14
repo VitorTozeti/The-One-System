@@ -50,8 +50,8 @@ function versoesOverlay(){
         h('div',{},h('b',{},verQuando(v.t)),h('span',{class:'hint'},' · '+v.m),h('div',{class:'hint'},verResumo(v.s))),
         h('button',{class:'btn sm',onclick:()=>verRestaurar(v)},'↩ Voltar para esta')))
     : [h('div',{class:'busca-vazio'},'Ainda não há versões. Elas são guardadas sozinhas enquanto você edita.')];
-  return h('div',{class:'busca-bg',onclick:e=>{ if(e.target.classList.contains('busca-bg')) fechar(); },
-      onkeydown:e=>{ if(e.key==='Escape') fechar(); }},
+  setTimeout(()=>{ const b=document.querySelector('.ver-head .btn'); if(b) try{ b.focus(); }catch(e){} },0);
+  return h('div',{class:'busca-bg',onclick:e=>{ if(e.target.classList.contains('busca-bg')) fechar(); }},
     h('div',{class:'busca-cx',role:'dialog','aria-modal':'true','aria-label':'Versões do sistema'},
       h('div',{class:'ver-head'},h('b',{},'🕘 Versões do sistema'),h('span',{style:{flex:'1'}}),
         h('button',{class:'btn sm',onclick:salvarAgora},'＋ Salvar versão agora'),

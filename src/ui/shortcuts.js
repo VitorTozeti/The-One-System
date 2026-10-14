@@ -30,7 +30,7 @@ document.addEventListener('keydown',e=>{
     S.ui.busca=S.ui.busca?null:{q:''};
     render(); return;
   }
-  if(e.key==='Escape'&&(S.ui.busca||S.ui.gloss)){ S.ui.busca=null; S.ui.gloss=null; render(); }
+  if(e.key==='Escape'&&(S.ui.busca||S.ui.gloss||S.ui.versoes)){ S.ui.busca=null; S.ui.gloss=null; S.ui.versoes=false; render(); }
 });
 document.addEventListener('keydown',e=>{
   if(!ehMestreAtivo()) return;
