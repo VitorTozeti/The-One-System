@@ -4,6 +4,7 @@ migrateLegacyIfNeeded();   /* embrulha dados globais antigos numa conta, se houv
 let S = {
   view:'mestre', tab:'inicio',
   ui:{open:{}, sel:null, stack:(window.innerWidth||1024)<640,
+      live:load('nexus_live')!==false,  /* gaveta Ficha ao vivo */
       modo:load('nexus_modo')||'avancado',  /* simples esconde os módulos avançados */
       grupo:'fundacao',  /* grupo de abas aberto no modo mestre */
       busca:null,        /* {q} enquanto a paleta Ctrl+K está aberta */
@@ -155,6 +156,7 @@ function render(){
   catch(err){ r.style.minHeight=''; console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
   /* avisa o CSS para abrir espaço à direita quando o painel flutuante está aberto */
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);
+  document.body.classList.toggle('live-aberto', typeof fichaVivaAberta==='function'&&fichaVivaAberta());
   fitCanvases();
   if(mesma){ restauraRolagem(r,rol); window.scrollTo(sx,sy); restauraFoco(r,foco); r.style.minHeight=''; restauraRolagem(r,rol); window.scrollTo(sx,sy); }
   else r.style.minHeight='';

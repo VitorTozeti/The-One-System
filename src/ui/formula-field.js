@@ -362,6 +362,7 @@ function mestreView(){
   content=h('div',{role:'tabpanel','aria-label':tabLabel(S.tab)}, aviso, content);
   return h('div',{class:'wrap'},
     crumb, barra, grupos, subtabs, content, rodape,
+    fichaVivaView(),
     S.ui.busca?buscaOverlay():null,
     S.ui.gloss?glossOverlay():null);
 }

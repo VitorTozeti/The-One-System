@@ -1254,8 +1254,9 @@ function exportFicha(){
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome+'.ficha.json'; a.click(); }
   showToast('Ficha exportada — envie o arquivo ao Mestre.');
 }
-function sampleDraft(sys){
+function sampleDraft(sys,level){
   const d=initDraft(sys);
+  if(level!=null) d.level=level;
   d.name='Herói de Exemplo';
   const lp=levelPoints(sys,d.level);
   let pts=lp.attrPoints, guard=0;
