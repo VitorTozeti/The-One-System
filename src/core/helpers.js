@@ -28,6 +28,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 function a11yPass(root){
   root.querySelectorAll('button[title]:not([aria-label])').forEach(b=>{ if(b.textContent.trim().length<3) b.setAttribute('aria-label',b.title); });
   root.querySelectorAll('input[placeholder]:not([aria-label])').forEach(i=>{ if(!i.closest('label')) i.setAttribute('aria-label',i.placeholder); });
+  root.querySelectorAll('.busca-cx:not([role])').forEach(x=>{ x.setAttribute('role','dialog'); x.setAttribute('aria-modal','true'); });
 }
 function sign(n){ return (n>=0?'+':'')+n; }
 

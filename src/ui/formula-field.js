@@ -305,6 +305,7 @@ function mestreView(){
     h('button',{class:'btn sm ghost',title:'Refazer (Ctrl+Shift+Z)','aria-label':'Refazer',onclick:()=>{redo();render();}},'↷'),
     h('button',{class:'btn sm ghost',title:'Versões guardadas automaticamente: volte a um ponto anterior',onclick:()=>{S.ui.versoes=true;render();}},'🕘 Versões'),
     h('button',{class:'btn sm ghost',title:'Ctrl+K',onclick:()=>{S.ui.busca={q:''};render();}},'🔎 Buscar'),
+    h('button',{class:'btn sm ghost',title:'Tour rápido de 4 passos',onclick:tourAbrir},'❓ Tour'),
     h('button',{class:'btn sm ghost',title:'Glossário: o que cada termo do app significa',
       onclick:()=>{S.ui.gloss={q:''};render();}},'📖 Glossário'),
     h('button',{class:'btn sm '+(modoSimples()?'emerald':'ghost'),
@@ -367,6 +368,7 @@ function mestreView(){
     crumb, barra, grupos, subtabs, content, rodape,
     fichaVivaView(),
     S.ui.versoes?versoesOverlay():null,
+    tourOverlay(),
     S.ui.busca?buscaOverlay():null,
     S.ui.gloss?glossOverlay():null);
 }
@@ -708,6 +710,7 @@ function tabItens(sys){
       campoFormula(sys,sys,'cargaFormula',{tipo:'carga',
         placeholder:'Ex.: Força * 5 — vazio = sem limite de carga', aoMudar:()=>render()}), 'carga'),
     h('div',{class:'hint',style:{margin:'6px 0 14px'}},'Se preenchida, a ficha mostra a barra de carga (peso total / limite). Pode usar atributos e características numéricas nas fórmulas.'),
+    bibliotecaItens(sys),
     sys.items.length?null:h('div',{class:'hint'},'Nenhum item ainda. Crie o primeiro em "+ Item".'),
     ...sys.items.map(it=>itemEditor(sys,it))));
 }
@@ -718,7 +721,7 @@ function itemEditor(sys,it){
   const header=h('div',{class:'acc-head',onclick:()=>{S.ui.open[it.id]=!open;render();}},
     h('div',{class:'row'}, h('span',{class:'acc-caret'},open?'▼':'▶'), h('span',{class:'acc-title'},it.name||'(sem nome)')),
     h('div',{class:'row'}, h('span',{class:'acc-meta'},meta),
-      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();sys.items=sys.items.filter(x=>x.id!==it.id);delete S.ui.open[it.id];render();}},'✕')));
+      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();comDesfazer('Item “'+(it.name||'sem nome')+'” excluído',()=>{sys.items=sys.items.filter(x=>x.id!==it.id);delete S.ui.open[it.id];});}},'✕')));
   if(!open) return h('div',{class:'acc'}, header);
   const catSel=h('select',{class:'in',onchange:e=>{it.categoria=e.target.value;render();}});
   ITEM_CATS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===it.categoria)o.selected=true;catSel.appendChild(o);});

@@ -27,3 +27,17 @@
 .ver-l{max-height:60vh;overflow:auto;padding:6px}
 .ver-i{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:10px}
 .ver-i:hover{background:var(--surf2)}
+
+/* ---------- Tour ---------- */
+.tour-cx{padding:22px;text-align:center}
+.tour-ic{font-size:40px;line-height:1}
+.tour-cx h3{margin:10px 0 6px}
+.tour-cx p{color:var(--muted);margin:0 0 14px;line-height:1.5}
+.tour-dots{display:flex;justify-content:center;gap:6px;margin-bottom:16px}
+.tour-dots span{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.tour-dots span.on{background:var(--indigo)}
+/* boas-vindas do sistema vazio */
+.bv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.bv-c{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surf2);color:var(--txt);cursor:pointer}
+.bv-c:hover{border-color:var(--indigo)}
+.bv-c b{font-size:15px}.bv-c span{font-size:12px;color:var(--muted)}

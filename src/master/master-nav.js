@@ -172,8 +172,11 @@ function tabInicio(sys){
         h('div',{class:'hero-txt'}, h('span',{class:'hero-k'},'Tudo essencial feito'), h('b',{},'Seu sistema está jogável 🎉'),
           h('span',{class:'hint'},'Teste como um jogador veria, ou continue refinando as abas.')),
         h('button',{class:'btn emerald',onclick:()=>{ if(!S.draft) S.draft=initDraft(sys); S.view='jogador'; render(); window.scrollTo(0,0); }},'🎲 Testar como jogador'));
-  const modeloCard = vazio ? card('Comece com um modelo','Seu sistema está vazio. Escolha um ponto de partida e ganhe atributos, recursos, perícias e classes em 3 passos.',null,
-      h('button',{class:'btn amber',onclick:aplicarModeloAoSistema},'✨ Escolher um modelo')) : null;
+  const modeloCard = (vazio && !S.ui.semBoasVindas) ? card('Por onde você quer começar?','Seu sistema está vazio. Escolha um caminho — dá para mudar de ideia a qualquer momento (🕘 Versões e ↶ guardam tudo).',null,
+      h('div',{class:'bv-grid'},
+        h('button',{class:'bv-c',onclick:aplicarModeloAoSistema},h('b',{},'✨ Começar de um modelo'),h('span',{},'Fantasia, investigação, narrativo… já vem jogável.')),
+        h('button',{class:'bv-c',onclick:()=>{ S.ui.semBoasVindas=true; render(); irParaAba('atributos'); }},h('b',{},'📄 Começar do zero'),h('span',{},'Crie seus atributos e deixe a ficha ao vivo guiar.')),
+        h('button',{class:'bv-c',onclick:()=>irParaAba('sistema')},h('b',{},'⬆ Importar um .nexus'),h('span',{},'Traga um sistema que você ou alguém já montou.')))) : null;
   return h('div',{},
     hero, modeloCard,
     card('Por onde começar','Os 12 passos essenciais para o sistema ficar jogável. Clique em qualquer linha para ir direto ao lugar.',

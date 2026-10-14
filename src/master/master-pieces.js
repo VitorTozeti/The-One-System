@@ -82,7 +82,7 @@ function condicaoEditor(sys,c){
       h('span',{class:'acc-title'},c.name||'(sem nome)')),
     h('div',{class:'row'}, h('span',{class:'acc-meta'},
       (c.effects||[]).length+' efeito(s)'+((c.componentes||[]).length?(' · compõe '+c.componentes.length):'')+(c.niveis>0?(' · '+c.niveis+' níveis'):'')),
-      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();sys.conditions=sys.conditions.filter(x=>x.id!==c.id);delete S.ui.open[c.id];render();}},'✕')));
+      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();comDesfazer('Condição “'+(c.name||'sem nome')+'” excluída',()=>{sys.conditions=sys.conditions.filter(x=>x.id!==c.id);delete S.ui.open[c.id];});}},'✕')));
   if(!open) return h('div',{class:'acc'}, header);
   const body=h('div',{class:'acc-body'},
     h('div',{class:'grid g3',style:{marginTop:'12px'}},
@@ -784,6 +784,7 @@ function featureCard(sys, list, title, hint, kind){
   const addLabel = isRace?'Raça':'Classe';
   return card(title, hint,
     h('button',{class:'btn primary',onclick:()=>{const it={id:uid(),name:'Nova '+addLabel,description:'',abilities:[]}; if(isRace)it.traits=[]; list.push(it); S.ui.open[it.id]=true; render();}},'+ '+addLabel),
+    isRace?bibliotecaOrigens(sys):bibliotecaClasses(sys),
     ...list.map(c=>featureItem(sys,list,c,kind)));
 }
 function featureItem(sys,list,c,kind){
@@ -793,7 +794,7 @@ function featureItem(sys,list,c,kind){
   const header=h('div',{class:'acc-head',onclick:()=>{S.ui.open[c.id]=!open;render();}},
     h('div',{class:'row'}, h('span',{class:'acc-caret'},open?'▼':'▶'), h('span',{class:'acc-title'},c.name||'(sem nome)')),
     h('div',{class:'row'}, h('span',{class:'acc-meta'}, nAb+' hab.'+(isRace?(' · '+nTr+' traços'):'')),
-      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();const i=list.indexOf(c);list.splice(i,1);delete S.ui.open[c.id];render();}},'✕')));
+      h('button',{class:'btn danger sm',onclick:e=>{e.stopPropagation();comDesfazer((isRace?'Origem':'Classe')+' “'+(c.name||'sem nome')+'” excluída',()=>{const i=list.indexOf(c);list.splice(i,1);delete S.ui.open[c.id];});}},'✕')));
   if(!open) return h('div',{class:'acc'}, header);
   const body=h('div',{class:'acc-body'},
     h('div',{style:{marginTop:'12px'}}, field('Nome', h('input',{class:'in',value:c.name,oninput:e=>{c.name=e.target.value;persist();},onchange:()=>render()}))),
