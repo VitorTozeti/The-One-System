@@ -228,7 +228,7 @@ function posRenderMesa(){
     if(sig!==_sigMesa){ if(_sigMesa) c.meta.changes=(c.meta.changes||0)+1; _sigMesa=sig; }
   }catch(e){}
   try{ cbMarcarTokenDOM(); }catch(e){}
-  if(ui.refocus){ const el=document.getElementById(ui.refocus); ui.refocus=null; if(el){ try{ el.focus(); }catch(e){} } }
+  if(ui.refocus){ const el=document.getElementById(ui.refocus); ui.refocus=null; if(el){ try{ el.focus({preventScroll:true}); }catch(e){} } }
   const alvo=ui.focus||(ui.notaFoco&&('nt-'+ui.notaFoco));
   if(alvo){ ui.focus=null; ui.notaFoco=null; const el=document.getElementById(alvo);
     if(el){ el.scrollIntoView({block:'center',behavior:'smooth'}); el.classList.add('mv-pulse'); setTimeout(()=>el.classList.remove('mv-pulse'),1800); } }

@@ -125,22 +125,39 @@ function restauraFoco(raiz,f){
   if(!el||el.tagName!==f.tag) return;
   try{ el.focus({preventScroll:true}); if(f.ini!=null&&el.setSelectionRange) el.setSelectionRange(f.ini,f.fim); }catch(e){}
 }
+/* Guarda a rolagem interna (painéis laterais, listas, abas) de cada elemento rolável. */
+function capturaRolagem(raiz){
+  const out=[], cont={};
+  raiz.querySelectorAll('*').forEach(el=>{
+    const k=el.tagName+'.'+(typeof el.className==='string'?el.className:''); const i=cont[k]=(cont[k]||0)+1;
+    if(el.scrollTop||el.scrollLeft) out.push({k,i,t:el.scrollTop,l:el.scrollLeft});
+  });
+  return out;
+}
+function restauraRolagem(raiz,lista){
+  if(!lista.length) return;
+  const cont={}, mapa={}; lista.forEach(o=>mapa[o.k+'#'+o.i]=o);
+  raiz.querySelectorAll('*').forEach(el=>{
+    const k=el.tagName+'.'+(typeof el.className==='string'?el.className:''); const i=cont[k]=(cont[k]||0)+1;
+    const o=mapa[k+'#'+i]; if(o){ el.scrollTop=o.t; el.scrollLeft=o.l; }
+  });
+}
 function render(){
   persist();
   const r=document.getElementById('root');
   const chave=chaveDaTela(), mesma=chave===_telaChave; _telaChave=chave;
-  const sx=window.scrollX, sy=window.scrollY, foco=mesma?capturaFoco(r):null;
+  const sx=window.scrollX, sy=window.scrollY, foco=mesma?capturaFoco(r):null, rol=mesma?capturaRolagem(r):[];
   /* Esvaziar o #root encolhe a página e o navegador joga a rolagem para o topo.
      Segurar a altura antiga durante a reconstrução evita isso. */
   if(mesma) r.style.minHeight=r.offsetHeight+'px';
   r.innerHTML='';
   try{ r.appendChild(App()); a11yPass(r); }
   catch(err){ r.style.minHeight=''; console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
-  if(mesma){ window.scrollTo(sx,sy); restauraFoco(r,foco); r.style.minHeight=''; window.scrollTo(sx,sy); }
-  else r.style.minHeight='';
   /* avisa o CSS para abrir espaço à direita quando o painel flutuante está aberto */
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);
   fitCanvases();
+  if(mesma){ restauraRolagem(r,rol); window.scrollTo(sx,sy); restauraFoco(r,foco); r.style.minHeight=''; restauraRolagem(r,rol); window.scrollTo(sx,sy); }
+  else r.style.minHeight='';
 }
 /* Redesenha SÓ o canvas do editor, mantendo o resto da tela intacto.
    Necessário para sliders e seletores de cor: um render() completo recriaria o
