@@ -2,7 +2,7 @@
    Classes com prefixo mt-. Ver src/master/campaign/mesa-mapa.js. */
 
 .mt-ws{display:flex;flex-direction:column;gap:8px;width:100%;color:var(--txt)}
-.mt-ws button:focus-visible,.mt-ws input:focus-visible,.mt-ws select:focus-visible{outline:2px solid #a5b4fc;outline-offset:1px}
+.mt-ws button:focus-visible,.mt-ws input:focus-visible,.mt-ws select:focus-visible{outline:2px solid var(--acc-txt2);outline-offset:1px}
 .mt-grow{flex:1 1 auto}
 
 /* ---- barra superior ---- */
@@ -19,21 +19,21 @@
   background:radial-gradient(circle at 50% 40%,#131a30,#080c18);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .mt-vp{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .mt-vp:active{cursor:grabbing}
-.mt-vp.soltar{outline:3px dashed #a5b4fc;outline-offset:-6px}
+.mt-vp.soltar{outline:3px dashed var(--acc-txt2);outline-offset:-6px}
 .mt-area{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;
-  box-shadow:0 10px 50px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.1);background:#1b2236}
+  box-shadow:0 10px 50px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.1);background:var(--surf)}
 .mt-terreno{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .mt-grade{position:absolute;inset:0;pointer-events:none;
   background-image:linear-gradient(rgba(255,255,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.28) 1px,transparent 1px)}
 .mt-tokens{position:absolute;inset:0}
 .mt-pin{position:absolute;transform:translate(-50%,-100%);font-size:22px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
 .mt-dica{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:340px;text-align:center;font-size:13px;color:var(--muted);
-  background:rgba(11,16,32,.85);border:1px dashed var(--line);border-radius:12px;padding:14px;pointer-events:none}
-.mt-legado{font-size:12px;color:#fbbf24;background:rgba(245,158,11,.12);border:1px solid #92610a;border-radius:10px;padding:8px 10px}
+  background:color-mix(in srgb,var(--bg) 85%,transparent);border:1px dashed var(--line);border-radius:12px;padding:14px;pointer-events:none}
+.mt-legado{font-size:12px;color:var(--warn-txt);background:rgba(245,158,11,.12);border:1px solid #92610a;border-radius:10px;padding:8px 10px}
 
 /* zoom */
 .mt-zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;align-items:center;gap:2px;
-  background:rgba(11,16,32,.85);border:1px solid var(--line);border-radius:10px;padding:4px;z-index:5}
+  background:color-mix(in srgb,var(--bg) 85%,transparent);border:1px solid var(--line);border-radius:10px;padding:4px;z-index:5}
 .mt-zoom button{width:32px;height:32px;border-radius:8px;background:transparent;color:var(--txt);font-size:18px;font-weight:800}
 .mt-zoom button:hover{background:rgba(255,255,255,.1)}
 .mt-zlbl{font-size:10px;color:var(--muted);font-weight:700}
@@ -45,15 +45,15 @@
 .mt-tok.lck{cursor:default}
 .mt-tok.hid{opacity:.5}
 .mt-tok.hid .mt-face{border-style:dashed}
-.mt-face{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid #94a3b8;background:#0e1424 center/cover no-repeat;
+.mt-face{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid var(--muted);background:var(--surf2) center/cover no-repeat;
   display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.55)}
 .mt-tok:hover .mt-face{transform:scale(1.05)}
 .mt-face{transition:transform .08s}
 .mt-tok.sel .mt-face{outline:3px solid #fff;outline-offset:2px}
-.mt-tok.turn .mt-face{box-shadow:0 0 0 4px #fbbf24,0 0 18px 4px #fbbf24}
+.mt-tok.turn .mt-face{box-shadow:0 0 0 4px var(--warn-txt),0 0 18px 4px var(--warn-txt)}
 .mt-ring{position:absolute;border-radius:50%;pointer-events:none;z-index:-1}
 .mt-lbl{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);margin-top:2px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;
-  font-size:11px;font-weight:700;color:#fff;background:rgba(11,16,32,.85);padding:0 6px;border-radius:6px;pointer-events:none}
+  font-size:11px;font-weight:700;color:#fff;background:color-mix(in srgb,var(--bg) 85%,transparent);padding:0 6px;border-radius:6px;pointer-events:none}
 .mt-tok.tem-anel .mt-lbl{transform:translate(-50%,10px)}
 .mt-marks{position:absolute;top:-9px;right:-9px;display:flex;gap:1px;font-size:12px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8));pointer-events:none}
 .mt-hp{position:absolute;left:8%;right:8%;bottom:-6px;height:5px;border-radius:3px;background:rgba(0,0,0,.6);overflow:hidden;pointer-events:none}
@@ -71,8 +71,8 @@
 .mt-lib{display:flex;flex-direction:column;gap:8px}
 .mt-cats{display:flex;flex-wrap:wrap;gap:5px}
 .mt-cat{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700}
-.mt-cat:hover{border-color:#475569}
-.mt-cat.on{background:rgba(99,102,241,.22);border-color:var(--indigo);color:#fff}
+.mt-cat:hover{border-color:var(--line2)}
+.mt-cat.on{background:color-mix(in srgb,var(--indigo) 22%,transparent);border-color:var(--indigo);color:#fff}
 .mt-cat.add{border-style:dashed;color:var(--muted)}
 .mt-cab{display:flex;align-items:center;gap:8px}
 .mt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
@@ -81,10 +81,10 @@
   border-radius:10px;padding:8px 4px 6px}
 .mt-tile-b:hover{border-color:var(--indigo);transform:translateY(-1px)}
 .mt-tile.pronto .mt-tile-b{border-style:dashed}
-.mt-tile-av,.mt-av,.mt-ed-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #94a3b8;background:#0e1424 center/cover no-repeat;color:#fff;flex:0 0 auto}
+.mt-tile-av,.mt-av,.mt-ed-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid var(--muted);background:var(--surf2) center/cover no-repeat;color:#fff;flex:0 0 auto}
 .mt-tile-av{width:46px;height:46px;font-size:24px}
 .mt-tile .nm{font-size:11px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mt-tile-ed{position:absolute;top:2px;right:2px;background:rgba(11,16,32,.85);border-radius:6px;font-size:11px;padding:2px 4px;color:#fff}
+.mt-tile-ed{position:absolute;top:2px;right:2px;background:color-mix(in srgb,var(--bg) 85%,transparent);border-radius:6px;font-size:11px;padding:2px 4px;color:#fff}
 .mt-criar{width:100%;margin-top:2px}
 
 /* lista "no mapa" */
@@ -127,7 +127,7 @@
 .mt-novo h3{margin:0}
 .mt-np{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .mt-np-prev{flex:1 1 260px;min-height:150px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;
-  color:var(--dim);font-size:13px;background:#0e1424 center/contain no-repeat}
+  color:var(--dim);font-size:13px;background:var(--surf2) center/contain no-repeat}
 .mt-np-prev.tem{border-style:solid;border-color:var(--indigo)}
 .mt-np-bt{display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
 
