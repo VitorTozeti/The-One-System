@@ -2,8 +2,19 @@
    Seção "Ferramentas" (🧰): recursos do grupo e relógios de ameaça, tabelas
    aleatórias (encontros, loot, rumores, clima, nomes), calculadora de encontro,
    XP do grupo, Tela dos jogadores e Backup. Também a rolagem secreta do Mestre.
-   Reaproveita nomeProc (map-gen.js, só leitura) para gerar nomes.
+   Gera nomes com nomeProc (definido logo abaixo).
    Estado: c.clocks, c.resources, c.tables, c.xp (ver campaign-model.js). */
+/* Nomes procedurais (cidades e reinos) — usados pelos geradores de nomes abaixo. */
+function sorteiaDe(rnd,a){ return a[Math.floor(rnd()*a.length)]; }
+const NOME_A=['Val','Dor','Kar','Ael','Thal','Mor','Eld','Vor','Nor','Syl','Bra','Cal','Gal','Ith','Ren','Ast','Dun','Fen','Hal','Ker'];
+const NOME_B=['an','or','en','ar','ul','is','ev','ad','on'];
+const NOME_REINO=['dia','mark','heim','ria','land','vale','gard','thos','mir','nia','dor'];
+const NOME_CIDADE=['burgo','porto','ford','haven','ton','stad','polis','cairn','dale','mere','wick','ir'];
+function nomeProc(rnd, tipo){
+  const base=sorteiaDe(rnd,NOME_A)+(rnd()<.55?sorteiaDe(rnd,NOME_B):'');
+  return base+sorteiaDe(rnd,tipo==='reino'?NOME_REINO:NOME_CIDADE);
+}
+
 
 /* ---------- Rolagem secreta ---------- */
 /* Rola sem registrar como pública: só o Mestre vê (toast + histórico com 🤫). */

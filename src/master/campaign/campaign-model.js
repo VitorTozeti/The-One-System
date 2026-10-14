@@ -3,13 +3,22 @@
    UM sistema (regras) e UMA campanha. Depende de helpers (uid) e do estado (S).
    Reaproveita: rollExpr (dados), readPhoto (imagens), canvasNode (ver ficha). */
 
+/* Categorias de token criadas por padrão (as de Jogadores/Inimigos/NPCs são automáticas). */
+const CATS_INICIAIS=[
+  {id:'criaturas',  nome:'Criaturas',  ic:'🐺'},
+  {id:'objetos',    nome:'Objetos',    ic:'📦'},
+  {id:'marcadores', nome:'Marcadores', ic:'📍'},
+];
 function defaultCampaign(){
   return {
     name:'', summary:'', notes:'', prep:'',
     players:[],                       /* {id,name,note,sheet|null,importedAt} */
     bestiary:{ enemies:[], npcs:[] }, /* Statblock[] e NpcCard[] */
     loot:[],                          /* {id,itemId|null,nome,qty,ownerPlayerId|null,note} */
-    maps:[],                          /* coleção de mapas (mundo, região, local, interior…) */
+    maps:[],                          /* mapas: imagem salva + tokens (ver mesa-mapa.js) */
+    tokenCats:CATS_INICIAIS.map(x=>Object.assign({},x)), /* categorias de token criadas pelo Mestre {id,nome,ic} */
+    tokenLib:[],                      /* tokens próprios {id,name,cat,img,icon,color,size} */
+    tokenConds:[],                    /* condições próprias (anel do token) {id,n,c,ic} */
     currentMapId:null,                /* mapa aberto no editor */
     diceLog:[],                       /* {id,ts,expr,total,detail,detalhes,by} */
     sessions:[],                      /* diário: {id,n,title,date,startedAt,endedAt,summary,decisions,xp,events:[{id,ts,text,kind}]} */
@@ -130,7 +139,7 @@ const TOKEN_SIZES=[
 
 function newMap(kind,theme,name){
   return { id:uid(), name:name||'Novo mapa', kind:kind||'regiao', theme:theme||'rustico',
-           image:null, terrain:null, showLabels:true,
+           image:null, aspect:1.6, terrain:null, showLabels:true,
            grid:{on:false,size:48,snap:true}, tokens:[], pins:[], props:[],
            objs:[],                          /* objetos vetoriais editáveis (salas, paredes, estradas…) — ver map-editor.js */
            bg:null, fx:null,                 /* cor de fundo e efeitos (hachuras/goo) dos geradores */
@@ -154,7 +163,12 @@ function curMap(){
   const c=S.campaign; if(!c||!Array.isArray(c.maps)||!c.maps.length) return null;
   return c.maps.find(m=>m.id===c.currentMapId) || c.maps[0];
 }
-/* Soma de locais (pins) em todos os mapas — usada no Painel/badges. */
+/* Total de tokens em todos os mapas — usado no Painel. */
+function totalTokens(){
+  const c=S.campaign; if(!c||!Array.isArray(c.maps)) return 0;
+  return c.maps.reduce((s,m)=>s+(Array.isArray(m.tokens)?m.tokens.length:0),0);
+}
+/* Soma de locais (pins) de mapas antigos. */
 function totalPins(){
   const c=S.campaign; if(!c||!Array.isArray(c.maps)) return 0;
   return c.maps.reduce((s,m)=>s+(Array.isArray(m.pins)?m.pins.length:0),0);
@@ -168,6 +182,12 @@ function sanitizeCampaign(c){
   c.bestiary=c.bestiary||{}; c.bestiary.enemies=Array.isArray(c.bestiary.enemies)?c.bestiary.enemies:[];
   c.bestiary.npcs=Array.isArray(c.bestiary.npcs)?c.bestiary.npcs:[];
   c.loot=Array.isArray(c.loot)?c.loot:[];
+  /* biblioteca de tokens (categorias, tokens próprios, condições) */
+  c.tokenCats=Array.isArray(c.tokenCats)?c.tokenCats.filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),nome:String(x.nome||'Categoria').slice(0,24),ic:String(x.ic||'📁').slice(0,4)}))
+    :CATS_INICIAIS.map(x=>Object.assign({},x));
+  c.tokenLib=Array.isArray(c.tokenLib)?c.tokenLib.filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),name:String(x.name||'Token').slice(0,40),cat:String(x.cat||'criaturas'),
+    img:typeof x.img==='string'?x.img:null,icon:String(x.icon||'').slice(0,4),color:typeof x.color==='string'?x.color:'#6366f1',size:Number(x.size)>0?Number(x.size):100})):[];
+  c.tokenConds=Array.isArray(c.tokenConds)?c.tokenConds.filter(x=>x&&typeof x==='object'&&x.id&&x.n).map(x=>({id:String(x.id),n:String(x.n).slice(0,24),c:typeof x.c==='string'?x.c:'#f43f5e',ic:String(x.ic||'').slice(0,4)})):[];
   /* Mapas: migra o antigo `map` único para a coleção `maps`. */
   if(!Array.isArray(c.maps)){
     c.maps=[];
@@ -184,6 +204,7 @@ function sanitizeCampaign(c){
   c.maps.forEach(mm=>{
     mm.grid=mm.grid||{on:false,size:48};
     if(mm.grid.snap==null) mm.grid.snap=true;
+    if(!(mm.aspect>0)) mm.aspect=1.6;   /* largura/altura da imagem (mapas antigos eram 16:10) */
     mm.tokens=Array.isArray(mm.tokens)?mm.tokens:[];
     mm.pins=Array.isArray(mm.pins)?mm.pins:[];
     mm.props=Array.isArray(mm.props)?mm.props:[];
@@ -197,7 +218,8 @@ function sanitizeCampaign(c){
     /* tokens antigos ganham os novos campos */
     mm.tokens.forEach(t=>{ if(t.icon==null)t.icon=''; if(t.img===undefined)t.img=null;
       if(t.size==null)t.size=100; if(t.hp===undefined)t.hp=null; if(t.hpMax===undefined)t.hpMax=null;
-      if(t.hidden==null)t.hidden=false; if(!Array.isArray(t.marks))t.marks=[]; });
+      if(t.hidden==null)t.hidden=false; if(!Array.isArray(t.marks))t.marks=[];
+      if(!Array.isArray(t.conds))t.conds=[]; if(t.libId===undefined)t.libId=null; });
     mm.props.forEach(p=>{ if(p.size==null)p.size=100; if(p.rot==null)p.rot=0;
       if(p.w==null)p.w=16; if(p.h==null)p.h=16; if(p.hidden==null)p.hidden=false; });
     /* mundo (continente + reinos) */
@@ -254,7 +276,7 @@ const TOKEN_CORES={player:'#10b981', enemy:'#e11d48', npc:'#6366f1'};
 function newToken(kind, label, refId){
   return { id:uid(), kind:kind||'npc', label:label||'?', refId:refId||null,
            xPct:50, yPct:50, color:TOKEN_CORES[kind]||'#94a3b8',
-           icon:'', img:null, size:100, hp:null, hpMax:null, hidden:false, marks:[] };
+           icon:'', img:null, size:100, hp:null, hpMax:null, hidden:false, marks:[], conds:[] };
 }
 function newPin(xPct,yPct,icon){ return { id:uid(), xPct:xPct==null?50:xPct, yPct:yPct==null?50:yPct, label:'Local', note:'', icon:icon||'📍' }; }
 

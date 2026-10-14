@@ -104,11 +104,40 @@ function persist(){
   }
   atualizaIndicadorSalvo();
 }
+/* Identifica "em que tela estou". Se não mudou entre dois render(), o usuário só
+   editou algo ali dentro — então a rolagem e o foco têm que ficar onde estavam. */
+let _telaChave='';
+function chaveDaTela(){
+  return [S.account&&S.account.id, S.currentId, S.view, S.tab, S.step, (S.ui||{}).grupo, (S.ui||{}).mtab].join('|');
+}
+/* Guarda qual campo está focado (posição entre os campos da tela) e a seleção de texto. */
+function capturaFoco(raiz){
+  const a=document.activeElement;
+  if(!a||!raiz.contains(a)||!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return null;
+  const todos=[...raiz.querySelectorAll('input,textarea,select')];
+  const i=todos.indexOf(a); if(i<0) return null;
+  let ini=null, fim=null; try{ ini=a.selectionStart; fim=a.selectionEnd; }catch(e){}
+  return {i, tag:a.tagName, ini, fim};
+}
+function restauraFoco(raiz,f){
+  if(!f) return;
+  const el=[...raiz.querySelectorAll('input,textarea,select')][f.i];
+  if(!el||el.tagName!==f.tag) return;
+  try{ el.focus({preventScroll:true}); if(f.ini!=null&&el.setSelectionRange) el.setSelectionRange(f.ini,f.fim); }catch(e){}
+}
 function render(){
   persist();
-  const r=document.getElementById('root'); r.innerHTML='';
+  const r=document.getElementById('root');
+  const chave=chaveDaTela(), mesma=chave===_telaChave; _telaChave=chave;
+  const sx=window.scrollX, sy=window.scrollY, foco=mesma?capturaFoco(r):null;
+  /* Esvaziar o #root encolhe a página e o navegador joga a rolagem para o topo.
+     Segurar a altura antiga durante a reconstrução evita isso. */
+  if(mesma) r.style.minHeight=r.offsetHeight+'px';
+  r.innerHTML='';
   try{ r.appendChild(App()); a11yPass(r); }
-  catch(err){ console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
+  catch(err){ r.style.minHeight=''; console.error(err); telaFalha(err&&err.message); return; }   /* nunca deixa a tela em branco */
+  if(mesma){ window.scrollTo(sx,sy); restauraFoco(r,foco); r.style.minHeight=''; window.scrollTo(sx,sy); }
+  else r.style.minHeight='';
   /* avisa o CSS para abrir espaço à direita quando o painel flutuante está aberto */
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);
   fitCanvases();

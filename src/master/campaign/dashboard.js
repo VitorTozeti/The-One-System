@@ -173,7 +173,7 @@ function painelView(){
     pnlStat('🐉', c.bestiary.enemies.length, 'inimigos', ()=>irMtab('bestiario')),
     pnlStat('🎭', c.bestiary.npcs.length, 'NPCs', ()=>irMtab('bestiario')),
     pnlStat('🎒', c.loot.length, 'itens', ()=>irMtab('itens')),
-    pnlStat('📍', totalPins(), 'locais', ()=>irMtab('mapa')),
+    pnlStat('🧍', totalTokens(), 'tokens no mapa', ()=>irMtab('mapa')),
     pnlStat('⭐', c.xp.total||0, 'XP do grupo', ()=>{ui.ferrSub='xp';irMtab('ferramentas');}));
 
   const acoes=card('Rolagem rápida',null,null, rolagemRapida());

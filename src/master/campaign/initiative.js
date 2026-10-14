@@ -230,9 +230,7 @@ function cbSyncTokenFlags(){
 /* Depois do render: marca visualmente o token da vez (casa por posição, sem depender do mapa). */
 function cbMarcarTokenDOM(){
   const cur=cbAtual(), t=cur&&cbToken(cur); if(!t) return;
-  document.querySelectorAll('.map-token').forEach(el=>{
-    if(el.style.left===t.xPct+'%' && el.style.top===t.yPct+'%') el.classList.add('turno');
-  });
+  document.querySelectorAll('.mt-tok[data-tid="'+t.id+'"]').forEach(el=>el.classList.add('turn'));
 }
 
 /* ============================ INTERFACE ============================ */

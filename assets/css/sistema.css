@@ -88,3 +88,26 @@ textarea.dlg-campo{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
 .nav-motivo.ok{color:#6ee7b7}
 .btn.meio{opacity:.55}
 @media(max-width:560px){.bar{flex-wrap:wrap}}
+
+/* ---------- Atributos e perícias (criação rápida) ---------- */
+.passo-l{margin:14px 0 6px;font-size:13px;color:var(--txt)}
+.passo-l b{color:var(--indigo)}
+.attr-add{display:flex;gap:8px;flex-wrap:wrap}
+.attr-add .in{flex:1 1 220px}
+button.chip{cursor:pointer;color:var(--txt);font-size:12px;font-weight:600}
+button.chip:hover{border-color:var(--indigo)}
+button.chip.on{background:rgba(16,185,129,.18);border-color:var(--emerald);color:#a7f3d0}
+.attr-list{display:flex;flex-direction:column;gap:8px}
+.attr-row{display:flex;align-items:flex-start;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px}
+.attr-n{flex:0 0 22px;height:22px;margin-top:6px;border-radius:50%;background:var(--indigo2);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.attr-mv{display:flex;flex-direction:column;gap:2px}
+.attr-mv .btn{padding:1px 7px;font-size:10px;min-height:0}
+.attr-campos{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.attr-l1{display:flex;gap:6px}
+.attr-l1 .in:first-child{flex:1;min-width:0}
+.attr-sg{max-width:92px;text-align:center;font-weight:800;text-transform:uppercase}
+.attr-ds{font-size:13px}
+.per-lib{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.per-g-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.per-item .per-attr{flex:0 0 190px;max-width:45%}
+.per-item .per-attr .in{width:100%}

@@ -536,26 +536,6 @@ function tabProgressao(sys){
         numField('+ Perícias',sys.perLevel,'skillPoints'), numField('… a cada N degraus',sys.perLevel,'skillEveryN')),
       h('div',{class:'hint',style:{marginTop:'10px'}}, `Prévia: no degrau ${sys.maxLevel} o personagem terá ${p.attrPoints} pontos de atributo e ${p.skillCount} perícias no total.`)));
 }
-const SUGESTOES_ATRIBUTOS=['Força','Agilidade','Vigor','Mente','Presença','Destreza','Inteligência','Sabedoria','Carisma','Constituição'];
-function tabAtributos(sys){
-  const vazio=!sys.attributes.length;
-  const sug=vazio?h('div',{class:'vazio'},
-    h('div',{class:'vazio-t'},'Nenhum atributo ainda'),
-    h('div',{class:'hint'},'Atributos são o que o personagem é (Força, Mente…). Toque para adicionar rápido, ou use o botão “+ Atributo”.'),
-    h('div',{class:'row wrapf',style:{marginTop:'8px'}},
-      h('button',{class:'btn sm emerald',onclick:()=>{ ['Força','Agilidade','Vigor','Mente','Presença'].forEach(n=>sys.attributes.push({id:uid(),name:n,abbr:''})); render(); showToast('5 atributos adicionados'); }},'✨ Adicionar um conjunto de 5'),
-      ...SUGESTOES_ATRIBUTOS.map(n=>h('button',{class:'btn sm ghost',onclick:()=>{ sys.attributes.push({id:uid(),name:n,abbr:''}); render(); }},'+ '+n)))):null;
-  return card('Atributos', 'Modo atual: '+(sys.attrMode==='modificador'?'Modificador':'Valor direto')+'. A sigla aparece na ficha estilizada.',
-    h('button',{class:'btn primary',onclick:()=>{sys.attributes.push({id:uid(),name:'Novo',abbr:''});render();
-      setTimeout(()=>{ const ins=document.querySelectorAll('[role="tabpanel"] .row input.in[placeholder="Nome"]'); const u=ins[ins.length-1]; if(u){ u.focus(); u.select(); } },0);}},'+ Atributo'),
-    sug,
-    ...sys.attributes.map(a=>h('div',{class:'row',style:{marginBottom:'8px'}},
-      h('input',{class:'in',value:a.name,placeholder:'Nome',oninput:e=>{a.name=e.target.value;persist();},onchange:()=>render()}),
-      h('input',{class:'in',style:{maxWidth:'110px',textAlign:'center',fontWeight:'800'},value:a.abbr||'',
-        placeholder:attrAbbr(a),title:'Sigla (ex.: FOR). Vazio = 3 primeiras letras.',
-        oninput:e=>{a.abbr=e.target.value;persist();},onchange:()=>render()}),
-      h('button',{class:'btn danger',onclick:()=>{sys.attributes=sys.attributes.filter(x=>x.id!==a.id);render();}},'✕'))));
-}
 function tabRecursos(sys){
   const eff=effAttr(sys,sys.attrMax);
   const sampleVars={'Nível':sys.maxLevel,'Nivel':sys.maxLevel}; sys.attributes.forEach(a=>sampleVars[a.name]=eff);
@@ -682,26 +662,6 @@ function profCard(sys){
           ...linhas,
           h('button',{class:'btn ghost sm',onclick:()=>{
             sys.profTiers.push({id:uid(),name:'Novo grau',mult:1,bonus:0});render();}},'+ Grau')));
-}
-function tabPericias(sys){
-  return h('div',{}, profCard(sys),
-   card('Perícias','Cada perícia pode ter descrição, ser ligada a um atributo e dar bônus ao treinar.',
-    h('button',{class:'btn primary',onclick:()=>{sys.skills.push({id:uid(),name:'Nova Perícia',description:'',linkedAttrId:null,trainedBonus:0,auto:false});render();}},'+ Perícia'),
-    ...sys.skills.map(s=>{
-      const linkSel=h('select',{class:'in',onchange:e=>{s.linkedAttrId=e.target.value||null;render();}});
-      linkSel.appendChild(h('option',{value:''},'— nenhum —'));
-      sys.attributes.forEach(a=>{const o=h('option',{value:a.id},a.name);if(a.id===s.linkedAttrId)o.selected=true;linkSel.appendChild(o);});
-      return h('div',{class:'item',style:{marginBottom:'10px'}},
-        h('div',{class:'row'},
-          h('input',{class:'in',value:s.name,placeholder:'Nome',oninput:e=>{s.name=e.target.value;persist();}}),
-          h('button',{class:'btn danger',onclick:()=>{sys.skills=sys.skills.filter(x=>x.id!==s.id);render();}},'✕')),
-        h('input',{class:'in',style:{marginTop:'6px'},value:s.description||'',placeholder:'Descrição (o que a perícia faz)',oninput:e=>{s.description=e.target.value;persist();}}),
-        h('div',{class:'grid g3',style:{marginTop:'8px'}},
-          field('Ligada ao atributo', linkSel),
-          field('Bônus ao treinar', h('input',{class:'in',type:'number',value:s.trainedBonus||0,onchange:e=>{s.trainedBonus=parseInt(e.target.value)||0;render();}}), 'bonustreino'),
-          field('Disponibilidade', h('button',{class:'in',style:{cursor:'pointer',textAlign:'left'},onclick:()=>{s.auto=!s.auto;render();}}, s.auto?'⚡ Automática':'✋ Jogador escolhe'), 'periciaauto')),
-        h('div',{class:'hint',style:{marginTop:'6px'}}, skillExplain(sys,s)));
-    })));
 }
 function skillExplain(sys,s){
   const l=sys.attributes.find(a=>a.id===s.linkedAttrId); const base=l?l.name:null;
