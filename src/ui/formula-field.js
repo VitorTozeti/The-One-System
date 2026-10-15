@@ -337,6 +337,7 @@ function mestreView(){
   else if(S.tab==='dados') content=tabDados(sys);
   else if(S.tab==='tecnicas') content=tabTecnicas(sys);
   else if(S.tab==='ficha') content=tabFicha(sys);
+  else if(S.tab==='livro') content=tabLivro(sys);
   else content=portCard();
 
   /* --- rodapé "Próximo passo →" (item 5): segue a ordem de TAB_META --- */

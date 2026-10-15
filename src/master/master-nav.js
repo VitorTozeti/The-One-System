@@ -27,6 +27,7 @@ const TAB_META=[
   {k:'tags',      ic:'🏷',  nome:'Tags',          g:'mundo',      adv:true},
   {k:'tecnicas',  ic:'🌀',  nome:'Técnicas',      g:'mundo',      adv:true},
   {k:'ficha',     ic:'🖼️',  nome:'Ficha',         g:'saida'},
+  {k:'livro',     ic:'📕',  nome:'Livro de regras', g:'saida'},
   {k:'sistema',   ic:'💾',  nome:'Sistema',       g:'saida'},
 ];
 function tabMeta(k){ return TAB_META.find(t=>t.k===k)||TAB_META[0]; }

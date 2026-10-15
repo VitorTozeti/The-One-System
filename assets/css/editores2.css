@@ -115,3 +115,18 @@
 .md-bib[open] > summary::before{content:'▾ '}
 .md-bib > summary small{font-weight:400;color:var(--dim)}
 .md-bib > summary:hover{color:var(--txt)}
+
+/* ---------- livro de regras ---------- */
+.lv{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,1.05fr);gap:16px;align-items:start}
+@media(max-width:1250px){.lv{grid-template-columns:1fr}}
+.lv-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.lv-prev{position:sticky;top:8px;min-width:0}
+@media(max-width:1250px){.lv-prev{position:static}}
+.lv-barra{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.lv-paper{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#7b8096}
+.lv-frame{display:block;width:100%;height:min(76vh,820px);border:0;background:#7b8096}
+.lv-off{opacity:.55}
+.lv-img{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel)}
+.lv-th{width:84px;height:64px;object-fit:cover;border-radius:6px;flex:0 0 auto}
+.lv-img-c{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.lv-img-c .in{margin-top:0}
