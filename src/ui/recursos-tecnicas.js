@@ -48,7 +48,10 @@ function recursoEditor(sys,r,sampleVars){
   const cab=mdCab({cor:r.color,icone:r.icon||(eValor?'🔢':'📊'),onIcone:v=>{r.icon=v;},onCor:v=>{r.color=v;},nome:r.name,onNome:v=>{r.name=v;},phNome:'Nome do recurso',
     sub:h('div',{class:'row wrapf'},
       h('button',{class:'btn sm '+(!eValor?'emerald':'ghost'),type:'button',title:'Consumível: tem máximo e valor atual',onclick:()=>{r.type='barra';render();}},(!eValor?'✓ ':'')+'Barra'),
-      h('button',{class:'btn sm '+(eValor?'emerald':'ghost'),type:'button',title:'Número calculado, sem gastar',onclick:()=>{r.type='valor';render();}},(eValor?'✓ ':'')+'Valor')),
+      h('button',{class:'btn sm '+(eValor?'emerald':'ghost'),type:'button',title:'Número calculado, sem gastar',onclick:()=>{r.type='valor';render();}},(eValor?'✓ ':'')+'Valor'),
+      eValor?h('button',{class:'btn sm '+(r.ehDefesa?'emerald':'ghost'),type:'button','aria-pressed':r.ehDefesa?'true':'false',
+        title:'Efeitos de “+N de defesa” (técnicas, itens, código) somam neste valor. Já vale sozinho para recursos chamados Defesa ou CA.',
+        onclick:()=>{r.ehDefesa=!r.ehDefesa;render();}},(r.ehDefesa?'✓ ':'')+'🛡 É a Defesa'):null),
     botoes:mdBotoes(sys.resources,r,'recurso',
       ()=>{ const c=clonarComIds(r); c.name=r.name+' (cópia)'; sys.resources.splice(sys.resources.indexOf(r)+1,0,c); S.ui.resSel=c.id; render(); },
       ()=>comDesfazer('Recurso “'+(r.name||'sem nome')+'” excluído',()=>{ sys.resources.splice(sys.resources.indexOf(r),1);

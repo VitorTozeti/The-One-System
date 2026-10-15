@@ -101,7 +101,6 @@ function tabItens(sys){
     h('button',{type:'button',class:'chip'+(!cat?' on':''),onclick:()=>{S.ui.itemCat='';render();}},'Todos'),
     ...ITEM_CATS.map(([v,l])=>h('button',{type:'button',class:'chip'+(cat===v?' on':''),onclick:()=>{S.ui.itemCat=cat===v?'':v;render();}},l)));
   return h('div',{},
-    slotsCard(sys),
     mdLayout({
       titulo:'Itens & Equipamento',
       dica:'Armas, armaduras, acessórios e consumíveis. Equipados, aplicam seus efeitos; consumíveis ganham o botão 🧪 Usar. Todo efeito de classe e origem também funciona aqui.',
@@ -117,7 +116,8 @@ function tabItens(sys){
       vazioTitulo:'Nenhum item ainda', vazioDica:'Use a biblioteca acima (já vem com mecânica) ou digite um nome.',
       cartao:(it,sel)=>mdCartao({sel,cor:raridadeInfo(it.raridade)[2],icone:iconeDoItem(it),nome:it.name,onclick:()=>{S.ui.itemSel=it.id;render();},
         sub:[itemCatLabel(it.categoria).replace(/^\S+\s/,''),(it.weight||0)+' peso',it.effects.length?(it.effects.length+' efeito(s)'):null,(it.uso&&it.uso.on)?'usável':null].filter(Boolean).join(' · ')}),
-      editor:it=>itemEditor(sys,it)}));
+      editor:it=>itemEditor(sys,it)}),
+    slotsCard(sys));
 }
 function itemEditor(sys,it){
   const cor=raridadeInfo(it.raridade)[2];
@@ -141,7 +141,30 @@ function itemEditor(sys,it){
     itemAtaqueBox(sys,it), itemArmaduraBox(sys,it));
   else if(aba==='efeitos') corpo=itemEfeitos(sys,it);
   else corpo=itemUso(sys,it);
-  return h('section',{class:'arq-edit'},cab,tabs,h('div',{class:'arq-corpo'},corpo));
+  const vazio=!it.attack.on&&!it.armor.on&&!it.uso.on&&!it.effects.length;
+  return h('section',{class:'arq-edit'},cab,vazio?itemInicioRapido(sys,it):null,tabs,h('div',{class:'arq-corpo'},corpo));
+}
+/* item novinho, sem nada: um clique transforma em arma, armadura, poção, acessório mágico… (depois é só ajustar) */
+function itemInicioRapido(sys,it){
+  const atr=(sys.attributes||[])[0]||null;
+  const aplica=(cfg,aba)=>()=>{ cfg(); S.ui.itemAba=aba; render(); };
+  const opts=[
+    ['⚔️','Arma','Ataque com rolagem, dano e crítico na ficha',aplica(()=>{ it.categoria='arma'; it.equipavel=true; if(!it.icon) it.icon='🗡️';
+      Object.assign(it.attack,{on:true,attrId:atr?atr.id:'',dano:'1d6'+(atr?(' + '+atr.name):''),alcance:'corpo a corpo'}); },'combate')],
+    ['🛡️','Armadura','Define a Defesa enquanto equipada',aplica(()=>{ it.categoria='armadura'; it.equipavel=true; if(!it.icon) it.icon='🦺';
+      const r=_recPor(sys,_DEF_NOMES); if(r) Object.assign(it.armor,{on:true,resId:r.id,formula:'11'+(atr?(' + '+atr.name):'')}); },'combate')],
+    ['🧪','Poção / consumível','Botão Usar: cura ou restaura um recurso',aplica(()=>{ it.categoria='consumivel'; it.equipavel=false; it.empilhavel=true; if(!it.icon) it.icon='🧪';
+      const r=_recPor(sys,_V); Object.assign(it.uso,{on:true,resId:r?r.id:'',formula:r?'2d4 + 2':'',consome:true,texto:'Bebe e sente os ferimentos fecharem.'}); },'uso')],
+    ['💍','Acessório mágico','Dá bônus enquanto equipado (você escolhe quais)',aplica(()=>{ it.categoria='acessorio'; it.equipavel=true; it.raridade='raro'; if(!it.icon) it.icon='💍';
+      it.effects.push(newEffect(sys)); },'efeitos')],
+    ['⚡','Com recurso especial','Cria uma barra nova (cargas…) enquanto equipado',aplica(()=>{ it.categoria='acessorio'; it.equipavel=true; if(!it.icon) it.icon='🪄';
+      it.effects.push(_ef({kind:'recursoNovo',text:'Cargas',value:3,icon:'⚡',recarga:'longo',color:'#f59e0b'})); },'efeitos')],
+    ['⌨️','Efeito por código','Regras fora do comum, com ajuda para montar',aplica(()=>{ it.equipavel=true; it.effects.push(_ef({kind:'codigo',text:it.name||'Efeito',code:CODIGO_EXEMPLO})); },'efeitos')],
+  ];
+  return h('div',{class:'item-inicio'},
+    h('div',{class:'ii-t'},'Começar rápido — que tipo de item é?'),
+    h('div',{class:'ii-g'},...opts.map(([ic,t,d,fn])=>h('button',{type:'button',class:'ii-b',onclick:fn},
+      h('span',{class:'ii-ic','data-noicon':''},ic),h('span',{class:'ii-tx'},h('b',{},t),h('small',{},d))))));
 }
 function itemBasico(sys,it){
   const catSel=h('select',{class:'in',onchange:e=>{it.categoria=e.target.value;render();}});

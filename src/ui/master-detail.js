@@ -20,7 +20,7 @@ function clonarComIds(o){
 function mdCab(o){
   return h('div',{class:'arq-cab',style:{'--arq':o.cor||'var(--indigo)'}},
     h('div',{class:'arq-ic-g'},
-      o.onIcone?h('input',{class:'in arq-ic-in',value:o.icone||'',maxlength:'4','aria-label':'Ícone',oninput:e=>{o.onIcone(e.target.value);persist();},onchange:()=>render()}):h('span',{class:'arq-ic-in arq-ic-fixo'},o.icone||'✦'),
+      o.onIcone?iconePicker(o.icone,v=>{o.onIcone(v);}):h('span',{class:'arq-ic-in arq-ic-fixo'},o.icone||'✦'),
       o.onCor?h('input',{type:'color',class:'arq-cor',value:o.cor||'#7c3aed','aria-label':'Cor',oninput:e=>{o.onCor(e.target.value);persist();},onchange:()=>render()}):null),
     h('div',{class:'arq-cab-t'},
       h('input',{class:'in arq-nome',value:o.nome||'',placeholder:o.phNome||'Nome','aria-label':'Nome',maxlength:'60',oninput:e=>{o.onNome(e.target.value);persist();},onchange:()=>render()}),
@@ -67,7 +67,7 @@ function mdLayout(o){
     oninput:e=>{ S.ui[qKey]=e.target.value; pintar(); }}):null;
   return h('div',{class:'arq'},
     o.extraTopo||null,
-    o.titulo?card(o.titulo,o.dica||'',null,o.biblioteca||null):(o.biblioteca||null),
+    o.titulo?card(o.titulo,o.dica||'',null,o.biblioteca?mdBib(o):null):(o.biblioteca||null),
     h('div',{class:'arq-wrap'},
       h('aside',{class:'arq-lista'}, criar, busca, o.filtros||null,
         lista.length?cont:h('div',{class:'vazio'},h('div',{class:'vazio-t'},o.vazioTitulo||'Nada ainda'),h('div',{class:'hint'},o.vazioDica||'Digite um nome acima e aperte Enter.'))),
@@ -84,4 +84,16 @@ function mdAbrirTudo(itens){
   return h('div',{class:'row wrapf',style:{margin:'4px 0 8px'}},
     h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ itens.forEach(a=>{S.ui.open[a.id]=true;}); render(); }},'▼ Expandir tudo'),
     h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ itens.forEach(a=>{delete S.ui.open[a.id];}); render(); }},'▶ Recolher tudo'));
+}
+
+/* a biblioteca de peças prontas vira uma gaveta: aberta enquanto a lista está vazia, recolhida depois (e lembra a escolha) */
+function mdBib(o){
+  const ab=S.ui.bibAb||(S.ui.bibAb={});
+  const aberta=ab[o.selKey]!=null?ab[o.selKey]:(o.lista.length===0);
+  const d=h('details',{class:'md-bib'},
+    h('summary',{},'📚 '+(o.bibTitulo||'Peças prontas e opções extras'),h('small',{},aberta?'':' — clique para abrir')),
+    o.biblioteca);
+  if(aberta) d.open=true;
+  d.addEventListener('toggle',()=>{ ab[o.selKey]=d.open; });
+  return d;
 }

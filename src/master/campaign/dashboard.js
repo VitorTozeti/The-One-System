@@ -111,7 +111,7 @@ function mestreDashboard(){
           h('div',{},'Use os menus laterais para abrir o Sistema, os Jogadores, o Mapa… Pode abrir quantos quiser ao mesmo tempo.'))));
   /* Mesa ao vivo: barra compacta sempre à vista (sessão, combate, nota rápida, rolagem secreta, busca). */
   const centro=h('div',{class:'mdash-centro'}, mesaViva(), panes);
-  return h('div',{class:'mdash2'}, mrail('L'), centro, mrail('R'),
+  return h('div',{class:'mdash2'+(isOpen('sistema')?' foco':'')}, mrail('L'), centro, mrail('R'),
     campBuscaOverlay(), importOverlay());
 }
 

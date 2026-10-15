@@ -15,7 +15,7 @@ function bibliotecaGenerica(titulo,lista,jaTem,adicionar){
     h('div',{class:'row wrapf'},...lista.map(p=>{
       const tem=jaTem(p);
       return h('button',{type:'button',class:'chip'+(tem?' on':''),'aria-pressed':tem?'true':'false',disabled:tem,
-        title:p.d+(tem?'\n(já adicionado)':'\n(clique para adicionar)'),onclick:()=>{ adicionar(p); render(); }},(tem?'✓ ':'+ ')+p.n);
+        title:p.d+(tem?'\n(já adicionado)':'\n(clique para adicionar)'),onclick:()=>{ adicionar(p); render(); }},(tem?'✓ ':'+ '),p.ic?h('span',{'data-noicon':'',class:'chip-ic'},p.ic+' '):null,p.n);
     })));
 }
 const _tem=(l,n)=>(l||[]).some(x=>semAcento(x.name||'')===semAcento(n));

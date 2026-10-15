@@ -151,7 +151,7 @@ function jogadorView(){
             if(on) d.classTechs=sel.filter(x=>x!==op.id);
             else { if(sel.length>=max) return showToast('Você já escolheu '+max+'. Desmarque uma para trocar.'); d.classTechs=[...sel,op.id]; }
             render(); }},
-          h('div',{class:'t'},(on?'✓ ':'')+(bloq?'🔒 ':'')+op.name+(lv>1?('  · '+levelLabel(sys,lv)):'')),
+          h('div',{class:'t'},(on?'✓ ':'')+(bloq?'🔒 ':'')+(op.icon?op.icon+' ':'')+op.name+(lv>1?('  · '+levelLabel(sys,lv)):'')),
           op.description?h('div',{class:'d'},op.description):null,
           fx.length?h('div',{class:'fx'},fx.join('  •  ')):null,
           bloq?h('div',{class:'tr',style:{color:'var(--warn-txt)'}},'Requer: '+[trav?levelLabel(sys,lv):null,...faltaAttr].filter(Boolean).join(', ')):null);
@@ -286,13 +286,21 @@ function computeSheet(sys,d){
     const fa=formulaRecursoArquetipo(sys,r,eff,varsTotal);
     let v = arm ? arm.v : fa.v;
     if(!Number.isNaN(v))v+=(eff.resBonus[r.id]||0);
+    /* "+N de defesa" (técnica, item, código…) soma no recurso que é a Defesa: o marcado, o que a armadura define ou o de nome Defesa/CA */
+    const bDef=(eff.rollBonus&&eff.rollBonus.defesa)||0;
+    const ehDef=bDef&&(r.ehDefesa||!!arm||['defesa','ca','armadura','classe de armadura','defense','ac'].includes(semAcentoSeguro(r.name)));
+    if(ehDef&&!Number.isNaN(v)) v+=bDef;
     let cur=d.resCurrent[r.id];
     /* o valor atual nunca passa do máximo (P3): se o mestre baixar a fórmula,
        a ficha acompanha em vez de exibir "999 / 25" */
     if(cur!=null && !Number.isNaN(v)) cur=Math.max(0,Math.min(cur,v));
     let pr=null;
     if(r.perRound&&r.perRound.trim()){ const x=evalFormula(r.perRound,varsTotal); if(!Number.isNaN(x)) pr=x; }
-    return {...r,max:v,cur:cur==null?v:cur,perRoundVal:pr,armadura:arm?arm.it.name:null,formulaDe:fa.origem};});
+    return {...r,max:v,cur:cur==null?v:cur,perRoundVal:pr,armadura:arm?arm.it.name:null,formulaDe:fa.origem,bonusDefesa:ehDef?bDef:0};});
+  /* recursos ESPECIAIS concedidos por itens/técnicas/código (aparecem enquanto a fonte valer) */
+  ((eff.B&&eff.B.novosRec)||[]).forEach(r=>{
+    let cur=d.resCurrent[r.id]; if(cur!=null) cur=Math.max(0,Math.min(cur,r.max));
+    allRes.push({...r,cur:cur==null?r.max:cur,perRoundVal:null,armadura:null,formulaDe:[]}); });
 
   /* PEÇA 2 — valor final de cada perícia, já com o multiplicador de proficiência */
   const skillVal=(s)=>{
@@ -351,7 +359,8 @@ function recursosInner(sys,d,ctx,b,mode){
     : null;
   return h('div',{}, barraDescanso, ...bars.map(r=>h('div',{style:{marginBottom:'12px'}},
     h('div',{class:'row between',style:{fontSize:'13px',marginBottom:'4px'}},
-      h('span',{style:{fontWeight:'600'}},r.name,
+      h('span',{style:{fontWeight:'600'}},(r.granted?(r.icon||'✨')+' ':'')+r.name,
+        (r.granted&&r.fontes&&r.fontes.length?h('span',{class:'hint',style:{marginLeft:'6px',fontWeight:'400'}},'· '+r.fontes.join(', ')):null),
         (ctx.eff.resBonus[r.id]?h('span',{style:{color:'var(--ok-txt)',fontSize:'11px',marginLeft:'6px'}},'(+'+ctx.eff.resBonus[r.id]+' hab.)'):null),
         (r.perRoundVal!=null?h('span',{class:'hint',style:{marginLeft:'6px'}},'· máx '+r.perRoundVal+'/rodada'):null)),
       h('span',{class:'hint'}, r.cur+' / '+(Number.isNaN(r.max)?'—':r.max))),
@@ -441,7 +450,7 @@ function statBoxes(sys,ctx,which){
   if(which==='valores'){
     return ctx.allRes.filter(r=>(r.type||'barra')==='valor').map(r=>({
       name:r.name, abbr:(r.name||'?').slice(0,3).toUpperCase(), main:Number.isNaN(r.max)?'—':r.max,
-      sub:ctx.eff.resBonus[r.id]?('+'+ctx.eff.resBonus[r.id]+' hab.'):'', color:r.color}));
+      sub:(ctx.eff.resBonus[r.id]||r.bonusDefesa)?(sign((ctx.eff.resBonus[r.id]||0)+(r.bonusDefesa||0))+' hab.'):'', color:r.color}));
   }
   return sys.attributes.map(a=>{const t=ctx.totals[a.id];
     return {name:a.name, abbr:attrAbbr(a),
@@ -590,13 +599,21 @@ function periciasInner(sys,d,ctx,b){
     h('div',{}, h('span',{class:'nm'},r.s.name), h('span',{class:'tg'},'· '+r.tag+' · '+r.link)),
     h('span',{class:'vl'}, sign(r.value)))));
 }
-function habilidadesInner(sys,ctx){
+function habilidadesInner(sys,ctx,d,mode){
   /* traços físicos aparecem em Características; aqui ficam habilidades e técnicas */
   const nomeFonte=x=>x.tipo==='tecnica'?(((ctx.eff.cls||{}).tecnicas||{}).nome||'técnica'):x.src==='classe'?((ctx.eff.cls||{}).name||'classe'):x.src==='origem'?((ctx.eff.org||{}).name||'origem'):x.src;
-  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>h('div',{class:'abil'},
-    h('div',{class:'t'},((x.ab.req||{}).level>1?h('span',{class:'nv'},'Nv '+x.ab.req.level):null),x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
-    x.ab.description?h('div',{class:'d'},x.ab.description):null,
-    (x.ab.effects&&x.ab.effects.length)?h('div',{class:'fx'},x.ab.effects.map(ef=>effectLabel(sys,ef)).join('  •  ')):null));
+  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>{
+    const ab=x.ab, ligada=x.ligada!==false, usa=!!(ab.uso&&ab.uso.on);
+    const btn=(d&&usa)?botaoUsoHab(sys,d,ctx,ab,ligada):null;
+    const apagada=usa&&ab.uso.modo==='ativa'&&!ligada;
+    return h('div',{class:'abil'+(apagada?' off':'')},
+      h('div',{class:'row between abil-cab'},
+        h('div',{class:'t'},(ab.icon?ab.icon+' ':''),((ab.req||{}).level>1?h('span',{class:'nv'},'Nv '+ab.req.level):null),ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
+        btn),
+      ab.description?h('div',{class:'d'},ab.description):null,
+      (usa&&mode==='play')?h('div',{class:'hint'},usoHabResumo(sys,ab)):null,
+      (ab.effects&&ab.effects.length)?h('div',{class:'fx'},(apagada?'(desligada) ':'')+ab.effects.map(ef=>effectLabel(sys,ef)).join('  •  ')):null);
+  });
   const locked=ctx.eff.locked.filter(x=>x.tipo!=='tecnica').map(x=>h('div',{class:'abil locked'},
     h('div',{class:'t'},'🔒 '+x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
     x.ab.description?h('div',{class:'d'},x.ab.description):null,
@@ -967,7 +984,7 @@ function blockInner(sys,d,ctx,b,mode){
     case 'valores':         return statsInner(sys,ctx,b,'valores');
     case 'recursos':        return recursosInner(sys,d,ctx,b,mode);
     case 'pericias':        return periciasInner(sys,d,ctx,b);
-    case 'habilidades':     return habilidadesInner(sys,ctx);
+    case 'habilidades':     return habilidadesInner(sys,ctx,d,mode);
     case 'caracteristicas': return caracteristicasInner(ctx);
     case 'anotacoes':       return anotacoesInner(d,mode);
     case 'dados':           return dadosInner(sys,ctx,mode);

@@ -16,7 +16,7 @@ function sanitizeArquetipo(c,kind){
   if(typeof c.icon!=='string') c.icon= kind==='origem' ? '🧬' : '⚔️';
   if(typeof c.color!=='string') c.color= kind==='origem' ? '#0d9488' : '#7c3aed';
   if(!Array.isArray(c.abilities)) c.abilities=[];
-  c.abilities.forEach(a=>{ if(!a.id)a.id=uid(); if(!Array.isArray(a.effects))a.effects=[]; if(!a.req)a.req={level:0,attrs:[]}; if(!Array.isArray(a.req.attrs))a.req.attrs=[]; });
+  c.abilities.forEach(a=>{ if(!a.id)a.id=uid(); if(!Array.isArray(a.effects))a.effects=[]; if(!a.req)a.req={level:0,attrs:[]}; if(!Array.isArray(a.req.attrs))a.req.attrs=[]; sanitizarUsoHab(a); });
   /* recursos: [{id,resId,modo:'substitui'|'soma',formula}] */
   if(!Array.isArray(c.recursos)) c.recursos=[];
   c.recursos.forEach(r=>{ if(!r.id)r.id=uid(); if(r.modo!=='soma') r.modo='substitui'; if(typeof r.formula!=='string') r.formula=''; });
@@ -26,7 +26,7 @@ function sanitizeArquetipo(c,kind){
     if(typeof t.nome!=='string'||!t.nome.trim()) t.nome='Técnicas';
     if(typeof t.formula!=='string') t.formula='Nível';
     if(!Array.isArray(t.opcoes)) t.opcoes=[];
-    t.opcoes.forEach(o=>{ if(!o.id)o.id=uid(); if(!Array.isArray(o.effects))o.effects=[]; if(!o.req)o.req={level:0,attrs:[]}; if(!Array.isArray(o.req.attrs))o.req.attrs=[]; });
+    t.opcoes.forEach(o=>{ if(!o.id)o.id=uid(); if(!Array.isArray(o.effects))o.effects=[]; if(!o.req)o.req={level:0,attrs:[]}; if(!Array.isArray(o.req.attrs))o.req.attrs=[]; sanitizarUsoHab(o); });
   } else {
     if(!Array.isArray(c.traits)) c.traits=[];
     c.traits.forEach(t=>{ if(!t.id)t.id=uid(); if(!Array.isArray(t.effects))t.effects=[]; if(typeof t.icon!=='string')t.icon='✦'; });
@@ -38,12 +38,21 @@ function sanitizeArquetipo(c,kind){
   }
   return c;
 }
+/* Técnica/magia/habilidade USÁVEL: custa um recurso (Mana…), pode curar/ferir um recurso (fórmula com dados)
+   e, no modo "ativa", liga/desliga (os efeitos só valem enquanto ligada). */
+function sanitizarUsoHab(ab){
+  const base={on:false,modo:'instantaneo',custoId:'',custo:'',alvoId:'',formula:'',texto:''};
+  ab.uso=Object.assign({},base,(ab.uso&&typeof ab.uso==='object')?ab.uso:{});
+  if(ab.uso.modo!=='ativa') ab.uso.modo='instantaneo';
+  if(typeof ab.icon!=='string') ab.icon='';
+  return ab;
+}
 const TAMANHOS=[['minusculo','Minúsculo'],['pequeno','Pequeno'],['medio','Médio'],['grande','Grande'],['enorme','Enorme']];
 
 /* ---------- baldes de efeito ---------- */
 function novoBalde(){
   return {attrBonus:{},resBonus:{},grantedSkills:[],charNum:{},charTags:[],diceMod:{},
-    rollBonus:{},resist:{},caps:{},resFormulas:[],techExtra:0,notas:[],erros:[]};
+    rollBonus:{},resist:{},caps:{},resFormulas:[],techExtra:0,notas:[],erros:[],novosRec:[]};
 }
 /* Resistências: "reduz" soma, as outras são marcas. Imunidade vence tudo. */
 const RESIST_MODOS=[['reduz','Reduz dano em'],['metade','Resistência (½ dano)'],['imune','Imunidade'],['vulneravel','Vulnerabilidade (×2)']];
@@ -77,6 +86,25 @@ const CAPACIDADES=[
 function capInfo(nm){ const t=semAcentoSeguro(nm); return CAPACIDADES.find(c=>semAcentoSeguro(c.n)===t)||{ic:'✦'}; }
 function semAcentoSeguro(s){ return (typeof semAcento==='function')?semAcento(s||''):String(s||'').toLowerCase(); }
 
+/* Recurso especial concedido por uma fonte (item, técnica, classe…): aparece na ficha como uma barra
+   enquanto a fonte estiver valendo. Se o sistema já tem um recurso com esse nome, vira bônus nele. */
+function registrarRecursoNovo(B,o){
+  const nome=String(o.nome||'').trim(); if(!nome) return;
+  const sys=(B.ctx||{}).sys;
+  const ex=sys&&_acha(sys.resources,nome);
+  if(ex){ B.resBonus[ex.id]=(B.resBonus[ex.id]||0)+(+o.max||0); return; }
+  const id='fx:'+semAcentoSeguro(nome).replace(/\s+/g,'-');
+  let r=B.novosRec.find(x=>x.id===id);
+  if(!r){
+    r={id,name:nome,max:0,icon:o.icone||'✨',color:o.cor||'#a855f7',granted:true,fontes:[],
+       recharge:{trig:['curto','longo','nunca'].includes(o.recarga)?o.recarga:'longo',amt:'tudo',formula:''},
+       type:o.tipo==='valor'?'valor':'barra',formula:'',desc:''};
+    B.novosRec.push(r);
+  }
+  r.max+=(+o.max||0);
+  if(o.fonte&&!r.fontes.includes(o.fonte)) r.fontes.push(o.fonte);
+}
+
 /* ---------- efeito por CÓDIGO ----------
    O Mestre escreve JavaScript que recebe `fx` e chama funções que despejam nos baldes.
    Roda a cada cálculo da ficha: deve ser rápido e não ter efeitos colaterais.
@@ -94,9 +122,9 @@ function rodarEfeitoCodigo(ef,B,k){
   if(!sys) return;
   if(sys.codigoBloqueado){ B.erros.push((ef.text||'Efeito por código')+': bloqueado (sistema importado — libere na aba Classes).'); return; }
   const c=compilarCodigo(src);
-  if(c.erro){ B.erros.push((ef.text||'Efeito por código')+': '+c.erro); return; }
+  if(c.erro){ B.erros.push((ef.text||'Efeito por código')+': '+traduzErroJs(c.erro)); return; }
   try{ c.fn(fxApi(sys,ctx,B,k==null?1:k)); }
-  catch(e){ B.erros.push((ef.text||'Efeito por código')+': '+(e&&e.message||e)); }
+  catch(e){ B.erros.push((ef.text||'Efeito por código')+': '+msgErroCodigo(e)); }
 }
 /* acha um item da lista pelo nome (ou sigla, no caso de atributo), sem ligar para acento/caixa */
 function _acha(lista,nome){
@@ -104,18 +132,24 @@ function _acha(lista,nome){
   return (lista||[]).find(x=>semAcentoSeguro(x.name)===t || (x.abbr&&semAcentoSeguro(x.abbr)===t)) || null;
 }
 function fxApi(sys,ctx,B,k){
-  const num=v=>(+v||0)*k;
+  const vars=()=>ctx._vars||(ctx._vars=varsDoEfeito(sys,ctx.level,ctx.tot1));
+  const formula=expr=>{ const r=evalFormula(String(expr),vars()); return Number.isNaN(r)?0:r; };
+  /* qualquer valor numérico aceita número OU texto de fórmula ("Nível * 2 + Vigor") */
+  const num=v=>(typeof v==='string'?formula(v):(+v||0))*k;
+  const avisa=(tipo,nome)=>{ const m='“'+(ctx.fonte||'código')+'”: não achei '+tipo+' “'+nome+'”.'; if(!B.erros.includes(m)) B.erros.push(m); };
   const d=ctx.d||{};
   const cls=(sys.classes||[]).find(c=>c.id===d.classId), org=(sys.origins||[]).find(o=>o.id===d.originId);
   const fx={
     nivel:ctx.level, classe:cls?cls.name:'', origem:org?org.name:'', fonte:ctx.fonte||'',
     /* leitura */
-    attr:nome=>{ const a=_acha(sys.attributes,nome); return a?((ctx.tot1||{})[a.id]||0):0; },
+    attr:nome=>{ const a=_acha(sys.attributes,nome); if(!a){ avisa('o atributo',nome); return 0; } return ((ctx.tot1||{})[a.id]||0); },
     tem:nome=>B.charTags.includes(nome)||!!B.caps[nome],
+    formula,
     /* escrita */
-    atributo:(nome,v)=>{ const a=_acha(sys.attributes,nome); if(a) B.attrBonus[a.id]=(B.attrBonus[a.id]||0)+num(v); },
-    recurso:(nome,v)=>{ const r=_acha(sys.resources,nome); if(r) B.resBonus[r.id]=(B.resBonus[r.id]||0)+num(v); },
-    pericia:nome=>{ const s=_acha(sys.skills,nome); if(s&&!B.grantedSkills.includes(s.id)) B.grantedSkills.push(s.id); },
+    atributo:(nome,v)=>{ const a=_acha(sys.attributes,nome); if(!a) return avisa('o atributo',nome); B.attrBonus[a.id]=(B.attrBonus[a.id]||0)+num(v); },
+    recurso:(nome,v)=>{ const r=_acha(sys.resources,nome); if(!r) return avisa('o recurso',nome); B.resBonus[r.id]=(B.resBonus[r.id]||0)+num(v); },
+    novoRecurso:(nome,max,op)=>{ op=op||{}; registrarRecursoNovo(B,{nome,max:num(max),icone:op.icone,cor:op.cor,recarga:op.recarga,tipo:op.tipo,fonte:ctx.fonte}); },
+    pericia:nome=>{ const s=_acha(sys.skills,nome); if(!s) return avisa('a perícia',nome); if(!B.grantedSkills.includes(s.id)) B.grantedSkills.push(s.id); },
     rolagem:(escopo,v)=>{ const e=escopo||'todos'; B.rollBonus[e]=(B.rollBonus[e]||0)+num(v); },
     dados:(escopo,v)=>{ const e=escopo||'todos'; B.diceMod[e]=(B.diceMod[e]||0)+num(v); },
     resistencia:(tipo,v)=>registrarResist(B,String(tipo),'reduz',num(v)),
@@ -128,6 +162,8 @@ function fxApi(sys,ctx,B,k){
     tecnicas:v=>{ B.techExtra+=num(v); },
     nota:txt=>{ if(txt) B.notas.push({fonte:ctx.fonte||'',t:String(txt)}); },
   };
+  /* atalhos legíveis: fx.ataque(2), fx.dano(1), fx.defesa(3) */
+  fx.ataque=v=>fx.rolagem('ataque',v); fx.dano=v=>fx.rolagem('dano',v); fx.defesa=v=>fx.rolagem('defesa',v);
   return Object.freeze(fx);
 }
 function sistemaTemCodigo(sys){

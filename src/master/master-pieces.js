@@ -87,7 +87,7 @@ function condicaoEditor(sys,c){
   const body=h('div',{class:'acc-body'},
     h('div',{class:'grid g3',style:{marginTop:'12px'}},
       field('Nome', h('input',{class:'in',value:c.name,oninput:e=>{c.name=e.target.value;persist();},onchange:()=>render()})),
-      field('Ícone', h('input',{class:'in',style:{textAlign:'center'},value:c.icon||'',placeholder:'⚠',oninput:e=>{c.icon=e.target.value;persist();},onchange:()=>render()})),
+      field('Ícone', iconePicker(c.icon||'',v=>{c.icon=v;},{cls:'ip-campo'})),
       field('Cor', h('input',{type:'color',value:c.color||'#e11d48',style:{width:'100%',height:'40px',background:'transparent',border:'1px solid var(--line)',borderRadius:'10px',cursor:'pointer',marginTop:'4px'},oninput:e=>{c.color=e.target.value;persist();},onchange:()=>render()}))),
     h('div',{style:{marginTop:'8px'}}, field('Descrição', h('textarea',{class:'in',rows:'2',value:c.description||'',oninput:e=>{c.description=e.target.value;persist();}}))),
     h('div',{class:'grid g2',style:{marginTop:'8px',alignItems:'end'}},
@@ -789,7 +789,7 @@ function quandoEditor(sys,ef){
 function effectRowCore(sys,arr,ef,depth){
   depth=depth||0;
   const grupos=[
-    ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],
+    ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['recursoNovo','✨ Cria um recurso especial (cargas, fôlego…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],
     ['Defesa e corpo',[['resistencia','🛡 Resistência / imunidade / vulnerabilidade'],['capacidade','🪽 Capacidade (voo, natação, visão no escuro…)'],['caracteristica','🏷 Característica (etiqueta ou número)']]],
     ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra']]],
     ['Especial',depth===0?[['livre','✨ Efeito único (texto + várias modificações)'],['codigo','⌨ Efeito por código (JavaScript)']]:[['codigo','⌨ Efeito por código (JavaScript)']]],
@@ -798,6 +798,7 @@ function effectRowCore(sys,arr,ef,depth){
     ef.kind=e.target.value;
     if(ef.kind==='atributo')ef.targetId=(sys.attributes[0]||{}).id;
     else if(ef.kind==='recurso')ef.targetId=(sys.resources[0]||{}).id;
+    else if(ef.kind==='recursoNovo'){ if(!ef.text)ef.text='Cargas'; if(!ef.value)ef.value=3; if(!ef.icon)ef.icon='⚡'; if(!ef.recarga)ef.recarga='longo'; if(!ef.color)ef.color='#a855f7'; }
     else if(ef.kind==='pericia')ef.targetId=(sys.skills[0]||{}).id;
     else if(ef.kind==='caracteristica'){ if(!ef.charType)ef.charType='tag'; }
     else if(ef.kind==='livre'){ if(!Array.isArray(ef.mods))ef.mods=[]; }
@@ -814,12 +815,20 @@ function effectRowCore(sys,arr,ef,depth){
 
   const numIn=(w,title)=>h('input',{class:'in',type:'number',style:{width:w||'76px'},value:ef.value==null?0:ef.value,title:title||'',
     onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}});
+  /* valor do efeito: número fixo OU ƒ fórmula (a mesma linguagem das fórmulas de recurso) */
+  const emF=efEmFormula(ef);
+  const fBtnV=h('button',{class:'btn sm ghost ef-f',type:'button',title:emF?'Voltar a um número fixo':'Usar uma fórmula (ex.: Nível * 2, piso(Nível / 3), Força)',
+    'aria-label':emF?'Voltar a número fixo':'Usar fórmula','aria-pressed':emF?'true':'false',
+    onclick:()=>{ if(emF) delete ef.formula; else ef.formula=(ef.value?String(ef.value):'Nível'); render(); }},emF?'123 fixo':'ƒ fórmula');
+  const valCtl=(w,title)=>emF?null:numIn(w,title);
+  const fCaixa=rot=>emF?h('div',{class:'ef-sub'},h('span',{class:'hint'},(rot||'Valor')+' ='),
+    campoFormula(sys,ef,'formula',{tipo:'recarga',placeholder:'Nível * 2',aoMudar:()=>render()})):null;
   const escSel=()=>{ const s2=h('select',{class:'in',style:{maxWidth:'170px'},onchange:e=>{ef.escopo=e.target.value;render();}});
     DICE_ESCOPOS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.escopo||'todos'))o.selected=true;s2.appendChild(o);}); return s2; };
 
   /* BÔNUS EM ROLAGEM — "mais força": +2 nos ataques, +1 no dano, +2 na defesa */
   if(ef.kind==='rolagem'){
-    return h('div',{class:'ef-row'}, kindSel, numIn('76px','Bônus fixo somado ao total'), h('span',{class:'hint'},'em'), escSel(), del);
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel, valCtl('76px','Bônus fixo somado ao total'), fBtnV, h('span',{class:'hint'},'em'), escSel(), del), fCaixa('Bônus'));
   }
   /* RESISTÊNCIA — tipo de dano livre (ou tag do sistema) + modo */
   if(ef.kind==='resistencia'){
@@ -827,22 +836,35 @@ function effectRowCore(sys,arr,ef,depth){
     const tipos=[...new Set([...(sys.tags||[]).map(t=>t.name),'Fogo','Frio','Ácido','Elétrico','Veneno','Necrótico','Psíquico','Físico','Corte','Perfuração','Impacto','Sono','Medo','Doença'])];
     const modoSel=h('select',{class:'in',style:{maxWidth:'210px'},onchange:e=>{ef.modo=e.target.value;render();}});
     RESIST_MODOS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.modo||'reduz'))o.selected=true;modoSel.appendChild(o);});
-    return h('div',{class:'ef-row'}, kindSel, modoSel,
-      (ef.modo||'reduz')==='reduz'?numIn('70px','Quanto de dano é reduzido'):null,
+    const reduz=(ef.modo||'reduz')==='reduz';
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel, modoSel,
+      reduz?valCtl('70px','Quanto de dano é reduzido'):null, reduz?fBtnV:null,
       h('input',{class:'in',style:{maxWidth:'170px'},list:lid,value:ef.text||'',placeholder:'Tipo (ex.: Fogo)',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}),
-      h('datalist',{id:lid},...tipos.map(t=>h('option',{value:t}))), del);
+      h('datalist',{id:lid},...tipos.map(t=>h('option',{value:t}))), del), reduz?fCaixa('Reduz'):null);
   }
   /* CAPACIDADE — movimento/sentido; valor opcional (metros) */
   if(ef.kind==='capacidade'){
     const lid='dl-cap-'+ef.id;
-    return h('div',{class:'ef-row'}, kindSel,
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel,
       h('input',{class:'in',style:{maxWidth:'190px'},list:lid,value:ef.text||'',placeholder:'Ex.: Voo',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}),
       h('datalist',{id:lid},...CAPACIDADES.map(c=>h('option',{value:c.n}))),
-      numIn('76px','Alcance/deslocamento (0 = só a capacidade)'), h('span',{class:'hint'},'m (0 = sem valor)'), del);
+      valCtl('76px','Alcance/deslocamento (0 = só a capacidade)'), emF?null:h('span',{class:'hint'},'m (0 = sem valor)'), fBtnV, del), fCaixa('Alcance'));
   }
   /* TÉCNICA EXTRA — quantas técnicas de classe a mais o personagem escolhe */
   if(ef.kind==='tecnicas'){
-    return h('div',{class:'ef-row'}, kindSel, numIn('70px'), h('span',{class:'hint'},'técnica(s) de classe a mais para escolher'), del);
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel, valCtl('70px'), fBtnV, h('span',{class:'hint'},'técnica(s) de classe a mais para escolher'), del), fCaixa('Quantas'));
+  }
+  /* RECURSO ESPECIAL — uma barra nova (cargas, fôlego, fúria…) que existe enquanto a fonte valer */
+  if(ef.kind==='recursoNovo'){
+    const rec=h('select',{class:'in',style:{maxWidth:'150px'},'aria-label':'Quando recarrega',onchange:e=>{ef.recarga=e.target.value;render();}});
+    [['longo','🌙 Descanso longo'],['curto','☕ Descanso curto'],['nunca','Não recarrega sozinho']].forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.recarga||'longo'))o.selected=true;rec.appendChild(o);});
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel,
+      iconePicker(ef.icon||'',v=>{ef.icon=v;},{cls:'ip-mini',semRemover:true}),
+      h('input',{class:'in',style:{maxWidth:'180px'},value:ef.text||'',placeholder:'Nome (ex.: Cargas)','aria-label':'Nome do recurso',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}),
+      h('span',{class:'hint'},'máx'), valCtl('70px','Máximo do recurso'), fBtnV, rec,
+      h('input',{type:'color',class:'arq-cor',style:{width:'34px',height:'30px'},value:ef.color||'#a855f7','aria-label':'Cor da barra',oninput:e=>{ef.color=e.target.value;persist();},onchange:()=>render()}), del),
+      fCaixa('Máximo'),
+      h('div',{class:'hint',style:{margin:'-2px 0 8px 12px'}},'Vira uma barra na ficha (como Vida/Mana) enquanto o item estiver equipado ou a técnica escolhida. Se já existir um recurso com este nome, soma no máximo dele.'));
   }
   /* CÓDIGO — JavaScript do Mestre; recebe `fx` */
   if(ef.kind==='codigo') return codigoEditor(sys,ef,kindSel,del);
@@ -854,10 +876,10 @@ function effectRowCore(sys,arr,ef,depth){
     DICE_ESCOPOS.forEach(([v,l])=>{const o=h('option',{value:v},l);if(v===(ef.escopo||'todos'))o.selected=true;escSel.appendChild(o);});
     return h('div',{},
       h('div',{class:'row wrapf',style:{marginBottom:'4px'}}, kindSel,
-        h('input',{class:'in',type:'number',style:{width:'80px'},value:ef.value==null?-1:ef.value,
+        emF?null:h('input',{class:'in',type:'number',style:{width:'80px'},value:ef.value==null?-1:ef.value,
           title:'Quantidade de dados: −1 tira um dado, +1 acrescenta',
-          onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}),
-        h('span',{class:'hint'},'dado(s) em'), escSel, del),
+          onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}), fBtnV,
+        h('span',{class:'hint'},'dado(s) em'), escSel, del), fCaixa('Dados'),
       h('div',{class:'hint',style:{marginBottom:'6px'}},
         'Mexe na quantidade de dados, não no total. Se sobrar 0 dados, a rolagem vira "2 dados, pega o pior".'));
   }
@@ -870,8 +892,9 @@ function effectRowCore(sys,arr,ef,depth){
     const nameIn=h('input',{class:'in',style:{maxWidth:'190px'},value:ef.text||'',
       placeholder:ef.charType==='num'?'Ex.: Deslocamento':'Ex.: Visão no escuro',
       oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()});
-    const valIn=ef.charType==='num'?h('input',{class:'in',type:'number',style:{width:'72px'},value:ef.value||0,onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}):null;
-    return h('div',{}, h('div',{class:'row wrapf',style:{marginBottom:'4px'}}, kindSel, typeSel, nameIn, valIn, del),
+    const valIn=(ef.charType==='num'&&!emF)?h('input',{class:'in',type:'number',style:{width:'72px'},value:ef.value||0,onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}):null;
+    return h('div',{}, h('div',{class:'row wrapf',style:{marginBottom:'4px'}}, kindSel, typeSel, nameIn, valIn, ef.charType==='num'?fBtnV:null, del),
+      ef.charType==='num'?fCaixa('Valor'):null,
       ef.charType==='num'?h('div',{class:'hint',style:{marginBottom:'6px'}},'O nome vira variável: "'+((ef.text||'Nome').trim()||'Nome')+'" pode ser usado nas fórmulas do sistema.'):null);
   }
 
@@ -893,13 +916,14 @@ function effectRowCore(sys,arr,ef,depth){
   const targetCtrl=h('select',{class:'in',onchange:e=>{ef.targetId=e.target.value;render();}});
   listp.forEach(it=>{const o=h('option',{value:it.id},it.name);if(it.id===ef.targetId)o.selected=true;targetCtrl.appendChild(o);});
   const usaFormula=ef.kind==='recurso'&&ef.formula!=null;
-  const valInput=(ef.kind==='atributo'||(ef.kind==='recurso'&&!usaFormula))
+  const valInput=((ef.kind==='atributo'&&!emF)||(ef.kind==='recurso'&&!usaFormula))
     ? h('input',{class:'in',type:'number',style:{width:'76px'},value:ef.value,onchange:e=>{ef.value=parseInt(e.target.value)||0;render();}}) : null;
   /* recurso: valor fixo OU fórmula que cresce ("Nível * 2" = +2 de Vida por nível) */
   const fBtn=ef.kind==='recurso'?h('button',{class:'btn sm ghost',type:'button',title:usaFormula?'Voltar a um número fixo':'Usar uma fórmula (ex.: Nível * 2)',
     onclick:()=>{ if(usaFormula) delete ef.formula; else ef.formula='Nível * 2'; render(); }}, usaFormula?'123 fixo':'ƒ fórmula'):null;
   return h('div',{},
-    h('div',{class:'ef-row'}, kindSel, targetCtrl, valInput, fBtn, del),
+    h('div',{class:'ef-row'}, kindSel, targetCtrl, valInput, ef.kind==='atributo'?fBtnV:fBtn, del),
+    ef.kind==='atributo'?fCaixa('Bônus'):null,
     usaFormula?h('div',{class:'ef-sub'}, h('span',{class:'hint'},'Soma ao máximo: '),
       campoFormula(sys,ef,'formula',{tipo:'recarga',placeholder:'Nível * 2',aoMudar:()=>render()})):null);
 }

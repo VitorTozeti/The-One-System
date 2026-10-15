@@ -33,10 +33,10 @@ function fichaVivaCorpo(sys){
         return h('div',{class:'fv-atr',title:a.name},h('small',{},attrAbbr(a)),h('b',{},String(t.eff==null?'—':t.eff))); }))
     : vazio('Sem atributos — crie na aba 💪 Atributos.');
   const recs=sys.resources.length
-    ? sys.resources.map(r=>{ const x=ctx.allRes.find(q=>q.id===r.id)||r; const bar=(r.type||'barra')!=='valor';
+    ? [...sys.resources,...ctx.allRes.filter(q=>q.granted)].map(r=>{ const x=ctx.allRes.find(q=>q.id===r.id)||r; const bar=(r.type||'barra')!=='valor';
         const ok=!Number.isNaN(x.max);
         return h('div',{class:'fv-rec'},
-          h('div',{class:'row between'},h('span',{},r.name),h('b',{class:ok?'':'fv-erro',title:ok?'':'Fórmula inválida'},ok?(bar?x.cur+' / '+x.max:String(x.max)):'?')),
+          h('div',{class:'row between'},h('span',{},(r.granted?(r.icon||'✨')+' ':'')+r.name),h('b',{class:ok?'':'fv-erro',title:ok?'':'Fórmula inválida'},ok?(bar?x.cur+' / '+x.max:String(x.max)):'?')),
           bar?h('div',{class:'bar-t'},h('div',{class:'bar-f',style:{width:(ok&&x.max>0?100:0)+'%',background:r.color}})):null); })
     : [vazio('Sem recursos — crie na aba ❤️ Recursos.')];
   const sk=sys.skills.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'','pt-BR',{sensitivity:'base'}));

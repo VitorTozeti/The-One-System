@@ -15,60 +15,19 @@ if (fx.nivel >= 5) {
   fx.resistencia('Corte', 3);
   fx.nota('Fúria ativa: +2 dano, −3 de dano de corte recebido.');
 }`;
-const CODIGO_API=[
-  ['fx.nivel','nível atual do personagem'],['fx.attr("Força")','valor do atributo (nome ou sigla)'],
-  ['fx.classe / fx.origem','nome da classe / origem'],['fx.tem("Voo")','já tem essa etiqueta/capacidade?'],
-  ['fx.atributo("Força", 2)','bônus de atributo'],['fx.recurso("Vida", 10)','bônus no máximo do recurso'],
-  ['fx.rolagem("ataque", 2)','bônus fixo: ataque, dano, defesa, pericia, tecnica, todos'],
-  ['fx.dados("ataque", 1)','+/− dados na rolagem'],['fx.resistencia("Fogo", 5)','reduz 5 do dano de fogo'],
-  ['fx.metade("Fogo") / fx.imunidade("Veneno") / fx.vulnerabilidade("Gelo")','resistência, imunidade, fraqueza'],
-  ['fx.capacidade("Voo", 9)','capacidade com alcance (m)'],['fx.tag("Anfíbio")','etiqueta na ficha'],
-  ['fx.numero("Deslocamento", 3)','característica numérica (vira variável)'],['fx.pericia("Atletismo")','concede perícia'],
-  ['fx.tecnicas(1)','técnica de classe extra'],['fx.nota("texto")','aviso que aparece na ficha'],
-];
-function codigoEditor(sys,ef,kindSel,del){
-  if(ef.code==null) ef.code=CODIGO_EXEMPLO;
-  const saida=h('div',{class:'cod-out hide'});
-  const testar=()=>{
-    const d=sampleDraft(sys,sys.maxLevel); const B=novoBalde();
-    B.ctx={sys:{...sys,codigoBloqueado:false},d,tot1:{...d.attrs},level:d.level,fonte:ef.text||'teste'};
-    rodarEfeitoCodigo(ef,B,1);
-    const r=[];
-    Object.keys(B.attrBonus).forEach(id=>{const a=sys.attributes.find(x=>x.id===id); r.push(sign(B.attrBonus[id])+' '+(a?a.name:'?'));});
-    Object.keys(B.resBonus).forEach(id=>{const x=sys.resources.find(q=>q.id===id); r.push(sign(B.resBonus[id])+' '+(x?x.name:'?'));});
-    Object.keys(B.rollBonus).forEach(k=>r.push('⚔ '+sign(B.rollBonus[k])+' '+k));
-    Object.keys(B.diceMod).forEach(k=>r.push('🎲 '+sign(B.diceMod[k])+'d '+k));
-    Object.keys(B.resist).forEach(k=>r.push(resistResumo(k,B.resist[k]).t));
-    Object.keys(B.caps).forEach(k=>r.push(capInfo(k).ic+' '+k+(B.caps[k]?' '+B.caps[k]:'')));
-    B.charTags.forEach(t=>r.push('🏷 '+t)); Object.keys(B.charNum).forEach(k=>r.push('◆ '+k+' '+sign(B.charNum[k])));
-    if(B.techExtra) r.push('🌀 '+sign(B.techExtra)+' técnica(s)');
-    B.notas.forEach(n=>r.push('📝 '+n.t));
-    saida.className='cod-out'+(B.erros.length?' erro':'');
-    saida.textContent=B.erros.length?('⚠ '+B.erros.join('\n')):(r.length?('No nível '+d.level+' o efeito aplica:\n• '+r.join('\n• ')):'Rodou sem erro, mas não aplicou nada no nível '+d.level+'.');
-  };
-  return h('div',{class:'cod'},
-    h('div',{class:'ef-row'}, kindSel,
-      h('input',{class:'in',style:{flex:'1',minWidth:'180px'},value:ef.text||'',placeholder:'Nome do efeito (aparece na ficha)',oninput:e=>{ef.text=e.target.value;persist();},onchange:()=>render()}), del),
-    sys.codigoBloqueado?h('div',{class:'aviso-aba'},'⚠ Este sistema veio de um arquivo importado: efeitos por código estão BLOQUEADOS até você ler o código e liberar na aba Classes.'):null,
-    h('textarea',{class:'in cod-in',rows:'8',spellcheck:'false',value:ef.code,
-      onkeydown:e=>{ if(e.key==='Tab'){ e.preventDefault(); const t=e.target,a=t.selectionStart; t.value=t.value.slice(0,a)+'  '+t.value.slice(t.selectionEnd); t.selectionStart=t.selectionEnd=a+2; ef.code=t.value; persist(); } },
-      oninput:e=>{ef.code=e.target.value;persist();}}),
-    h('div',{class:'row wrapf'},
-      h('button',{class:'btn sm primary',type:'button',onclick:testar},'▶ Testar no nível máximo'),
-      h('details',{class:'cod-api'}, h('summary',{},'📖 O que dá para usar (fx.*)'),
-        h('div',{class:'cod-api-l'}, ...CODIGO_API.map(([c,t])=>h('div',{}, h('code',{},c), h('span',{},t)))))),
-    saida);
-}
-
 /* ---------- receitas rápidas: um clique adiciona um efeito comum já configurado ---------- */
 function _recPor(sys,nomes){ for(const n of nomes){ const r=_acha(sys.resources,n); if(r) return r; } return null; }
 function receitasEfeito(sys){
   const vida=_recPor(sys,['Vida','PV','HP','Pontos de Vida']);
+  const mana=_recPor(sys,['Mana','PM','Energia','PE','Pontos de Mana']);
   return [
     ['⚔ +2 em ataques',()=>({kind:'rolagem',escopo:'ataque',value:2})],
     ['💥 +2 de dano',()=>({kind:'rolagem',escopo:'dano',value:2})],
     ['🛡 +2 de defesa',()=>({kind:'rolagem',escopo:'defesa',value:2})],
     vida?['❤️ +1 '+vida.name+' por nível',()=>({kind:'recurso',targetId:vida.id,value:0,formula:'Nível'})]:null,
+    mana?['🔷 +1 '+mana.name+' por nível',()=>({kind:'recurso',targetId:mana.id,value:0,formula:'Nível'})]:null,
+    ['✨ Recurso especial (cargas)',()=>({kind:'recursoNovo',text:'Cargas',value:3,icon:'⚡',recarga:'longo',color:'#f59e0b'})],
+    ['🛡 Defesa +1 a cada 3 níveis',()=>({kind:'rolagem',escopo:'defesa',value:0,formula:'piso(Nível / 3)'})],
     ['🔥 Resistência a fogo 5',()=>({kind:'resistencia',modo:'reduz',text:'Fogo',value:5})],
     ['☠️ Imune a veneno',()=>({kind:'resistencia',modo:'imune',text:'Veneno',value:0})],
     ['🪽 Voo 9 m',()=>({kind:'capacidade',text:'Voo',value:9})],
@@ -79,12 +38,14 @@ function receitasEfeito(sys){
     ['⌨ Efeito por código',()=>({kind:'codigo',text:'Efeito especial',code:CODIGO_EXEMPLO})],
   ].filter(Boolean);
 }
+/* chips das receitas mais comuns + lista completa — tudo visível, nada escondido num select só */
 function receitaSelect(sys,arr){
-  const sel=h('select',{class:'in rec-sel','aria-label':'Adicionar efeito pronto',onchange:e=>{
-    const i=+e.target.value; if(Number.isNaN(i)) return;
-    const r=receitasEfeito(sys)[i]; if(r){ arr.push(Object.assign({id:uid(),targetId:'',value:0,text:'',charType:'tag',mods:[]},r[1]())); render(); }
-  }}, h('option',{value:''},'✨ Efeito pronto…'), ...receitasEfeito(sys).map((r,i)=>h('option',{value:String(i)},r[0])));
-  return sel;
+  const rs=receitasEfeito(sys);
+  const add=i=>{ const r=rs[i]; if(r){ arr.push(Object.assign({id:uid(),targetId:'',value:0,text:'',charType:'tag',mods:[]},r[1]())); render(); } };
+  const sel=h('select',{class:'in rec-sel','aria-label':'Mais efeitos prontos',onchange:e=>{ const i=+e.target.value; if(!Number.isNaN(i)&&e.target.value!=='') add(i); }},
+    h('option',{value:''},'✨ Mais efeitos prontos…'), ...rs.map((r,i)=>h('option',{value:String(i)},r[0])));
+  return h('div',{class:'row wrapf rec-bar'},
+    ...rs.slice(0,4).map((r,i)=>h('button',{type:'button',class:'chip rec-chip',title:'Adicionar este efeito',onclick:()=>add(i)},'+ '+r[0])), sel);
 }
 
 /* ---------- cartão de habilidade/técnica/traço (recolhível) ---------- */
@@ -92,11 +53,13 @@ function habCard(sys,arr,ab,opts){
   opts=opts||{};
   if(!ab.effects) ab.effects=[];
   if(!ab.req) ab.req={level:0,attrs:[]};
+  if(!opts.semUso) sanitizarUsoHab(ab);
   const aberto=!!S.ui.open[ab.id];
   const fx=ab.effects.map(ef=>effectLabel(sys,ef)).filter(Boolean);
+  const usoTxt=(!opts.semUso&&ab.uso&&ab.uso.on)?usoHabResumo(sys,ab):'';
   const cab=h('div',{class:'hab-cab',onclick:e=>{ if(e.target.closest('input,button,select')) return; S.ui.open[ab.id]=!aberto; render(); }},
     h('span',{class:'acc-caret'},aberto?'▼':'▶'),
-    opts.icone?h('input',{class:'in hab-ic',value:ab.icon||'✦',maxlength:'4','aria-label':'Ícone',oninput:e=>{ab.icon=e.target.value;persist();}}):null,
+    iconePicker(ab.icon||'',v=>{ab.icon=v;},{cls:'hab-ic'}),
     h('input',{class:'in hab-nome',value:ab.name||'',placeholder:opts.ph||'Nome',oninput:e=>{ab.name=e.target.value;persist();},onchange:()=>render()}),
     opts.nivel?h('label',{class:'hab-nv',title:'A partir de qual nível'},h('span',{},(sys.levelName||'Nível').slice(0,3)+'.'),
       h('input',{class:'in',type:'number',min:'0',value:ab.req.level||0,onchange:e=>{ab.req.level=Math.max(0,parseInt(e.target.value)||0);render();}})):null,
@@ -104,17 +67,19 @@ function habCard(sys,arr,ab,opts){
     h('button',{class:'btn sm danger',type:'button','aria-label':'Excluir',onclick:()=>comDesfazer('“'+(ab.name||'item')+'” excluído',()=>{ const i=arr.indexOf(ab); if(i>=0) arr.splice(i,1); })},'✕'));
   const resumo=!aberto?h('div',{class:'hab-res'},
       ab.description?h('span',{class:'hab-d'},ab.description):null,
+      usoTxt?h('span',{class:'tg-fx tg-uso'},usoTxt):null,
       ...fx.map(t=>h('span',{class:'tg-fx'},t)),
       ...((opts.nivel?[]:reqTags(sys,ab)).map(t=>h('span',{class:'tg-req'},'🔒 '+t)))):null;
   const corpo=aberto?h('div',{class:'hab-corpo'},
       h('textarea',{class:'in',rows:'2',value:ab.description||'',placeholder:'O que faz (texto livre que aparece na ficha)',oninput:e=>{ab.description=e.target.value;persist();}}),
       opts.semReq?null:reqEditor(sys,ab,!!opts.nivel),
       h('div',{class:'sub-h2'},'Efeitos mecânicos'),
-      ab.effects.length?null:h('div',{class:'hint'},'Sem efeito: fica só como texto. Adicione um efeito pronto ou monte o seu.'),
+      ab.effects.length?null:h('div',{class:'hint'},'Sem efeito: fica só como texto. Clique num efeito pronto abaixo ou monte o seu.'),
       ...ab.effects.map(ef=>effectRow(sys,ab.effects,ef,0)),
       h('div',{class:'row wrapf',style:{marginTop:'6px'}},
         h('button',{class:'btn sm',type:'button',onclick:()=>{ab.effects.push(newEffect(sys));render();}},'+ Efeito'),
-        receitaSelect(sys,ab.effects))):null;
+        receitaSelect(sys,ab.effects)),
+      opts.semUso?null:usoHabEditor(sys,ab)):null;
   return h('div',{class:'hab'+(aberto?' on':'')}, cab, resumo, corpo);
 }
 
@@ -252,7 +217,7 @@ function arqEditor(sys,kind,lista,c){
   const icones=ehC?['⚔️','🔮','🗡️','✨','🪓','🏹','🎻','🌿','🛡️','🕵️','🔫','💀','👊','🎭']:['🧑','🧝','⛏️','🪽','🐟','🐉','🍀','🤖','👑','🏚️','🐺','👹','🧛','🌱'];
   const cab=h('div',{class:'arq-cab',style:{'--arq':c.color}},
     h('div',{class:'arq-ic-g'},
-      h('input',{class:'in arq-ic-in',value:c.icon||'',maxlength:'4','aria-label':'Ícone',oninput:e=>{c.icon=e.target.value;persist();},onchange:()=>render()}),
+      iconePicker(c.icon,v=>{c.icon=v||(ehC?'⚔️':'🧬');},{semRemover:true}),
       h('input',{type:'color',class:'arq-cor',value:c.color||'#7c3aed','aria-label':'Cor',oninput:e=>{c.color=e.target.value;persist();},onchange:()=>render()})),
     h('div',{class:'arq-cab-t'},
       h('input',{class:'in arq-nome',value:c.name||'',placeholder:'Nome',oninput:e=>{c.name=e.target.value;persist();},onchange:()=>render()}),
@@ -387,6 +352,7 @@ function arqNiveis(sys,kind,c){
         h('button',{class:'btn sm ghost',onclick:()=>add(lv)},'+ aqui')),
       h('div',{class:'tl-itens'}, ...lista.filter(a=>nivelDe(a)===lv).map(a=>habCard(sys,lista,a,{nivel:true,ph:'Nome da habilidade'})))))),
     arqCopiarDe(sys,kind,c),
+    modelosRapidos(sys,lista,S.ui.arqNovoLv!=null?S.ui.arqNovoLv:novoLv,'Criar de um modelo pronto (no nível escolhido abaixo)'),
     h('div',{class:'row wrapf tl-add'},
       h('span',{},'Nova habilidade no'),
       h('input',{class:'in',type:'number',min:'0',style:{width:'80px'},value:novoLv,onchange:e=>{S.ui.arqNovoLv=Math.max(0,parseInt(e.target.value)||0);}}),
@@ -422,7 +388,9 @@ function arqTecnicas(sys,c){
     t.opcoes.length?mdAbrirTudo(t.opcoes):null,
     t.opcoes.length?null:h('div',{class:'vazio'},h('div',{class:'vazio-t'},'Nenhuma opção ainda'),h('div',{class:'hint'},'Crie as técnicas que o jogador pode escolher. O nível no cartão é a partir de quando ela fica disponível.')),
     ...t.opcoes.slice().sort((a,b)=>((a.req||{}).level||0)-((b.req||{}).level||0)).map(o=>habCard(sys,t.opcoes,o,{nivel:true,ph:'Nome da técnica'})),
-    h('button',{class:'btn primary sm',style:{marginTop:'8px'},onclick:()=>{ const o={id:uid(),name:'Nova técnica',description:'',req:{level:0,attrs:[]},effects:[]}; t.opcoes.push(o); S.ui.open[o.id]=true; render(); }},'+ Técnica'));
+    h('div',{class:'row wrapf',style:{marginTop:'10px'}},
+      h('button',{class:'btn primary sm',onclick:()=>{ const o=sanitizarUsoHab({id:uid(),name:'Nova técnica',description:'',req:{level:0,attrs:[]},effects:[]}); t.opcoes.push(o); S.ui.open[o.id]=true; render(); }},'+ Técnica em branco')),
+    modelosRapidos(sys,t.opcoes,0,'… ou comece de um modelo pronto (já vem com ícone, efeitos e custo)'));
 }
 const TRACOS_PRONTOS=[
   ['🪽','Asas','Voa livremente.',()=>[_ef(_cap('Voo',9))]],['🫧','Guelras','Respira debaixo da água.',()=>[_ef(_cap('Respirar na água'))]],
@@ -437,6 +405,6 @@ function arqTracos(sys,c){
     h('div',{class:'row wrapf',style:{marginBottom:'12px'}}, h('span',{class:'hint'},'Prontos:'),
       ...TRACOS_PRONTOS.map(([ic,n,d,efs])=>{ const tem=_tem(c.traits,n);
         return h('button',{type:'button',class:'chip'+(tem?' on':''),disabled:tem,title:d,onclick:()=>{ c.traits.push({id:uid(),icon:ic,name:n,description:d,req:{level:0,attrs:[]},effects:efs()}); render(); }},(tem?'✓ ':'+ ')+ic+' '+n); })),
-    ...c.traits.map(t=>habCard(sys,c.traits,t,{icone:true,semReq:true,ph:'Ex.: Asas'})),
+    ...c.traits.map(t=>habCard(sys,c.traits,t,{icone:true,semReq:true,semUso:true,ph:'Ex.: Asas'})),
     h('button',{class:'btn primary sm',style:{marginTop:'8px'},onclick:()=>{ const t={id:uid(),icon:'✦',name:'Novo traço',description:'',req:{level:0,attrs:[]},effects:[]}; c.traits.push(t); S.ui.open[t.id]=true; render(); }},'+ Traço'));
 }

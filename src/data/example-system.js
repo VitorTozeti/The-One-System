@@ -557,6 +557,7 @@ function initDraft(sys){
     conditions:[],     /* peça 5: [{cid,condId,nivel}] */
     techniques:[],     /* peça 8: técnicas autorais do jogador */
     classTechs:[],     /* técnicas de classe escolhidas (ids das opções) */
+    ativas:{},         /* habilidades/técnicas "liga/desliga" que estão ligadas (id → true) */
   };
 }
 /* Garante que um rascunho antigo (salvo antes destas peças) tenha os campos novos. */
@@ -567,6 +568,7 @@ function sanitizeDraft(d,sys){
   if(!Array.isArray(d.conditions)) d.conditions=[];
   if(!Array.isArray(d.techniques)) d.techniques=[];
   if(!Array.isArray(d.classTechs)) d.classTechs=[];
+  if(!d.ativas||typeof d.ativas!=='object'||Array.isArray(d.ativas)) d.ativas={};
   if(!Array.isArray(d.inventory)) d.inventory=[];
   d.inventory.forEach(e=>{
     if(!e.iid) e.iid=uid();
@@ -610,16 +612,35 @@ function quandoTexto(sys,q){
   const a=(sys.attributes||[]).find(x=>x.id===q.attrId);
   return ' ⏱ se '+(a?a.name:'?')+' ≥ '+(+q.n||0);
 }
+/* Valor de um efeito: número fixo OU fórmula (mesma linguagem das fórmulas de recurso: Nível, atributos, piso()…).
+   `ef.formula` string = modo fórmula (kind 'recurso' tem tratamento próprio, mais rico, no cálculo da ficha). */
+function varsDoEfeito(sys,level,tot1){
+  const v={'Nível':level,'Nivel':level}; if(sys.levelName) v[sys.levelName]=level;
+  (sys.attributes||[]).forEach(a=>{ if(a.name) v[a.name]=effAttr(sys,(tot1||{})[a.id]||0); });
+  return v;
+}
+function efEmFormula(ef){ return ef.kind!=='recurso' && typeof ef.formula==='string'; }
+function efNum(ef,B,k){
+  k=k==null?1:k;
+  if(efEmFormula(ef)){
+    const f=ef.formula.trim(); if(!f) return 0;
+    const ctx=B.ctx||{}; if(!ctx.sys) return 0;
+    const vars=ctx._vars||(ctx._vars=varsDoEfeito(ctx.sys,ctx.level,ctx.tot1));
+    const r=evalFormula(f,vars); return Number.isNaN(r)?0:Math.round(r*100)/100*k;
+  }
+  return (+ef.value||0)*k;
+}
 function applyEffectTo(ef, B, mult){
   if(!ef) return;
   if(ef.quando && !quandoOk(ef.quando,B)) return;
   const k=mult==null?1:mult;               /* trilha de níveis (exaustão) multiplica o valor */
-  const v=(+ef.value||0)*k;
+  const v=efNum(ef,B,k);
   if(ef.kind==='atributo'){ if(ef.targetId) B.attrBonus[ef.targetId]=(B.attrBonus[ef.targetId]||0)+v; }
   else if(ef.kind==='recurso'){ if(!ef.targetId) return;
     /* com fórmula ("Nível * 2"), o valor só é conhecido no cálculo da ficha */
     if(String(ef.formula||'').trim()) (B.resFormulas||(B.resFormulas=[])).push({resId:ef.targetId,formula:ef.formula,k});
-    else B.resBonus[ef.targetId]=(B.resBonus[ef.targetId]||0)+v; }
+    else B.resBonus[ef.targetId]=(B.resBonus[ef.targetId]||0)+((+ef.value||0)*k); }
+  else if(ef.kind==='recursoNovo'){ registrarRecursoNovo(B,{nome:ef.text,max:v,icone:ef.icon,cor:ef.color,recarga:ef.recarga,tipo:ef.tipoRec,fonte:(B.ctx||{}).fonte}); }
   else if(ef.kind==='rolagem'){ const es=ef.escopo||'todos'; B.rollBonus[es]=(B.rollBonus[es]||0)+v; }
   else if(ef.kind==='resistencia'){ const nm=String(ef.text||'').trim(); if(nm) registrarResist(B,nm,ef.modo||'reduz',v); }
   else if(ef.kind==='capacidade'){ const nm=String(ef.text||'').trim(); if(nm) B.caps[nm]=Math.max(B.caps[nm]||0, v); }
@@ -635,12 +656,15 @@ function applyEffectTo(ef, B, mult){
 }
 /* Quantos dados somar/tirar num escopo (o "todos" sempre entra junto). */
 function diceModDe(B, escopo){ return (B.diceMod&&((B.diceMod.todos||0)+(B.diceMod[escopo]||0)))||0; }
-function attrOnlyTo(ef, tot1, level){
+function attrOnlyTo(ef, tot1, level, sys){
   if(!ef) return;
   if(ef.quando && !quandoOk(ef.quando,{ctx:{level,tot1}},true)) return;
-  if(ef.kind==='atributo'){ if(ef.targetId) tot1[ef.targetId]=(tot1[ef.targetId]||0)+(+ef.value||0); }
+  if(ef.kind==='atributo'){ if(ef.targetId){
+    let v=+ef.value||0;
+    if(efEmFormula(ef)){ const f=ef.formula.trim(); const r=(f&&sys)?evalFormula(f,varsDoEfeito(sys,level,tot1)):0; v=Number.isNaN(r)?0:r; }
+    tot1[ef.targetId]=(tot1[ef.targetId]||0)+v; } }
   else if(ef.kind==='tecnicas'||ef.kind==='codigo') return;   /* não mexem em atributo na 1ª passagem */
-  else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1,level)); }
+  else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1,level,sys)); }
 }
 /* efeitos com requisitos (2 passagens p/ liberar habilidades) */
 /* Expande as condições ativas: resolve composição (Fatigado = Fraco + Vulnerável),
@@ -674,6 +698,9 @@ function escolhasAtivas(sys,d){
   });
   return out;
 }
+/* Técnica/magia/habilidade do tipo "ativa" (liga/desliga): só aplica os efeitos enquanto estiver ligada na ficha. */
+function habAtivavel(ab){ return !!(ab&&ab.uso&&ab.uso.on&&ab.uso.modo==='ativa'); }
+function habLigada(ab,d){ return !habAtivavel(ab)||!!((d&&d.ativas)||{})[ab.id]; }
 function gatherEffects(sys,d){
   const cls=sys.classes.find(c=>c.id===d.classId);
   const org=sys.origins.find(o=>o.id===d.originId);
@@ -701,8 +728,8 @@ function gatherEffects(sys,d){
   const condAtivas=expandirCondicoes(sys,d);
   /* 1ª passagem: base + fontes incondicionais + itens equipados alimentam os requisitos */
   const tot1={}; sys.attributes.forEach(a=>tot1[a.id]=(d.attrs[a.id]??0));
-  sources.forEach(({ab})=>{ if(isUncond(ab))(ab.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level)); });
-  equipped.forEach(({it})=>(it.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level)));
+  sources.forEach(({ab})=>{ if(isUncond(ab)&&habLigada(ab,d))(ab.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level,sys)); });
+  equipped.forEach(({it})=>(it.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level,sys)));
   const reasonsFor=ab=>{ const r=ab.req||{}; const out=[];
     if(r.level&&level<r.level) out.push((sys.levelName||'Nível')+' '+r.level);
     (r.attrs||[]).forEach(rq=>{ if((tot1[rq.attrId]||0)<rq.min){const a=sys.attributes.find(x=>x.id===rq.attrId);out.push((a?a.name:'?')+' '+rq.min+'+');} });
@@ -717,7 +744,9 @@ function gatherEffects(sys,d){
   const active=[],locked=[];
   sources.forEach(({ab,src,tipo})=>{ const rs=reasonsFor(ab);
     if(rs.length){ locked.push({ab,src,tipo,reasons:rs}); return; }
-    active.push({ab,src,tipo});
+    const ligada=habLigada(ab,d);
+    active.push({ab,src,tipo,ligada});
+    if(!ligada) return;                       /* técnica/magia "ativa" desligada: não aplica efeitos */
     B.ctx.fonte=ab.name||src;
     (ab.effects||[]).forEach(ef=>applyEffectTo(ef,B));
   });
@@ -751,19 +780,22 @@ function interacaoTags(sys, tagsOrigem, tagsAlvo){
   return {mult, dice, notas};
 }
 function effectLabel(sys,ef){ return effectLabelBase(sys,ef)+(ef.quando?quandoTexto(sys,ef.quando):''); }
+/* texto do valor de um efeito: "+2" ou "+(Nível * 2)" quando é fórmula */
+function efValTxt(ef){ return efEmFormula(ef)?('+('+(ef.formula.trim()||'?')+')'):sign(+ef.value||0); }
 function effectLabelBase(sys,ef){
   if(ef.kind==='livre'){ const n=(ef.mods||[]).length; return (ef.text||'efeito único')+(n?(' ('+n+' mod.)'):''); }
-  if(ef.kind==='atributo'){const a=sys.attributes.find(x=>x.id===ef.targetId);return sign(ef.value)+' '+(a?a.name:'?');}
+  if(ef.kind==='atributo'){const a=sys.attributes.find(x=>x.id===ef.targetId);return efValTxt(ef)+' '+(a?a.name:'?');}
+  if(ef.kind==='recurso'&&String(ef.formula||'').trim()){const r=sys.resources.find(x=>x.id===ef.targetId);return '+('+ef.formula.trim()+') '+(r?r.name:'?')+' (máx)';}
   if(ef.kind==='recurso'){const r=sys.resources.find(x=>x.id===ef.targetId);return sign(ef.value)+' '+(r?r.name:'?')+' (máx)';}
+  if(ef.kind==='recursoNovo') return (ef.icon||'✨')+' Recurso '+(String(ef.text||'').trim()||'?')+' ('+(efEmFormula(ef)?ef.formula.trim()||'?':(+ef.value||0))+')';
   if(ef.kind==='pericia'){const k=sys.skills.find(x=>x.id===ef.targetId);return 'Concede '+(k?k.name:'?');}
-  if(ef.kind==='caracteristica'){const nm=(ef.text||'').trim()||'?'; return ef.charType==='num'?('◆ '+nm+' '+sign(+ef.value||0)):('🏷 '+nm);}
+  if(ef.kind==='caracteristica'){const nm=(ef.text||'').trim()||'?'; return ef.charType==='num'?('◆ '+nm+' '+efValTxt(ef)):('🏷 '+nm);}
   if(ef.kind==='dados'){const e=(DICE_ESCOPOS.find(x=>x[0]===(ef.escopo||'todos'))||[,'?'])[1];
-    return '🎲 '+sign(+ef.value||0)+'d em '+e;}
-  if(ef.kind==='recurso'&&String(ef.formula||'').trim()){const r=sys.resources.find(x=>x.id===ef.targetId);return '+('+ef.formula+') '+(r?r.name:'?');}
-  if(ef.kind==='rolagem'){const e=(DICE_ESCOPOS.find(x=>x[0]===(ef.escopo||'todos'))||[,'?'])[1]; return '⚔ '+sign(+ef.value||0)+' em '+e;}
-  if(ef.kind==='resistencia') return resistLabel(ef.text,ef.modo||'reduz',+ef.value||0);
-  if(ef.kind==='capacidade'){const c=capInfo(ef.text); return c.ic+' '+(ef.text||'?')+((+ef.value||0)>0?(' '+ef.value+(c.un||'')):'');}
-  if(ef.kind==='tecnicas') return '🌀 '+sign(+ef.value||0)+' técnica(s) de classe';
+    return '🎲 '+efValTxt(ef)+'d em '+e;}
+  if(ef.kind==='rolagem'){const e=(DICE_ESCOPOS.find(x=>x[0]===(ef.escopo||'todos'))||[,'?'])[1]; return '⚔ '+efValTxt(ef)+' em '+e;}
+  if(ef.kind==='resistencia') return resistLabel(ef.text,ef.modo||'reduz',efEmFormula(ef)?('('+(ef.formula.trim()||'?')+')'):(+ef.value||0));
+  if(ef.kind==='capacidade'){const c=capInfo(ef.text); return c.ic+' '+(ef.text||'?')+(efEmFormula(ef)?(' ('+(ef.formula.trim()||'?')+')'):((+ef.value||0)>0?(' '+ef.value+(c.un||'')):''));}
+  if(ef.kind==='tecnicas') return '🌀 '+efValTxt(ef)+' técnica(s) de classe';
   if(ef.kind==='codigo') return '⌨ '+(String(ef.text||'').trim()||'efeito por código');
   return '';
 }
