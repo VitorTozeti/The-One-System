@@ -75,6 +75,7 @@ function jogadorView(){
     body=card('Distribua seus atributos',
       'Faixa: '+effMin+' a '+sys.attrMax+'. '+(sys.allowDump?'Pode baixar abaixo de '+sys.startAttrValue+' para ganhar pontos.':'')+(sys.attrMode==='modificador'?' (mostrando o modificador)':''),
       h('div',{class:'badge '+(left===0?'ok':'warn')}, left+' pts'),
+      ferramentasAtributos(sys,d,lp.attrPoints),
       ...sys.attributes.map(a=>{const val=d.attrs[a.id]??sys.startAttrValue;const bonus=eff.attrBonus[a.id]||0;const raw=val+bonus;
         return h('div',{class:'attrrow'},
           h('span',{style:{fontWeight:'600'}}, a.name,
@@ -233,13 +234,13 @@ function jogadorView(){
       : h('span'));
 
   const themeChips=(sys.themes||[]).map(t=>h('span',{class:'pill'},t));
-  return h('div',{class:'wrap-sm'},
+  return h('div',{class:'wrap-sm'+(atual==='sheet'?'':' cria-w')},
     h('div',{class:'row',style:{justifyContent:'flex-end',marginBottom:'12px'}},
       h('button',{class:'btn ghost',title:'Sorteia nome, classe, origem, atributos e perícias — dá para ajustar depois',onclick:()=>surpreendaFicha(sys,d)},'🎲 Me surpreenda'),
       h('button',{class:'btn ghost',onclick:()=>{S.draft=initDraft(sys);S.step=0;render();}},'↻ Recomeçar ficha')),
     h('div',{class:'note',html:'🎲 Campanha <b>“'+esc(sys.campaignName||'')+'”</b> — sistema <b>“'+esc(sys.name)+'”</b>. O app te guia e impede erros.'}),
     themeChips.length?h('div',{class:'row wrapf',style:{marginBottom:'14px'}},...themeChips):null,
-    dots, body, nav,
+    dots, (atual==='sheet'?[body,nav]:h('div',{class:'cria'},h('div',{},body,nav),painelVivo(sys,d))),
     S.saved.length?h('div',{style:{textAlign:'center',fontSize:'11px',color:'var(--dim)',marginTop:'14px'}},S.saved.length+' ficha(s) salva(s) neste dispositivo.'):null);
 }
 
@@ -1181,7 +1182,8 @@ function attachEdit(sys,el,b){
     };
     el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
   };
-  el.addEventListener('pointerdown',ev=>{ if(ev.target.closest('.blk-rs'))return; grab(ev,'move'); });
+  el.addEventListener('pointerdown',ev=>{ if(ev.target.closest('.blk-rs')||ev.target.closest('.blk-ed'))return; grab(ev,'move'); });
+  el.addEventListener('dblclick',ev=>{ if(ev.target.closest('.blk-rs')||ev.target.closest('.blk-ed')) return; editarTextoNoBloco(el,b); });
   if(!(b.opts&&b.opts.locked)){
     const rs=h('div',{class:'blk-rs',title:'Redimensionar'});
     rs.addEventListener('pointerdown',ev=>grab(ev,'resize'));
@@ -1245,7 +1247,7 @@ function canvasNode(sys,d,mode){
   if(mode!=='edit' && S.ui.stack){
     blocks.sort((a,b2)=>(a.y-b2.y)||(a.x-b2.x));
     const stack=h('div',{});
-    stack.style.setProperty('--sheet-accent', sh.accent||'#4f46e5');
+    stack.style.setProperty('--sheet-accent', sh.accent||'#4f46e5'); aplicaTemaFicha(stack,sh);
     blocks.forEach(b=>{
       const clone={...b, x:0, y:0, w:CANVAS_W, h:b.h};
       const n=blockNode(sys,d,ctx,clone,mode);
@@ -1261,6 +1263,7 @@ function canvasNode(sys,d,mode){
   cv.style.height=(sh.canvasH||990)+'px';
   cv.dataset.h=sh.canvasH||990;
   cv.style.setProperty('--sheet-accent', sh.accent||'#4f46e5');
+  aplicaTemaFicha(cv,sh);
   /* fundo do papel: cor sólida e/ou imagem enviada pelo mestre */
   if(sh.bg) cv.style.background=sh.bg;
   if(sh.bgImage){ cv.style.backgroundImage='url('+sh.bgImage+')';

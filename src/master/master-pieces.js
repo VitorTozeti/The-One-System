@@ -309,7 +309,7 @@ function itemArmaduraBox(sys,it){
 }
 
 /* ---------- Aba: Editor visual da Ficha (canvas de posição livre) ---------- */
-function tabFicha(sys){
+function tabFichaLegado(sys){
   if(!sys.sheet||!Array.isArray(sys.sheet.blocks)) migrateSheet(sys);
   const sh=sys.sheet;
   const sel=sh.blocks.find(b=>b.id===S.ui.sel)||null;
