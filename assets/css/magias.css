@@ -1,0 +1,86 @@
+/* ============================================================ MAGIAS / TÉCNICAS — tipos, área, resultado e invocações ============================================================
+   --tc = cor do tipo (cura verde, dano vermelho, buff azul, debuff roxo, invocação âmbar, utilidade cinza)
+   --ic = cor da criatura invocada · --cc = cor da condição */
+
+/* ---------- editor ---------- */
+.uso-hab{border-left:3px solid var(--tc,var(--indigo))}
+.uso-tipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:6px 0 2px}
+.uso-tipo{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--txt);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s,transform .1s}
+.uso-tipo:hover{border-color:var(--tc)}
+.uso-tipo:active{transform:scale(.98)}
+.uso-tipo:focus-visible{outline:2px solid var(--tc);outline-offset:2px}
+.uso-tipo.on{border-color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,var(--panel2));box-shadow:inset 0 0 0 1px var(--tc)}
+.uso-tipo-ic{font-size:18px;line-height:1}
+.uso-sec{margin-top:12px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--tc,var(--indigo)) 5%,transparent);border:1px solid var(--line)}
+.uso-sec-t{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.uso-extra{gap:6px;margin-bottom:6px;align-items:center}
+.uso-extra select{max-width:130px}
+.area-box{display:flex;align-items:center;gap:10px;margin-top:8px}
+.area-svg{width:120px;height:70px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.uso-prev{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
+.invoc-ed{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.invoc-ed{grid-template-columns:1fr}}
+
+/* ---------- cartão da técnica na ficha ---------- */
+.abil.tec-card{border-left-color:var(--tc,var(--indigo));background:linear-gradient(90deg,color-mix(in srgb,var(--tc,var(--indigo)) 12%,transparent),color-mix(in srgb,var(--tc,var(--indigo)) 3%,transparent) 70%);
+  padding:8px 12px;position:relative}
+.abil.tec-card.ligada{box-shadow:0 0 0 1px var(--tc),0 0 14px color-mix(in srgb,var(--tc) 35%,transparent)}
+.tec-ic{display:inline-grid;place-items:center;width:26px;height:26px;margin-right:6px;border-radius:8px;font-size:15px;vertical-align:middle;
+  background:color-mix(in srgb,var(--tc,var(--indigo)) 22%,transparent)}
+.uso-chips{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 3px}
+.uso-chip{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.uso-chip.tipo{background:color-mix(in srgb,var(--tc) 20%,transparent);border-color:color-mix(in srgb,var(--tc) 55%,transparent);color:var(--txt)}
+.uso-chip.cond{border-color:var(--cc);color:var(--txt);background:color-mix(in srgb,var(--cc) 18%,transparent)}
+.btn.uso-btn{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.btn.uso-btn:hover:not(:disabled){filter:brightness(1.1)}
+.btn.uso-btn:disabled{opacity:.45}
+
+/* resultado do último uso */
+.uso-res{position:relative;margin-top:8px;padding:8px 30px 8px 10px;border-radius:10px;border:1px solid color-mix(in srgb,var(--tc) 50%,transparent);
+  background:color-mix(in srgb,var(--tc) 10%,var(--panel));animation:usoIn .25s ease-out}
+.uso-res-x{position:absolute;top:4px;right:4px}
+.uso-res-big b{font-size:26px;font-weight:900;color:var(--tc);line-height:1}
+.uso-res-big span{font-weight:700}
+.uso-res-big small{color:var(--muted)}
+.uso-res-l{font-size:12px;margin-top:2px}
+.uso-res-t{font-size:12px;font-style:italic;color:var(--muted);margin-top:4px}
+@keyframes usoIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ---------- invocações ---------- */
+.invoc-lista{margin-bottom:10px}
+.invoc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.invoc-card{--ic:#f59e0b;position:relative;padding:10px;border-radius:14px;border:1px solid color-mix(in srgb,var(--ic) 60%,transparent);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--ic) 22%,var(--panel)) 0%,var(--panel) 75%);overflow:hidden;animation:usoIn .3s ease-out}
+.invoc-card::after{content:'';position:absolute;inset:auto -20px -30px auto;width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--ic) 30%,transparent),transparent 70%);pointer-events:none}
+.invoc-top{display:flex;align-items:center;gap:8px}
+.invoc-ava{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:12px;font-size:24px;
+  background:color-mix(in srgb,var(--ic) 30%,var(--panel2));box-shadow:0 0 0 2px var(--ic)}
+.invoc-id{flex:1;min-width:0;display:flex;flex-direction:column}
+.invoc-id b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invoc-id small{font-size:11px;color:var(--muted)}
+.invoc-hp{position:relative;height:16px;margin:8px 0 6px;border-radius:999px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.invoc-hp-f{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#ef4444,#f87171);transition:width .25s}
+.invoc-hp>span{position:relative;display:flex;align-items:center;justify-content:center;gap:3px;height:100%;white-space:nowrap;font-size:10.5px;font-weight:800;color:var(--txt)}
+.invoc-hp .ic,.invoc-hp .ic svg{width:11px;height:11px}
+.invoc-stats{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;font-weight:700}
+.invoc-stats span{padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--ic) 14%,transparent)}
+.invoc-desc{font-size:11.5px;color:var(--muted);margin-top:5px}
+.invoc-acoes{gap:4px;margin-top:8px}
+.invoc-acoes .btn,.uso-btn{white-space:nowrap}
+.invoc-card.caida{filter:grayscale(.85);opacity:.7}
+.invoc-card.caida .invoc-id b::after{content:' — caído';color:var(--muted);font-weight:600}
+/* estilos por tipo de criatura */
+.invoc-card.est-espirito{border-style:dashed}
+.invoc-card.est-espirito .invoc-ava{animation:flutua 3s ease-in-out infinite;box-shadow:0 0 12px var(--ic),0 0 0 2px var(--ic)}
+.invoc-card.est-morto{background:linear-gradient(160deg,color-mix(in srgb,#64748b 30%,var(--panel)),var(--panel) 75%)}
+.invoc-card.est-morto .invoc-ava{border-radius:50% 50% 40% 40%}
+.invoc-card.est-elemental .invoc-ava{border-radius:50%;box-shadow:0 0 16px var(--ic),0 0 0 2px var(--ic)}
+.invoc-card.est-constructo{border-radius:6px;border-width:2px}
+.invoc-card.est-constructo .invoc-ava{border-radius:4px}
+.invoc-card.est-divino{border-color:#facc15;box-shadow:0 0 14px color-mix(in srgb,#facc15 30%,transparent)}
+.invoc-card.est-demonio{background:linear-gradient(160deg,color-mix(in srgb,#7f1d1d 45%,var(--panel)),var(--panel) 80%)}
+.invoc-card.est-demonio .invoc-ava{clip-path:polygon(50% 0,100% 30%,85% 100%,15% 100%,0 30%);border-radius:0}
+@keyframes flutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.invoc-card,.uso-res,.invoc-card.est-espirito .invoc-ava{animation:none}}

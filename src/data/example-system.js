@@ -567,6 +567,7 @@ function initDraft(sys){
     techniques:[],     /* peça 8: técnicas autorais do jogador */
     classTechs:[],     /* técnicas de classe escolhidas (ids das opções) */
     ativas:{},         /* habilidades/técnicas "liga/desliga" que estão ligadas (id → true) */
+    invocacoes:[],     /* criaturas invocadas por técnicas/magias [{iid,abId,nome,icone,cor,vida,vidaMax,…}] */
   };
 }
 /* Garante que um rascunho antigo (salvo antes destas peças) tenha os campos novos. */
@@ -578,6 +579,7 @@ function sanitizeDraft(d,sys){
   if(!Array.isArray(d.techniques)) d.techniques=[];
   if(!Array.isArray(d.classTechs)) d.classTechs=[];
   if(!d.ativas||typeof d.ativas!=='object'||Array.isArray(d.ativas)) d.ativas={};
+  if(!Array.isArray(d.invocacoes)) d.invocacoes=[];
   if(!Array.isArray(d.inventory)) d.inventory=[];
   d.inventory.forEach(e=>{
     if(!e.iid) e.iid=uid();

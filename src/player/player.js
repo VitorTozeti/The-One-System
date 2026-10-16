@@ -623,24 +623,15 @@ function periciasInner(sys,d,ctx,b,mode){
 function habilidadesInner(sys,ctx,d,mode){
   /* traços físicos aparecem em Características; aqui ficam habilidades e técnicas */
   const nomeFonte=x=>x.tipo==='tecnica'?(((ctx.eff.cls||{}).tecnicas||{}).nome||'técnica'):x.src==='classe'?((ctx.eff.cls||{}).name||'classe'):x.src==='origem'?((ctx.eff.org||{}).name||'origem'):x.src;
-  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>{
-    const ab=x.ab, ligada=x.ligada!==false, usa=!!(ab.uso&&ab.uso.on);
-    const btn=(d&&usa)?botaoUsoHab(sys,d,ctx,ab,ligada):null;
-    const apagada=usa&&ab.uso.modo==='ativa'&&!ligada;
-    return h('div',{class:'abil'+(apagada?' off':'')},
-      h('div',{class:'row between abil-cab'},
-        h('div',{class:'t'},(ab.icon?ab.icon+' ':''),((ab.req||{}).level>1?h('span',{class:'nv'},'Nv '+ab.req.level):null),ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
-        btn),
-      ab.description?h('div',{class:'d'},ab.description):null,
-      (usa&&mode==='play')?h('div',{class:'hint'},usoHabResumo(sys,ab)):null,
-      (ab.effects&&ab.effects.length)?h('div',{class:'fx'},(apagada?'(desligada) ':'')+ab.effects.map(ef=>effectLabel(sys,ef)).join('  •  ')):null);
-  });
+  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>
+    cartaoTecnica(sys,d,ctx,x.ab,{ligada:x.ligada!==false,fonte:nomeFonte(x),play:mode==='play'}));
   const locked=ctx.eff.locked.filter(x=>x.tipo!=='tecnica').map(x=>h('div',{class:'abil locked'},
     h('div',{class:'t'},'🔒 '+x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
     x.ab.description?h('div',{class:'d'},x.ab.description):null,
     h('div',{class:'lk'},'Requer: '+x.reasons.join(', '))));
-  if(!active.length&&!locked.length) return h('div',{class:'hint'},'Nenhuma habilidade.');
-  return h('div',{}, ...active, ...locked);
+  const inv=(d&&typeof invocacoesInner==='function')?invocacoesInner(sys,d):null;
+  if(!active.length&&!locked.length&&!inv) return h('div',{class:'hint'},'Nenhuma habilidade.');
+  return h('div',{}, inv, ...active, ...locked);
 }
 function caracteristicasInner(ctx){
   const e=ctx.eff, race=e.org; const traits=(race&&race.traits)||[];

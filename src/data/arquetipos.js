@@ -41,9 +41,22 @@ function sanitizeArquetipo(c,kind){
 /* Técnica/magia/habilidade USÁVEL: custa um recurso (Mana…), pode curar/ferir um recurso (fórmula com dados)
    e, no modo "ativa", liga/desliga (os efeitos só valem enquanto ligada). */
 function sanitizarUsoHab(ab){
-  const base={on:false,modo:'instantaneo',custoId:'',custo:'',alvoId:'',formula:'',texto:''};
+  /* tipo: cura · dano · buff · debuff · invocacao · utilidade ('' = deduzido, fichas antigas)
+     aplicaEm: onde a fórmula principal cai — 'eu' (meu recurso) ou 'alvo' (rola e informa: dano no inimigo, cura no aliado)
+     extras: mais recursos mexidos ao mesmo tempo [{id,resId,formula,quem}] · condId: condição aplicada (em mim ou no alvo)
+     area/teste/alcance: alcance, forma da área e teste de resistência · invoc: criatura invocada (cartão estilizado na ficha) */
+  const base={on:false,modo:'instantaneo',custoId:'',custo:'',alvoId:'',formula:'',texto:'',
+    tipo:'',aplicaEm:'',alcance:'',alvos:'',tipoDano:'',duracao:'',extras:[],condId:'',condEm:'alvo',
+    area:{forma:'',tam:''},teste:{attr:'',cd:'',sucesso:'metade'},invoc:null};
   ab.uso=Object.assign({},base,(ab.uso&&typeof ab.uso==='object')?ab.uso:{});
   if(ab.uso.modo!=='ativa') ab.uso.modo='instantaneo';
+  const u=ab.uso;
+  if(!Array.isArray(u.extras)) u.extras=[];
+  u.extras.forEach(x=>{ if(!x.id) x.id=uid(); if(x.quem!=='alvo') x.quem='eu'; });
+  if(!u.area||typeof u.area!=='object') u.area={forma:'',tam:''};
+  if(!u.teste||typeof u.teste!=='object') u.teste={attr:'',cd:'',sucesso:'metade'};
+  if(u.invoc&&typeof u.invoc!=='object') u.invoc=null;
+  if(u.invoc) u.invoc=Object.assign({nome:'Criatura',icone:'🐺',cor:'#8b5cf6',vida:'10',defesa:'12',ataque:'+4',dano:'1d6',mov:'9',qtd:'1',duracao:'',desc:'',estilo:'fera'},u.invoc);
   if(typeof ab.icon!=='string') ab.icon='';
   return ab;
 }
