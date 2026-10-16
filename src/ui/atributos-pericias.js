@@ -167,9 +167,18 @@ function atributoParaPericia(sys,dicas){
   }
   return null;
 }
+let _perSemAttr=[];
 function adicionaPericia(sys,p,auto){
   if(periciaExiste(sys,p.n)>=0) return false;
-  sys.skills.push({id:uid(), name:p.n, description:p.d||'', linkedAttrId:atributoParaPericia(sys,p.a), trainedBonus:2, auto:!!auto});
+  const link=atributoParaPericia(sys,p.a);
+  sys.skills.push({id:uid(), name:p.n, description:p.d||'', linkedAttrId:link, trainedBonus:2, auto:!!auto});
+  /* a biblioteca liga por nome (Força, Destreza…). Se o seu sistema usa outros nomes, a perícia fica
+     sem atributo — antes isso passava em silêncio e só aparecia como "—" na ficha do jogador. */
+  if(!link&&(sys.attributes||[]).length&&!auto){
+    _perSemAttr.push(p.n);
+    setTimeout(()=>{ if(_perSemAttr.length){ const l=_perSemAttr.slice(0,4).join(', ')+(_perSemAttr.length>4?'…':''); const n=_perSemAttr.length; _perSemAttr=[];
+      showToast('⚠ '+n+' perícia(s) sem atributo ('+l+'): abra a perícia e escolha um — senão o valor não soma nada.',6000); } },60);
+  }
   return true;
 }
 function removePericia(sys,i){

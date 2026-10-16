@@ -1,0 +1,57 @@
+/* ============================================================ MELHORIAS DE USABILIDADE (teste às cegas, 2026-10-16) ============================================================
+   Ajustes de UX/UI vindos do teste de criação de um sistema do zero. Fica por último para vencer as regras antigas. */
+
+/* ---- Perícias/itens clicáveis na ficha do jogador ---- */
+.rolavel{cursor:pointer;transition:background .12s,border-color .12s}
+.ptable tr.rolavel:hover td{background:color-mix(in srgb,var(--indigo) 18%,transparent)}
+.achip.rolavel:hover,.skl.rolavel:hover{border-color:var(--indigo);background:color-mix(in srgb,var(--indigo) 18%,transparent)}
+.rolavel:focus-visible{outline:2px solid var(--indigo)}
+
+/* ---- Resultado de rolagem: impossível de não ver ---- */
+.toast{font-size:16px;padding:12px 20px}
+
+/* ---- Chips marcáveis não mudam de largura ao marcar (a fileira não "pula") ---- */
+.ck{display:inline-block;width:1.15em;visibility:hidden;text-align:left}
+.ck.on{visibility:visible}
+
+/* ---- Bestiário: rótulo acima do campo, sem grudar ---- */
+.best-card .f{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.best-card .f>span{font-size:11px;color:var(--muted)}
+.best-card .row.wrapf{gap:10px;align-items:flex-end}
+.best-attrs{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.best-attrs .f{flex:0 0 auto}
+.best-res{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}
+.best-res .f{width:100%}
+
+/* ---- Ação rara (excluir) discreta em listas longas; fica forte só ao passar o mouse ---- */
+.md-edit .btn.danger.mini,.arq-corpo .btn.danger.mini{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.md-edit .btn.danger.mini:hover,.arq-corpo .btn.danger.mini:hover{background:#9f1239;color:#fff;border-color:#9f1239}
+
+/* ---- Combate: chips de outros recursos ---- */
+.mv-res{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.mv-res .mv-chip{font-size:10.5px}
+.mv-resrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mv-resrow b{min-width:90px}
+
+/* ---- Barra de passos unificada ---- */
+.passo-uni{font-size:11px;color:var(--muted)}
+
+/* ---- Painéis da Mesa: ao abrir, a tela vai até eles (sem ficar escondidos atrás da barra fixa) ---- */
+.mpane{scroll-margin-top:88px}
+.mpane-flash{animation:mpFlash 1.2s ease-out}
+@keyframes mpFlash{0%{box-shadow:0 0 0 3px var(--indigo)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ---- Ficha do jogador: nada de barra de rolagem dentro dos blocos (eles crescem até caber o conteúdo) ---- */
+.cv:not(.edit) .blk-body{overflow:visible}
+
+/* ---- Botões de ação curtos não quebram linha ---- */
+.arq-l .btn,.mv-resrow .btn{white-space:nowrap}
+.mv-resrow{margin:4px 0}
+.mv-resrow .mv-hpin{width:84px;flex:0 0 84px}
+
+/* ---- Bestiário: busca, filtro e cartões recolhidos ---- */
+.best-bar{margin:6px 0;align-items:center}
+.best-card.best-min{padding:8px 12px}
+.best-card.best-min .best-av{width:36px;height:36px}
+.best-grid:has(.best-min){grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.best-bar .btn,.best-card .btn.mini{white-space:nowrap}

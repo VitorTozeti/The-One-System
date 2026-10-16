@@ -121,6 +121,30 @@ function problemasDaAba(sys,k){
     (sys.techTiers||[]).forEach(t=>{ if(formulaRuim(t.custoFormula,v)) p.push('Tier “'+t.name+'”: fórmula de custo inválida.'); });
   }
   if(k==='ficha'&&!((sys.sheet||{}).blocks||[]).length) p.push('A ficha está vazia — nenhum bloco no papel.');
+  /* ---- referências quebradas: coisas que apontam para algo que não existe (antes passavam em silêncio) ---- */
+  const resIds=new Set((sys.resources||[]).map(r=>r.id));
+  const varre=(lista,onde)=>(lista||[]).forEach(ef=>{
+    if(ef&&ef.kind==='recurso'&&ef.targetId&&!resIds.has(ef.targetId)) p.push(onde+': um efeito aponta para um recurso que não existe mais.');
+    if(ef&&ef.mods) varre(ef.mods,onde); });
+  const varreArq=(lista,rot)=>(lista||[]).forEach(c=>{
+    (c.abilities||[]).forEach(a=>varre(a.effects,rot+' “'+(c.name||'?')+'”'));
+    (c.traits||[]).forEach(t=>varre(t.effects,rot+' “'+(c.name||'?')+'”'));
+    (c.recursos||[]).forEach(x=>{ if(x.resId&&!resIds.has(x.resId)) p.push(rot+' “'+(c.name||'?')+'”: muda a fórmula de um recurso que não existe mais.'); }); });
+  if(k==='classes') varreArq(sys.classes,'Classe');
+  if(k==='racas') varreArq(sys.origins,'Origem');
+  if(k==='itens') (sys.items||[]).forEach(it=>varre(it.effects,'Item “'+(it.name||'?')+'”'));
+  if(k==='pericias') (sys.skills||[]).filter(s=>!s.linkedAttrId&&(sys.attributes||[]).length)
+    .forEach(s=>p.push('Perícia “'+s.name+'” está sem atributo — o valor dela não soma nada (abra a perícia e escolha um).'));
+  if(k==='recursos') (sys.resources||[]).forEach(r=>{
+    if(formulaRuim(r.start,v)) p.push('Recurso “'+r.name+'”: o “Começa em” é inválido.');
+    (r.gatilhos||[]).forEach(g=>(g.acoes||[]).forEach(a=>{
+      if((a.k==='restaurar'||a.k==='somar')&&a.alvo&&a.alvo!=='*'&&!resIds.has(a.alvo)) p.push('Recurso “'+r.name+'”: um gatilho aponta para um recurso que não existe mais.'); })); });
+  /* origem/traço que dá "+N técnica de classe" mas nenhuma classe tem técnicas para escolher */
+  if(k==='racas'||k==='classes'){
+    const daTec=(sys.origins||[]).concat(sys.classes||[]).some(c=>[].concat(c.abilities||[],c.traits||[]).some(a=>(a.effects||[]).some(ef=>ef&&ef.kind==='tecnicas')));
+    const temOp=(sys.classes||[]).some(c=>((c.tecnicas||{}).opcoes||[]).length);
+    if(daTec&&!temOp) p.push('Algo concede “+técnica de classe”, mas nenhuma classe tem técnicas para escolher (aba Classes → Técnicas).');
+  }
   return p;
 }
 /* contador do badge de cada aba (null = aba sem contagem) */
@@ -152,7 +176,7 @@ function passosEssenciais(sys){
     {ok:(sys.skills||[]).length>0,             tab:'pericias', t:'Criar as perícias', s:'O que o personagem sabe fazer.'},
     {ok:lp.skillCount<=escolhiveis,            tab:'pericias', t:'Pedir menos perícias do que existem', s:'Pede '+lp.skillCount+', existem '+escolhiveis+' escolhíveis.'},
     {ok:(sys.classes||[]).length>0&&(sys.origins||[]).length>0, tab:'classes', t:'Cadastrar ao menos 1 classe e 1 origem', s:'Sem isso o jogador trava no primeiro passo.'},
-    {ok:(((sys.sheet||{}).blocks)||[]).length>0, tab:'ficha',  t:'Montar a ficha', s:'Ao menos um bloco no papel.'},
+    {ok:(((sys.sheet||{}).blocks)||[]).length>0, tab:'ficha',  t:'Ficha com ao menos um bloco', s:'Já vem uma ficha padrão — abra 🖼️ Ficha para personalizar ou deixar do seu jeito.'},
   ];
 }
 /* ---------- Aba Início: onde o mestre entende o que falta ---------- */
@@ -160,7 +184,10 @@ function tabInicio(sys){
   const passos=passosEssenciais(sys);
   const feitos=passos.filter(p=>p.ok).length;
   const problemas=[];
-  abasVisiveis().forEach(t=>problemasDaAba(sys,t.k).forEach(msg=>problemas.push({tab:t.k,msg})));
+  /* "Sugestões" não repete o que o checklist acima já cobre (mesma aba + frase de "falta criar") */
+  const pendTabs=new Set(passos.filter(p=>!p.ok).map(p=>p.tab));
+  const repete=(tab,msg)=>pendTabs.has(tab)&&/^(Nenhum|São \d|O sistema pede|O máximo do atributo|A campanha está|O sistema está sem)/.test(msg);
+  abasVisiveis().forEach(t=>problemasDaAba(sys,t.k).forEach(msg=>{ if(!repete(t.k,msg)) problemas.push({tab:t.k,msg}); }));
   const linha=p=>h('button',{class:'chk-l '+(p.ok?'ok':''),onclick:()=>{irParaAba(p.tab);}},
     h('span',{class:'mk'}, p.ok?'✔':'○'),
     h('span',{}, h('b',{},p.t), h('span',{class:'sub'}, p.s+'  ·  abrir '+tabLabel(p.tab)+' →')));
@@ -170,7 +197,7 @@ function tabInicio(sys){
   const hero = proximo
     ? h('div',{class:'hero-passo'},
         h('div',{class:'hero-txt'},
-          h('span',{class:'hero-k'},'Próximo passo · '+(feitos+1)+' de '+passos.length),
+          h('span',{class:'hero-k'},'Próximo passo · faltam '+(passos.length-feitos)+' de '+passos.length),
           h('b',{},proximo.t), h('span',{class:'hint'},proximo.s)),
         h('div',{class:'row wrapf'},
           h('button',{class:'btn primary',onclick:()=>irParaAba(proximo.tab)},'Ir para '+tabLabel(proximo.tab)+' →'),
@@ -195,7 +222,13 @@ function tabInicio(sys){
         ? h('div',{}, ...problemas.map(pr=>h('button',{class:'chk-l',onclick:()=>irParaAba(pr.tab)},
             h('span',{class:'mk',style:{color:'var(--amber)'}},'💡'),
             h('span',{}, pr.msg, h('span',{class:'sub'},'em '+tabLabel(pr.tab)+' →')))))
-        : h('div',{class:'hint'},'Nenhuma sugestão por enquanto. '+(modoSimples()?'(As abas avançadas estão ocultas no Modo Simples e não foram verificadas.)':'')),
+        : h('div',{class:'hint'},'Nenhuma sugestão por enquanto.'),
+      /* o Modo Simples esconde abas — mas os problemas delas continuam sendo contados e avisados aqui */
+      (()=>{ if(!modoSimples()) return null;
+        const ocultos=TAB_META.filter(t=>t.adv).reduce((n,t)=>n+problemasDaAba(sys,t.k).length,0);
+        return h('div',{class:'hint',style:{marginTop:'8px'}},
+          ocultos?('⚠ '+ocultos+' sugestão(ões) nas abas avançadas (ocultas no Modo Simples). '):'As abas avançadas (ocultas no Modo Simples) também foram verificadas: tudo certo. ',
+          ocultos?h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ S.ui.modo='avancado'; store('nexus_modo','avancado'); render(); }},'Mostrar abas avançadas'):null); })(),
       h('div',{class:'hint',style:{marginTop:'10px'}},'Dica: aperte Ctrl+K em qualquer lugar para procurar uma opção pelo nome.')),
     card('Não entendeu um termo?','Slot, tier, degrau, escopo, sintonização — o glossário explica cada um com exemplo. O mesmo texto aparece no “?” ao lado dos campos.',
       h('button',{class:'btn sm primary',onclick:()=>{S.ui.gloss={q:''};render();}},'📖 Abrir glossário'),
@@ -237,7 +270,8 @@ const BUSCA_EXTRA=[
   ['Nome do eixo (Nível, NEX, Grau)','progressao'],['Tabela de progressão','progressao'],
   ['Sigla do atributo (FOR, AGI)','atributos'],
   ['Barra de Vida / Mana','recursos'],['Fórmula do recurso','recursos'],['Descanso curto e longo','recursos'],
-  ['Recarga de recurso','recursos'],['Gasto por rodada','recursos'],['Defesa (recurso do tipo valor)','recursos'],
+  ['Recarga de recurso','recursos'],['Gasto por rodada','recursos'],
+  ['Gatilho: ao chegar a 0 (morte, colapso)','recursos'],['Contador / “Começa em”','recursos'],['Meu sistema não usa níveis','regras'],['Defesa (recurso do tipo valor)','recursos'],
   ['Proficiência / graus de treino','pericias'],['Expertise','pericias'],['Perícia automática','pericias'],
   ['Bônus ao treinar','pericias'],['Perícia ligada a atributo','pericias'],
   ['Habilidades de classe','classes'],['Requisitos de habilidade','classes'],['Tabela da classe','classes'],

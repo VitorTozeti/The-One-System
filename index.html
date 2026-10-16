@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- O app é 100% offline: nada precisa sair do navegador. Esta política BLOQUEIA qualquer envio de dados para fora
+     (fetch/XHR/WebSocket/imagens remotas), inclusive por um "efeito por código" liberado de um sistema importado.
+     'unsafe-eval' só existe por causa do efeito por código; estilos inline são usados pela ficha. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'none'; frame-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'" />
 <title>Nexus RPG — Protótipo</title>
 <!--
   Nexus RPG — Protótipo (Mestre + Jogador)
@@ -21,6 +25,7 @@
 <link rel="stylesheet" href="assets/css/ficha-viva.css" />
 <link rel="stylesheet" href="assets/css/classes.css" />
 <link rel="stylesheet" href="assets/css/editores2.css" />
+<link rel="stylesheet" href="assets/css/melhorias.css" />
 </head>
 <body>
 <div id="root"></div>
@@ -47,6 +52,7 @@
 <!-- 3) Estado global e histórico (dependem de helpers + dados + contas) -->
 <script src="src/core/state.js"></script>
 <script src="src/core/history.js"></script>
+<script src="src/core/gatilhos.js"></script>
 
 <!-- 4) UI compartilhada -->
 <script src="src/ui/shortcuts.js"></script>

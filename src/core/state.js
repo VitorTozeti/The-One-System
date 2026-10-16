@@ -3,7 +3,7 @@ migrateLegacyIfNeeded();   /* embrulha dados globais antigos numa conta, se houv
 
 let S = {
   view:'mestre', tab:'inicio',
-  ui:{open:{}, sel:null, stack:(window.innerWidth||1024)<640,
+  ui:{open:{}, sel:null, stack:(window.innerWidth||1024)<1100,   /* telas menores escalam o papel a <80% (fonte ilegível): empilha por padrão */
       live:load('nexus_live'),  /* gaveta Ficha ao vivo (null = decide pela largura da tela) */
       modo:load('nexus_modo')||'simples',  /* simples esconde os módulos avançados */
       grupo:'fundacao',  /* grupo de abas aberto no modo mestre */
@@ -143,6 +143,24 @@ function restauraRolagem(raiz,lista){
     const o=mapa[k+'#'+i]; if(o){ el.scrollTop=o.t; el.scrollLeft=o.l; }
   });
 }
+/* Clique num campo logo depois de editar outro: o blur do primeiro dispara onchange → render(),
+   que troca o DOM ANTES do foco chegar ao segundo campo — e o que o usuário digita some.
+   Guardamos qual campo foi clicado (posição entre os campos da tela) e devolvemos o foco no render. */
+let _cliqueCampo=null;
+document.addEventListener('mousedown',e=>{
+  const raiz=document.getElementById('root'); const t=e.target&&e.target.closest&&e.target.closest('input,textarea,select');
+  if(!raiz||!t||!raiz.contains(t)||t.type==='checkbox'||t.type==='radio'||t.type==='range'||t.type==='file'){ _cliqueCampo=null; return; }
+  const i=[...raiz.querySelectorAll('input,textarea,select')].indexOf(t);
+  _cliqueCampo=i<0?null:{i,tag:t.tagName,t:Date.now()};
+},true);
+function restauraCliqueCampo(raiz){
+  const c=_cliqueCampo; _cliqueCampo=null;
+  if(!c||Date.now()-c.t>600) return false;
+  const el=[...raiz.querySelectorAll('input,textarea,select')][c.i];
+  if(!el||el.tagName!==c.tag) return false;
+  try{ el.focus({preventScroll:true}); }catch(e){}
+  return true;
+}
 function render(){
   persist();
   const r=document.getElementById('root');
@@ -158,7 +176,7 @@ function render(){
   document.body.classList.toggle('painel-aberto', S.view==='mestre'&&S.tab==='ficha'&&!!S.ui.sel);
   document.body.classList.toggle('live-aberto', typeof fichaVivaAberta==='function'&&fichaVivaAberta());
   fitCanvases();
-  if(mesma){ restauraRolagem(r,rol); window.scrollTo(sx,sy); restauraFoco(r,foco); r.style.minHeight=''; restauraRolagem(r,rol); window.scrollTo(sx,sy); }
+  if(mesma){ restauraRolagem(r,rol); window.scrollTo(sx,sy); if(!restauraCliqueCampo(r)) restauraFoco(r,foco); r.style.minHeight=''; restauraRolagem(r,rol); window.scrollTo(sx,sy); }
   else r.style.minHeight='';
 }
 /* Redesenha SÓ o canvas do editor, mantendo o resto da tela intacto.
@@ -182,9 +200,41 @@ function fitCanvases(){
     const sc=manual?S.ui.zoom:Math.min(1, avail/CANVAS_W);
     cv.style.transform='scale('+sc+')';
     cv.dataset.scale=sc;
+    ajustaBlocosJogo(cv);
     fit.style.height=(parseFloat(cv.dataset.h||0)*sc)+'px';
     fit.style.overflowX=(CANVAS_W*sc>avail)?'auto':'';
   });
+}
+/* Na ficha do JOGADOR nenhum bloco corta conteúdo com rolagem interna: cada bloco cresce até caber o
+   que tem dentro e empurra para baixo o que estiver logo abaixo dele (o papel também cresce).
+   No editor do Mestre nada muda — lá o tamanho desenhado é o que vale. */
+function ajustaBlocosJogo(cv){
+  if(!cv||cv.classList.contains('edit')) return;
+  const blks=[...cv.children].filter(el=>el.classList.contains('blk')&&el.offsetHeight>0);
+  if(!blks.length) return;
+  const g=blks.map(el=>{
+    const body=el.querySelector('.blk-body');
+    const top=parseFloat(el.style.top)||0, hh=parseFloat(el.style.height)||el.offsetHeight, left=parseFloat(el.style.left)||0, w=parseFloat(el.style.width)||el.offsetWidth;
+    let need=hh;
+    if(body){
+      const extra=el.offsetHeight-body.clientHeight;   /* padding + borda do bloco, medidos com a altura ORIGINAL do corpo */
+      body.style.overflow='visible'; body.style.height='auto';
+      need=Math.ceil(body.scrollHeight+extra)+10;
+      body.style.height=''; body.style.overflow='';
+    }
+    return {el,top,h:hh,left,w,d:Math.max(0,need-hh)};
+  });
+  g.forEach(a=>{ a.shift=0; });
+  g.slice().sort((a,b)=>a.top-b.top).forEach(a=>{
+    if(a.d>0) g.forEach(b=>{ if(b!==a && b.top>=a.top+a.h-2 && b.left<a.left+a.w && b.left+b.w>a.left) b.shift=Math.max(b.shift,a.shift+a.d); });
+  });
+  let fundo=0;
+  g.forEach(a=>{
+    a.el.style.top=(a.top+a.shift)+'px'; a.el.style.height=(a.h+a.d)+'px';
+    fundo=Math.max(fundo,a.top+a.shift+a.h+a.d);
+  });
+  const novoH=Math.max(parseFloat(cv.dataset.h)||0,fundo+16);
+  cv.style.height=novoH+'px'; cv.dataset.h=novoH;
 }
 let fitTimer=null;
 window.addEventListener('resize',()=>{ clearTimeout(fitTimer); fitTimer=setTimeout(fitCanvases,120); });

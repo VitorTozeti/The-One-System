@@ -43,13 +43,25 @@ function jogadoresView(){
         if(!nome.trim()) return alert('Informe o nome do jogador.');
         c.players.push({id:uid(), name:nome.trim(), note:'', sheet:null, importedAt:null}); render();
       }},'+ Adicionar'),
-      h('button',{class:'btn ghost', onclick:()=>importarFichaNova()},'⬆ Importar ficha direto')));
+      h('button',{class:'btn ghost', onclick:()=>importarFichaNova()},'⬆ Importar ficha direto'),
+      /* testar o PRÓPRIO sistema ponta a ponta: leva o personagem criado em "Testar como jogador" para a mesa/combate */
+      h('button',{class:'btn emerald', title:'Usa a ficha que você montou em “Testar como jogador” como se fosse um jogador da mesa (para testar combate, mapa e Tela dos jogadores).',
+        onclick:()=>adicionarPersonagemDeTeste()},'🧪 Adicionar meu personagem de teste')));
 
   return h('div',{},
     card('Jogadores da campanha','O jogador cria a ficha na conta dele, exporta e você importa aqui (offline).',null),
     lista, addBox);
 }
 
+function adicionarPersonagemDeTeste(){
+  const c=S.campaign, d=S.draft; if(!d) return showToast('Monte um personagem em “Testar como jogador” primeiro.');
+  const nome=(d.name||'').trim()||'Personagem de teste';
+  const copia=JSON.parse(JSON.stringify(d));
+  const ja=c.players.find(p=>p.teste);
+  if(ja){ ja.sheet=copia; ja.name=nome; ja.importedAt=Date.now(); showToast('🧪 Personagem de teste atualizado'); }
+  else { c.players.push({id:uid(), name:nome, note:'personagem de teste', teste:true, sheet:copia, importedAt:Date.now()}); showToast('🧪 '+nome+' entrou na mesa'); }
+  render();
+}
 /* Lê um arquivo/JSON de ficha e devolve o objeto via callback. */
 function lerFichaJSON(cb){
   const inp=h('input',{type:'file', accept:'.json,.ficha,.nexus', class:'hide',

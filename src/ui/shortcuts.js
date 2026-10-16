@@ -74,5 +74,6 @@ document.addEventListener('keydown',e=>{
     render();
   }
 });
-function showToast(msg){ S.toast=msg; render(); setTimeout(()=>{S.toast=null;render();},1700); }
+let _toastT=null;
+function showToast(msg,ms){ S.toast=msg; render(); clearTimeout(_toastT); _toastT=setTimeout(()=>{S.toast=null;render();},ms||1700); }
 

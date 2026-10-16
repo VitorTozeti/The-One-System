@@ -344,7 +344,16 @@ function sanitizeSystem(sys){
     if(typeof r.desc!=='string') r.desc='';
     if(!r.recharge||typeof r.recharge!=='object') r.recharge={trig:'nunca',amt:'tudo',formula:''};
     if(typeof r.perRound!=='string') r.perRound='';
+    /* campos novos: "começa em", contador e gatilhos de evento (validados: o arquivo pode vir de fora) */
+    r.start=typeof r.start==='string'?r.start.slice(0,120):(typeof r.start==='number'?String(r.start):'');
+    r.contador=!!r.contador;
+    r.gatilhos=(Array.isArray(r.gatilhos)?r.gatilhos:[]).filter(g=>g&&typeof g==='object').slice(0,20).map(g=>({
+      id:typeof g.id==='string'?g.id:uid(), quando:g.quando==='cheio'?'cheio':'zero',
+      acoes:(Array.isArray(g.acoes)?g.acoes:[]).filter(a=>a&&typeof a==='object').slice(0,20).map(a=>({
+        k:['restaurar','somar','aviso'].includes(a.k)?a.k:'aviso', alvo:typeof a.alvo==='string'?a.alvo:'',
+        n:Number.isFinite(+a.n)?+a.n:0, modo:a.modo==='inicio'?'inicio':'max', texto:typeof a.texto==='string'?a.texto.slice(0,200):'' })) }));
   });
+  sys.semNiveis=!!sys.semNiveis;
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
     const sh=sys.sheet;

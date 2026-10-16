@@ -101,7 +101,7 @@ function abrirAssistenteSistema(opts){
     THEME_PRESETS.forEach(t=>{
       const on=st.themes.includes(t);
       temas.appendChild(h('button',{type:'button',class:'btn sm '+(on?'emerald':'ghost'),'aria-pressed':on?'true':'false',
-        onclick:()=>{ on?(st.themes=st.themes.filter(x=>x!==t)):st.themes.push(t); desenha(); }},(on?'✓ ':'')+t));
+        onclick:()=>{ on?(st.themes=st.themes.filter(x=>x!==t)):st.themes.push(t); desenha(); }},ck(on),t));
     });
     corpo.appendChild(temas);
     /* atributos */
@@ -114,7 +114,7 @@ function abrirAssistenteSistema(opts){
       corpo.appendChild(h('div',{class:'row wrapf'},m.res.map(r=>{
         const on=st.resOn[r.n]!==false;
         return h('button',{type:'button',class:'btn sm '+(on?'emerald':'ghost'),'aria-pressed':on?'true':'false',
-          onclick:()=>{ st.resOn[r.n]=!on; desenha(); }},(on?'✓ ':'')+r.n+(r.tipo==='valor'?' (valor)':''));
+          onclick:()=>{ st.resOn[r.n]=!on; desenha(); }},ck(on),r.n+(r.tipo==='valor'?' (valor)':''));
       })));
     }
     setTimeout(()=>{ try{ inpCamp.focus(); inpCamp.select(); }catch(e){} },0);
@@ -127,7 +127,8 @@ function abrirAssistenteSistema(opts){
     const s=previa;
     corpo.appendChild(h('p',{class:'wiz-intro'},'Tudo certo? Ao criar, você cai direto na aba Início, que mostra o que falta para o sistema ficar jogável.'));
     const resumo=h('div',{class:'wiz-resumo'},
-      h('div',{class:'wiz-camp'},h('span',{class:'hint'},'Campanha'),h('b',{},s.campaignName)),
+      h('div',{class:'wiz-camp'},h('span',{class:'hint'},'Campanha'),h('b',{},s.campaignName),
+        h('span',{class:'hint',style:{marginLeft:'10px'}},'Sistema: '),h('b',{},s.name||'Meu Sistema')),
       h('div',{class:'wiz-num'},
         ...[['💪',s.attributes.length,'atributos'],['❤️',s.resources.length,'recursos'],['🎯',s.skills.length,'perícias'],['🎭',s.classes.length,'classes'],['🌱',s.origins.length,'origens']]
           .map(([ic,n,l])=>h('div',{class:'wiz-stat'},h('span',{},ic),h('b',{},String(n)),h('small',{},l)))),

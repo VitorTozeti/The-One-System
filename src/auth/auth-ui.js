@@ -49,7 +49,7 @@ async function removePersonagem(id){
 }
 /* Cria um Mestre guiado: assistente → sistema pronto → entra direto na aba Início. */
 function criarMestreGuiado(nome){
-  abrirAssistenteSistema({titulo:'Criar o sistema do Mestre', nomeInicial:'', okRotulo:'✔ Criar e começar',
+  abrirAssistenteSistema({titulo:'Criar o sistema do Mestre', nomeInicial:(nome||'').trim(), okRotulo:'✔ Criar e começar',
     aoCriar:(sys,info)=>{
       const id=addPersonagem('mestre', (nome||'').trim()||sys.campaignName, sys);
       selectPersonagem(id);
@@ -79,7 +79,7 @@ function loginView(){
       cadastro?'Já tem conta? ':'Não tem conta? ',
       h('a',{href:'#', onclick:(e)=>{ e.preventDefault(); S.auth={mode:cadastro?'login':'cadastro', error:null}; render(); }},
         cadastro?'Entrar':'Criar uma conta')),
-    h('div',{class:'auth-warn'},'⚠️ Protótipo de teste: a senha é salva sem criptografia no seu navegador. Não use uma senha real.'));
+    h('div',{class:'auth-warn'},'⚠️ Protótipo local: a senha é guardada só como hash neste navegador (sem servidor) e quem usa este computador acessa os dados. Não use uma senha real.'));
 
   function submit(){
     const name=(document.getElementById('auth-name')||{}).value||'';

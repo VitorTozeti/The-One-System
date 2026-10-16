@@ -60,6 +60,40 @@ function cbHpPadraoJogador(x){
   const n=evalFormula(r.formula,v); return (Number.isNaN(n)||n<=0)?null:n;
 }
 
+/* ---------- Outros recursos do sistema (Mana, Sanidade, Marca…) além da Vida ---------- */
+function cbResVida(){ return (S.system.resources||[]).find(rr=>/vida|hp|^pv|sa[uú]de/i.test(rr.name)); }
+function cbOutrosRecursos(){ const v=cbResVida(); return (S.system.resources||[]).filter(r=>(r.type||'barra')!=='valor'&&r!==v); }
+/* Jogador: valores reais da ficha (classe, itens e início já aplicados). Inimigo: fórmula do sistema com os atributos do statblock
+   (ou o valor que o Mestre digitou no bestiário). Guarda {cur,max} em x.res[resId]. */
+function cbIniciaRecursos(x){
+  x.res=x.res||{};
+  const outros=cbOutrosRecursos(); if(!outros.length) return;
+  try{
+    if(x.kind==='player'){
+      const p=S.campaign.players.find(pp=>pp.id===x.refId); if(!p||!p.sheet) return;
+      const ctx=computeSheet(S.system,sanitizeDraft(JSON.parse(JSON.stringify(p.sheet)),S.system));
+      outros.forEach(r=>{ const a=ctx.allRes.find(q=>q.id===r.id); if(a&&!x.res[r.id]&&!Number.isNaN(a.max)) x.res[r.id]={cur:a.cur,max:a.max}; });
+    } else if(x.kind==='enemy'){
+      const sb=S.campaign.bestiary.enemies.find(s=>s.id===x.refId), v=cbVars(x); if(!sb||!v) return;
+      outros.forEach(r=>{
+        if(x.res[r.id]) return;
+        const ov=sb.recs&&sb.recs[r.id];
+        let max=(ov!=null&&ov!=='')?Number(ov):evalFormula(r.formula,v);
+        if(Number.isNaN(max)) return;
+        x.res[r.id]={cur:recursoInicio(r,v,max),max};
+      });
+    }
+  }catch(e){ console.warn('recursos do combatente:',e); }
+}
+function cbResDelta(x,r,delta){
+  const a=(x.res||{})[r.id]; if(!a) return;
+  const antes=a.cur; a.cur=Math.max(0,Math.min(a.max,Math.round(a.cur+delta)));
+  if(a.cur===antes) return;
+  cbLog(x.name+' — '+r.name+' '+antes+' → '+a.cur);
+  if(antes>0&&a.cur<=0) showToast('⚠ '+x.name+': '+r.name+' chegou a 0');
+  render();
+}
+
 /* ---------- Criar combatentes ---------- */
 function cbNovo(o){
   return Object.assign({id:uid(), name:'?', kind:'enemy', refId:null, tokenId:null, mapId:null,
@@ -74,6 +108,7 @@ function cbAddJogadores(){
     x.bonus=cbBonusPadrao(x);
     const hp=(tk&&tk.hp!=null)?tk.hp:null, mx=(tk&&tk.hpMax)||cbHpPadraoJogador(x);
     if(mx!=null){ x.hpMax=mx; x.hp=hp!=null?hp:mx; if(tk){ tk.hp=x.hp; tk.hpMax=mx; } }
+    cbIniciaRecursos(x);
     cb.order.push(x); n++;
   });
   if(!c.players.length) showToast('Cadastre jogadores na seção Jogadores.');
@@ -91,7 +126,7 @@ function cbAddGrupo(sbId, qtd, comTokens){
   for(let i=0;i<qtd;i++){
     const num=ja+i+1, nome=(qtd>1||ja>0)?(sb.name+' '+num):sb.name;
     const x=cbNovo({name:nome, kind:'enemy', refId:sb.id, hp:sb.hp, hpMax:sb.hpMax||sb.hp});
-    x.bonus=cbBonusPadrao(x);
+    x.bonus=cbBonusPadrao(x); cbIniciaRecursos(x);
     if(m){
       const tk=newToken('enemy',nome,sb.id); tk.hp=x.hp; tk.hpMax=x.hpMax;
       const k=m.tokens.length; tk.xPct=Math.min(94,14+(k%8)*10); tk.yPct=Math.min(90,14+Math.floor(k/8)*9);
@@ -112,7 +147,7 @@ function cbAddTokensMapa(){
     const info=(typeof tokenRefInfo==='function')?tokenRefInfo(t):null;
     const x=cbNovo({name:(info&&info.name)||t.label||'Token', kind:t.kind||'npc', refId:t.refId||null, tokenId:t.id, mapId:m.id,
       hp:t.hp!=null?t.hp:null, hpMax:t.hpMax!=null?t.hpMax:null, hidden:!!t.hidden});
-    x.bonus=cbBonusPadrao(x); cb.order.push(x); n++;
+    x.bonus=cbBonusPadrao(x); cbIniciaRecursos(x); cb.order.push(x); n++;
   });
   showToast(n?(n+' token(s) trazidos do mapa'):'Todos os tokens do mapa já estão na lista');
   render();
@@ -252,6 +287,10 @@ function cbLinha(x,i){
   const hp=cbHp(x), mx=cbHpMax(x), aberto=ui.cbOpen===x.id, down=cbCaido(x);
   const marks=cbMarks(x);
   const chips=[...marks.map(mk=>h('span',{class:'mv-chip'},mk)), ...x.conds.map(cn=>h('span',{class:'mv-chip txt'},cn))];
+  if(!x.res) cbIniciaRecursos(x);
+  const recsX=cbOutrosRecursos().filter(r=>x.res&&x.res[r.id]);
+  const recChips=recsX.length?h('div',{class:'mv-res'},recsX.map(r=>{ const a=x.res[r.id];
+    return h('span',{class:'mv-chip txt',title:r.name+' — abra ▾ para mudar',style:{borderColor:r.color||null}},(r.icon?r.icon+' ':'')+r.name+' '+a.cur+'/'+a.max); })):null;
   const hpBloco = hp!=null
     ? h('div',{class:'mv-hp'},
         h('div',{class:'mv-hp-n'}, h('b',{}, hp), mx!=null?h('span',{class:'hint'},'/'+mx):null), cbBarraHp(x),
@@ -270,7 +309,7 @@ function cbLinha(x,i){
     h('button',{class:'btn mini ghost', title:'Rolar iniciativa', onclick:()=>cbRolar(x)},'🎲'),
     h('div',{class:'mv-cb-nm'},
       h('div',{class:'mv-cb-name'}, cbIcone(x)+' '+x.name, x.hidden?h('span',{class:'mv-chip txt'},'oculto'):null, down?h('span',{class:'mv-chip txt'},'caído'):null),
-      chips.length?h('div',{class:'mv-chips'}, chips):null),
+      chips.length?h('div',{class:'mv-chips'}, chips):null, recChips),
     hpBloco,
     h('button',{class:'btn mini ghost', title:'Detalhes: condições, ataques, ocultar, mover, remover', onclick:()=>{ ui.cbOpen=aberto?null:x.id; render(); }}, aberto?'▴':'▾'));
   if(!aberto) return linha;
@@ -283,7 +322,16 @@ function cbLinha(x,i){
       const p=x.conds.indexOf(cn); if(p>=0)x.conds.splice(p,1); else x.conds.push(cn); cbLog(x.name+(p>=0?' perdeu ':' ganhou ')+cn); render(); }}, cn));
   const ataques=sb&&sb.ataques.length?h('div',{class:'row wrapf'}, h('span',{class:'hint'},'Ataques:'),
     sb.ataques.map(at=>h('button',{class:'btn sm primary', onclick:()=>{ rolarAtaque(sb,at); cbLog(x.name+' usou '+at.nome); }}, '🎲 '+at.nome+' ('+at.acerto+'/'+at.dano+')'))):null;
+  const recLinhas=recsX.map(r=>{ const a=x.res[r.id];
+    return h('div',{class:'mv-resrow'}, h('b',{},(r.icon?r.icon+' ':'')+r.name), h('span',{class:'hint'},a.cur+' / '+a.max),
+      h('button',{class:'btn mini',type:'button',title:'−1',onclick:()=>cbResDelta(x,r,-1)},'−'),
+      h('button',{class:'btn mini',type:'button',title:'+1',onclick:()=>cbResDelta(x,r,1)},'+'),
+      h('input',{class:'in mv-hpin',placeholder:'±',title:'7 = tira · +5 = soma · =12 = define. Enter aplica.','aria-label':r.name+' de '+x.name,
+        onkeydown:e=>{ if(e.key!=='Enter') return; e.preventDefault(); const t=String(e.target.value).trim(), n=parseInt(t.replace(/^[=+\-]/,''));
+          if(Number.isNaN(n)) return showToast('Digite um número (ex.: 3, +2, =10).');
+          if(t[0]==='=') cbResDelta(x,r,n-a.cur); else cbResDelta(x,r,t[0]==='+'?n:-Math.abs(n)); }})); });
   const extra=h('div',{class:'mv-cb-more'},
+    recLinhas.length?h('div',{},...recLinhas):null,
     h('div',{class:'row wrapf'}, h('span',{class:'hint'},'Marcas:'), marcasBtns),
     h('div',{class:'row wrapf'}, h('span',{class:'hint'},'Condições:'), condBtns),
     ataques,

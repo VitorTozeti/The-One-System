@@ -131,6 +131,22 @@ const CATALOGO_CLASSES2=[
   {n:'Detetive',ic:'🕵️',c:'#57534e',d:'Investiga pistas e desvenda mistérios.',tec:['Métodos','1 + piso(Nível / 3)'],
    hab:s=>[[1,'Olho clínico','Nota o que ninguém notou.',[_dad('pericia',1)]],[5,'Dedução','Liga os pontos e acerta o alvo.',[_rol('pericia',2)]],[9,'Mente fria','Nada o abala.',[_res('Medo','metade'),_res('Psíquico','metade')]]],
    opc:s=>[['Interrogatório','Pressão certeira.',[_rol('pericia',1)]],['Reconstituição','Revive a cena do crime.',[_txt('Pergunta ao Mestre sobre a cena')]]]},
+  /* ---- Pacote isekai / anime (mundos que NÃO são D&D): reino, espíritos, contratos, loops ---- */
+  {n:'Cavaleiro Real',ic:'🛡️',c:'#1d4ed8',d:'Guerreiro juramentado a uma casa ou reino: armadura, honra e disciplina.',tec:['Estilos de espada','1 + piso(Nível / 3)'],
+   hab:s=>[[1,'Juramento da guarda','Treino de armadura e escudo: protege quem está por perto.',[_rol('defesa',2)]],[3,'Estilo de espada','Domínio técnico da arma.',[_rol('ataque',1)]]],
+   opc:s=>[['Estocada rápida','Golpe veloz e preciso.',[_rol('ataque',2)]],['Muralha','Fica entre o perigo e os aliados.',[_rol('defesa',2)]],['Corte de honra','Mais dano contra quem ataca inocentes.',[_rol('dano',2)]]]},
+  {n:'Espiritualista',ic:'🔮',c:'#7c3aed',d:'Faz contrato com espíritos e usa magia pela afinidade com a natureza.',tec:['Magias de espírito','Nível + 1'],
+   hab:s=>[[1,'Pacto com um espírito','Um espírito menor acompanha e ajuda nas magias.',[_rol('tecnica',1)]],[5,'Sintonia','Magias ficam mais fortes ao lado do espírito.',[_rol('tecnica',2)]]],
+   opc:s=>[['Lâmina de vento','Corte de ar condensado.',[_txt('Dano cortante à distância')]],['Névoa protetora','Esconde e protege o grupo.',[_rol('defesa',2)]],['Cura espiritual','O espírito fecha feridas.',[_txt('Cura um aliado')]]]},
+  {n:'Curandeiro',ic:'💚',c:'#16a34a',d:'Cuida dos feridos e mantém o grupo de pé.',tec:['Artes de cura','Nível'],
+   hab:s=>[[1,'Mãos que curam','Estabiliza ferimentos com o toque.',[_txt('Cura um aliado')]],[5,'Cuidado constante','Aliados próximos aguentam mais.',[_rol('defesa',1)]]],
+   opc:s=>[['Cura em área','Fecha feridas de todos ao redor.',[_txt('Cura aliados próximos')]],['Antídoto','Remove veneno e doença.',[_res('Veneno','imune')]]]},
+  {n:'Mercenário',ic:'⚔️',c:'#b45309',d:'Luta por quem paga. Prático, durão e sem frescura.',tec:['Truques sujos','piso(Nível / 2) + 1'],
+   hab:s=>[[1,'Instinto de sobrevivência','Sabe a hora certa de recuar ou de atacar.',[_rol('ataque',1)]],[4,'Pele grossa','Já apanhou demais para se abalar.',[_res('Físico','reduz',1)]]],
+   opc:s=>[['Golpe baixo','Aproveita a abertura.',[_dad('dano',1)]],['Provocação','Atrai a atenção do inimigo.',[_rol('pericia',1)]]]},
+  {n:'Forasteiro (Retornante)',ic:'🕰️',c:'#0f766e',d:'Alguém de outro mundo, sem poder especial além de insistir. Cada fracasso ensina algo.',tec:['Lições do retorno','1 + piso(Nível / 2)'],
+   hab:s=>[[1,'Memória do que já aconteceu','Lembra de coisas que "ainda não" aconteceram.',[_rol('pericia',1)]],[3,'Teimosia','Não desiste: rerrola um teste por sessão.',[_txt('Rerrola 1 teste por sessão')]]],
+   opc:s=>[['Reconhecer o padrão','Percebe o que se repete.',[_rol('pericia',1)]],['Segunda chance','Evita um erro que já cometeu.',[_rol('defesa',2)]]]},
 ];
 const CATALOGO_ORIGENS2=[
   {n:'Humano',ic:'🧑',c:'#b45309',d:'Versátil e adaptável, de qualquer lugar do mundo.',hab:s=>[[0,'Versátil','Aprende de tudo um pouco.',[{kind:'tecnicas',value:1}]]]},
@@ -153,6 +169,15 @@ const CATALOGO_ORIGENS2=[
    tr:s=>[['⚙️','Corpo de metal','',[_rol('defesa',2)]],['🔩','Sem carne','',[_res('Veneno','imune'),_res('Doença','imune'),_res('Elétrico','vulneravel')]]]},
   {n:'Nobre',ic:'👑',c:'#7c3aed',d:'Cresceu entre privilégios, etiqueta e intrigas.',hab:s=>[[0,'Educação refinada','Domina etiqueta e idiomas.',[_dad('pericia',1)]],[0,'Contatos','Conhece gente poderosa.',[_txt('Pode pedir favores a nobres')]]]},
   {n:'Órfão das ruas',ic:'🏚️',c:'#57534e',d:'Aprendeu a sobreviver sozinho nas vielas.',hab:s=>[[0,'Malandragem','Conhece os becos e os truques.',[_rol('pericia',1)]],[0,'Estômago forte','Come o que aparecer.',[_res('Doença','metade'),_res('Veneno','reduz',1)]]]},
+  /* ---- Pacote isekai / anime ---- */
+  {n:'Semi-humano',ic:'🧬',c:'#0d9488',d:'Sangue misto: traços de outro povo e olhares atravessados da multidão.',ap:'Orelhas, cauda ou olhos fora do comum.',
+   tr:s=>[['👂','Sentidos aguçados','Ouve e cheira mais que os outros.',[_rol('pericia',1)]]],hab:s=>[[0,'Preconceito','Alguns lugares tratam você pior — e o Mestre pode usar isso.',[]]]},
+  {n:'Espírito menor',ic:'🌬️',c:'#38bdf8',d:'Ser feito de natureza e mana, leve e fugaz.',ap:'Corpo translúcido que brilha de leve.',
+   tr:s=>[['🪽','Flutua','Paira alguns palmos acima do chão.',[_cap('Voo',3)]],['✨','Corpo de mana','Magia o atravessa menos.',[_res('Psíquico','metade')]]]},
+  {n:'Convocado (outro mundo)',ic:'🌀',c:'#a855f7',d:'Veio de um mundo diferente, sem raízes aqui — nem saber de como as coisas funcionam.',
+   hab:s=>[[0,'Olhar de fora','Percebe o que os locais já nem notam.',[_rol('pericia',1)]],[0,'Sem lugar','Não conhece costumes locais; o Mestre pode cobrar isso.',[]]]},
+  {n:'Besta-humana',ic:'🐺',c:'#92400e',d:'Povo selvagem de instintos fortes e força física acima da média.',ap:'Pelagem, presas e olhos de predador.',
+   tr:s=>[['🦷','Garras e presas','Ataques desarmados mais perigosos.',[_rol('dano',1)]],['👃','Faro','Segue rastros pelo cheiro.',[_rol('pericia',1)]]]},
 ];
 function _ef(o){ return o?Object.assign({id:uid(),targetId:'',value:0,text:'',charType:'tag',mods:[]},o):null; }
 function _hab(sys,[lv,n,d,efs]){ return {id:uid(),name:n,description:d||'',req:{level:lv||0,attrs:[]},effects:(efs||[]).map(_ef).filter(Boolean)}; }
@@ -199,7 +224,11 @@ function tabArquetipos(sys,kind){
     biblioteca, lista, selKey:chave,
     texto:c=>c.name+' '+(c.description||''),
     phCriar:ehC?'+ Nova classe: digite o nome e Enter':'+ Nova origem: digite o nome e Enter',
-    aoCriar:v=>{ if(_tem(lista,v)){ showToast('Já existe uma com esse nome.'); return null; } S.ui.arqAba='visao'; return nova({n:v,ic:ehC?'⚔️':'🧬',c:ehC?'#7c3aed':'#0d9488'}); },
+    aoCriar:v=>{ if(_tem(lista,v)){ showToast('Já existe uma com esse nome.'); return null; } S.ui.arqAba='visao'; 
+      /* cada nova classe/origem ganha ícone e cor diferentes (antes todas nasciam iguais e se confundiam na lista) */
+      const ICS=ehC?['⚔️','🛡️','🔮','🗡️','🏹','🌿','✨','🎭','🐺','🔥']:['🧬','🌱','👁️','🦴','🌙','⭐','🧪','🪶'];
+      const CORS=['#7c3aed','#0d9488','#e11d48','#d97706','#2563eb','#65a30d','#be185d','#0891b2'];
+      return nova({n:v,ic:ICS[lista.length%ICS.length],c:CORS[lista.length%CORS.length]}); },
     vazioTitulo:ehC?'Nenhuma classe ainda':'Nenhuma origem ainda', vazioDica:'Adicione da biblioteca acima ou digite um nome.',
     cartao:(c,sel)=>{
       const nTec=ehC?(((c.tecnicas||{}).opcoes)||[]).length:0, nRec=(c.recursos||[]).length;
@@ -262,7 +291,7 @@ function arqPrevia(sys,kind,c){
   const ativas=e.active.filter(x=>x.tipo!=='traco').map(x=>x.ab.name);
   const prox=e.locked.filter(x=>x.tipo==='habilidade').sort((a,b)=>((a.ab.req||{}).level||0)-((b.ab.req||{}).level||0))[0];
   return h('div',{class:'pv'},
-    h('div',{class:'row between wrapf'}, h('b',{},'Prévia — '+c.name+' no '+levelLabel(sys,lv)), h('label',{class:'row'},h('span',{class:'hint'},'nível'),lvSel)),
+    h('div',{class:'row between wrapf'}, h('b',{},'Prévia — '+c.name+(sys.semNiveis?'':(' no '+levelLabel(sys,lv)))), sys.semNiveis?null:h('label',{class:'row'},h('span',{class:'hint'},'nível'),lvSel)),
     h('div',{class:'pv-chips'}, ...chips),
     h('div',{class:'hint'}, ativas.length?('Tem: '+ativas.join(', ')):'Nenhuma habilidade ativa neste nível.'),
     prox?h('div',{class:'hint'},'Próxima: '+prox.ab.name+' ('+prox.reasons.join(', ')+')'):null,

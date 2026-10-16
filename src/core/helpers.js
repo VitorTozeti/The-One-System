@@ -31,6 +31,9 @@ function a11yPass(root){
   root.querySelectorAll('.busca-cx:not([role])').forEach(x=>{ x.setAttribute('role','dialog'); x.setAttribute('aria-modal','true'); });
 }
 function sign(n){ return (n>=0?'+':'')+n; }
+/* "✓" de botão/chip marcável: o espaço é SEMPRE reservado, então marcar não alarga o botão
+   nem faz a fileira refluir (antes o clique seguinte caía no chip errado). */
+function ck(on){ return h('span',{class:'ck'+(on?' on':''),'aria-hidden':'true'},'✓ '); }
 
 
 /* JSON.parse que descarta chaves perigosas (__proto__/constructor/prototype) em qualquer nível. */

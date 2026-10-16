@@ -62,7 +62,7 @@ function jogadorView(){
       faltando.length?h('div',{class:'aviso'},'⚠ Este sistema tem '+faltando.join(' e ')+
         ' cadastrada(s). Peça ao mestre para criar na aba correspondente — sem isso não dá para avançar.'):null,
       field('Nome do personagem', h('input',{class:'in',value:d.name,placeholder:'Ex: Kára, a andarilha',oninput:e=>{d.name=e.target.value;persist();}})),
-      h('div',{style:{marginTop:'10px'}}, field('Nível inicial deste personagem', levelSel)),
+      sys.semNiveis?null:h('div',{style:{marginTop:'10px'}}, field('Nível inicial deste personagem', levelSel)),
       h('div',{class:'hint',style:{margin:'14px 0 6px',color:'var(--acc-txt)'}},'Classe:'),
       featBtns(sys.classes,'classId',false),
       h('div',{class:'hint',style:{margin:'10px 0 6px',color:'var(--acc-txt)'}},'Origem / Raça:'),
@@ -127,8 +127,12 @@ function jogadorView(){
       h('div',{class:'badge '+(canNext?'ok':'warn')}, d.skills.length+'/'+lp.skillCount),
       impossivel?h('div',{class:'aviso'},'⚠ '+impossivel):null,
       h('div',{class:'skillgrid'}, ...choosable.map(s=>{const on=d.skills.includes(s.id);const granted=eff.grantedSkills.includes(s.id);
-        return h('button',{class:'selectable '+(on?'sel-e':''),onclick:()=>toggle(s.id),title:s.description||''},
-          (on?'✓ ':'')+s.name+(granted?'  (concedida)':''));})),
+        const at=(sys.attributes||[]).find(a=>a.id===s.linkedAttrId);
+        /* nome + atributo que ela usa + descrição: antes só aparecia o nome e o jogador escolhia às cegas */
+        return h('button',{class:'selectable '+(on?'sel-e':''),onclick:()=>toggle(s.id),title:s.description||'',style:{textAlign:'left'}},
+          h('span',{style:{display:'block',fontWeight:'700'}},(on?'✓ ':'')+s.name+(granted?'  (concedida)':''),
+            at?h('span',{class:'hint',style:{marginLeft:'6px',fontWeight:'400'}},'· '+(at.abbr||at.name)):h('span',{class:'hint',style:{marginLeft:'6px',fontWeight:'400',color:'#fbbf24'}},'· sem atributo')),
+          s.description?h('span',{class:'hint',style:{display:'block',fontWeight:'400',fontSize:'11px',marginTop:'2px'}},s.description):null);})),
       autoNames.length?h('div',{class:'hint',style:{marginTop:'10px'}},'Automáticas (todos têm): '+autoNames.join(', ')):null,
       grantedNames.length?h('div',{class:'hint',style:{marginTop:'4px'}},'Concedidas por classe/raça: '+grantedNames.join(', ')):null,
       tierBox);
@@ -297,7 +301,8 @@ function computeSheet(sys,d){
     if(cur!=null && !Number.isNaN(v)) cur=Math.max(0,Math.min(cur,v));
     let pr=null;
     if(r.perRound&&r.perRound.trim()){ const x=evalFormula(r.perRound,varsTotal); if(!Number.isNaN(x)) pr=x; }
-    return {...r,max:v,cur:cur==null?v:cur,perRoundVal:pr,armadura:arm?arm.it.name:null,formulaDe:fa.origem,bonusDefesa:ehDef?bDef:0};});
+    const inicio=(r.type||'barra')==='valor'?v:recursoInicio(r,varsTotal,v);
+    return {...r,max:v,inicio,cur:cur==null?inicio:cur,perRoundVal:pr,armadura:arm?arm.it.name:null,formulaDe:fa.origem,bonusDefesa:ehDef?bDef:0};});
   /* recursos ESPECIAIS concedidos por itens/técnicas/código (aparecem enquanto a fonte valer) */
   ((eff.B&&eff.B.novosRec)||[]).forEach(r=>{
     let cur=d.resCurrent[r.id]; if(cur!=null) cur=Math.max(0,Math.min(cur,r.max));
@@ -349,7 +354,14 @@ function recursosInner(sys,d,ctx,b,mode){
   /* Os botões aparecem também no editor (inertes, via pointer-events:none):
      o mestre precisa dimensionar o bloco vendo o mesmo conteúdo do jogador. */
   const ctrl=b.opts.controls!==false;
-  const setRes=(id,cur,max)=>{d.resCurrent[id]=Math.max(0,Math.min(max,cur));render();};
+  const setRes=(id,cur,max)=>{
+    const antes=(bars.find(x=>x.id===id)||{}).cur;
+    d.resCurrent[id]=Math.max(0,Math.min(max,cur));
+    /* regras de evento (aba ⚡ Gatilhos do recurso): morrer e voltar, colapso, etc. */
+    const feitos=(mode==='play'&&antes!=null)?executarGatilhos(sys,d,id,antes,d.resCurrent[id]):[];
+    if(feitos.length){ render(); showToast('⚡ '+feitos.join(' · ')); return; }
+    render();
+  };
   const temDescanso=(tipo)=>bars.some(r=>(r.recharge||{}).trig===tipo);
   const barraDescanso=(b.opts.showRest!==false && (temDescanso('curto')||temDescanso('longo')))
     ? h('div',{class:'row wrapf',style:{marginBottom:'10px',paddingBottom:'8px',borderBottom:'1px dashed var(--line)'}},
@@ -369,8 +381,11 @@ function recursosInner(sys,d,ctx,b,mode){
     ctrl?h('div',{class:'row',style:{marginTop:'6px'}},
       h('button',{class:'btn sm',onclick:()=>setRes(r.id,r.cur-1,r.max)},'−1'),
       h('button',{class:'btn sm',onclick:()=>setRes(r.id,r.cur+1,r.max)},'+1'),
-      h('button',{class:'btn sm danger',onclick:()=>setRes(r.id,r.cur-5,r.max)},'Dano 5'),
-      h('button',{class:'btn sm',onclick:()=>setRes(r.id,r.max,r.max)},'Cheio')):null)));
+      r.contador
+        ? h('button',{class:'btn sm ghost',title:'Volta a 0',onclick:()=>setRes(r.id,0,r.max)},'Zerar')
+        : h('button',{class:'btn sm danger',onclick:()=>setRes(r.id,r.cur-5,r.max)},'Dano 5'),
+      r.contador?null:h('button',{class:'btn sm',title:'Enche até o máximo',onclick:()=>setRes(r.id,r.max,r.max)},'Cheio'),
+      (r.inicio!=null&&r.inicio!==r.max)?h('button',{class:'btn sm ghost',title:'Volta ao valor com que começou',onclick:()=>setRes(r.id,r.inicio,r.max)},'↺ Início'):null):null)));
 }
 /* Inventário: carga + lista de itens do personagem, com equipar/remover e adicionar do catálogo.
    Os controles aparecem também no editor (inertes via pointer-events:none) para o
@@ -583,20 +598,25 @@ function skillRows(sys,d,ctx){
       link: s.linkedAttrId?((sys.attributes.find(a=>a.id===s.linkedAttrId)||{}).name||'—'):'—'};
   });
 }
-function periciasInner(sys,d,ctx,b){
+function periciasInner(sys,d,ctx,b,mode){
   const rows=skillRows(sys,d,ctx);
   if(!rows.length) return h('div',{class:'hint'},'Nenhuma perícia.');
   const view=b.opts.view||'tabela';
+  /* na ficha do jogador, clicar numa perícia rola (Shift = vantagem · Alt = desvantagem) */
+  const joga=mode==='play';
+  const dica=r=>(r.s.description?r.s.description+'\n':'')+(joga?'🎲 Clique para rolar (Shift = vantagem · Alt = desvantagem)':'');
+  const rola=r=>joga?(e=>rolarPericia(sys,ctx,r.s,r.value,e.shiftKey?1:e.altKey?-1:0)):null;
+  const cls=base=>base+(joga?' rolavel':'');
   if(view==='tabela'){
     const tb=h('table',{class:'ptable'},
-      h('thead',{},h('tr',{},h('th',{},'Perícia'),h('th',{},'Atributo'),h('th',{},'Tipo'),h('th',{style:{textAlign:'right'}},'Valor'))),
-      h('tbody',{}, ...rows.map(r=>h('tr',{title:r.s.description||''},
+      h('thead',{},h('tr',{},h('th',{},'Perícia'),h('th',{},'Atributo'),h('th',{},'Tipo'),h('th',{style:{textAlign:'right'}},joga?'🎲 Valor':'Valor'))),
+      h('tbody',{}, ...rows.map(r=>h('tr',{class:cls(''),title:dica(r),onclick:rola(r)},
         h('td',{},r.s.name), h('td',{class:'at'},r.link), h('td',{class:'at'},r.tag), h('td',{class:'vv'},sign(r.value))))));
     return tb;
   }
-  if(view==='chips') return h('div',{class:'aline'}, ...rows.map(r=>h('div',{class:'achip',title:r.s.description||''},
+  if(view==='chips') return h('div',{class:'aline'}, ...rows.map(r=>h('div',{class:cls('achip'),title:dica(r),onclick:rola(r)},
     h('div',{class:'n'},r.s.name), h('div',{class:'v'},sign(r.value)))));
-  return h('div',{}, ...rows.map(r=>h('div',{class:'skl',title:r.s.description||''},
+  return h('div',{}, ...rows.map(r=>h('div',{class:cls('skl'),title:dica(r),onclick:rola(r)},
     h('div',{}, h('span',{class:'nm'},r.s.name), h('span',{class:'tg'},'· '+r.tag+' · '+r.link)),
     h('span',{class:'vl'}, sign(r.value)))));
 }
@@ -651,7 +671,7 @@ function anotacoesInner(d,mode){
 function nomeInner(sys,d,ctx,b){
   const o=b.opts;
   const sz=o.size==='p'?'15px':o.size==='m'?'18px':'22px';
-  const sub=[ctx.eff.cls&&ctx.eff.cls.name, ctx.eff.org&&ctx.eff.org.name, levelLabel(sys,d.level)].filter(Boolean).join(' • ');
+  const sub=[ctx.eff.cls&&ctx.eff.cls.name, ctx.eff.org&&ctx.eff.org.name, sys.semNiveis?null:levelLabel(sys,d.level)].filter(Boolean).join(' • ');
   return h('div',{style:{textAlign:o.align||'left'}},
     h('div',{class:'sheet-name',style:{fontSize:sz}}, d.name||'Personagem'),
     o.showSub!==false?h('div',{class:'sheet-sub'},sub):null);
@@ -707,6 +727,25 @@ function fotoInner(sys,d,b,mode){
   return box;
 }
 /* Também desenhado por inteiro no editor (inerte) para o mestre ver o tamanho real. */
+/* O resultado da rolagem tem que ser impossível de não ver: o bloco "Dados" pode estar longe
+   do botão que rolou (perícia, ataque, técnica) — então também sobe um aviso grande na tela. */
+function avisaResultado(r){
+  if(!r) return render();
+  showToast('🎲 '+(r.titulo||'Rolagem')+': '+(r.total==null?'—':r.total)+(r.sub&&r.total!=null&&String(r.sub).length<60?('  ('+r.sub+')'):''),4500);
+}
+/* Rola uma perícia com um clique: dado base do sistema + valor da perícia (já com atributo e proficiência). */
+function rolarPericia(sys,ctx,s,valor,vd){
+  const dmDados=diceModDe(ctx.eff,'pericia');
+  let expr=sys.rollMode==='pool'?poolExpr(valor,sys.poolFaces||20):(sys.rollBase||'1d20');
+  expr=aplicarVD(aplicarModDados(expr,dmDados),vd||0);
+  const soma=sys.rollMode==='pool'?'':(valor?(' + '+valor):'');
+  const res=rollExpr(expr+soma,ctx.varsTotal);
+  const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
+  const crit=nat>=(sys.critNat||20);
+  S.dice.result={livre:true,titulo:s.name+(crit?'  ★ CRÍTICO':'')+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
+    total:res.erro?null:res.total,sub:res.erro?('⚠ '+res.erro):(expr+soma+'   '+textoRolagem(res))};
+  avisaResultado(S.dice.result);
+}
 /* ============ PEÇA 3 — ROLADOR ESTRUTURADO ============
    Faz o que o rolador antigo não fazia: vantagem/desvantagem com álgebra
    própria (não somam, se cancelam), pool "melhor de N", crítico que multiplica
@@ -738,7 +777,7 @@ function dadosInner(sys,ctx,mode){
       titulo:(dc.livre?'Rolagem livre':(attr?attr.name:'Rolagem'))+(crit?'  ★ CRÍTICO':'')+
              (dc.vd>0?'  (vantagem)':dc.vd<0?'  (desvantagem)':''),
       total:res.erro?null:res.total, sub:res.erro?('⚠ '+res.erro):(expr+'   '+textoRolagem(res))};
-    render();
+    avisaResultado(dc.result);
   };
   const attrSel=h('select',{class:'in',style:{maxWidth:'140px'},onchange:e=>{dc.attrId=e.target.value;render();}});
   attrSel.appendChild(h('option',{value:''},'nenhum'));
@@ -832,7 +871,7 @@ function ataquesInner(sys,d,ctx,b,mode){
       S.dice.result={livre:true, titulo:a.it.name+(crit?'  ★ CRÍTICO':''),
         total:res.total, sub:textoRolagem(res)+'  →  dano '+(dano.erro?dano.erro:dano.total)+'  ['+textoRolagem(dano)+']',
         tags:a.tags};
-      render();
+      avisaResultado(S.dice.result);
     };
     const nomeTag=id=>((sys.tags||[]).find(t=>t.id===id)||{});
     return h('div',{class:'item',style:{marginBottom:'8px'}},
@@ -922,7 +961,7 @@ function tecnicasInner(sys,d,ctx,b,mode){
         const dm=diceModDe(ctx.eff,'tecnica');
         const res=rollExpr(aplicarModDados(t.dano,dm),ctx.varsTotal);
         S.dice.result={livre:true,titulo:t.name||'Técnica',total:res.total,sub:textoRolagem(res)};
-        render();}},'🎲 Rolar dano'):null);
+        avisaResultado(S.dice.result);}},'🎲 Rolar dano'):null);
   });
   return h('div',{},
     tiers.length?null:h('div',{class:'hint'},'Nenhum tier liberado no seu degrau ainda.'),
@@ -984,7 +1023,7 @@ function blockInner(sys,d,ctx,b,mode){
     case 'atributos':       return statsInner(sys,ctx,b,'atributos');
     case 'valores':         return statsInner(sys,ctx,b,'valores');
     case 'recursos':        return recursosInner(sys,d,ctx,b,mode);
-    case 'pericias':        return periciasInner(sys,d,ctx,b);
+    case 'pericias':        return periciasInner(sys,d,ctx,b,mode);
     case 'habilidades':     return habilidadesInner(sys,ctx,d,mode);
     case 'caracteristicas': return caracteristicasInner(ctx);
     case 'anotacoes':       return anotacoesInner(d,mode);

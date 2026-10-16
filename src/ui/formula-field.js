@@ -296,10 +296,12 @@ function mestreView(){
   /* --- breadcrumb (item 10) + Modo Simples/Avançado (item 9) --- */
   const gAtual=TAB_GRUPOS.find(g=>g.k===grupoAtivo)||TAB_GRUPOS[0];
   const crumb=h('div',{class:'crumb'},
-    h('span',{},'🛠️'), h('b',{},sys.campaignName||'Campanha'),
-    h('span',{class:'sep'},'›'),
-    h('button',{onclick:()=>{const a=abasVisiveis().find(t=>t.g===gAtual.k);if(a){S.tab=a.k;render();}}}, gAtual.ic+' '+gAtual.nome),
-    h('span',{class:'sep'},'›'), h('b',{},tabLabel(S.tab)),
+    h('span',{},'🛠️'),
+    /* no Modo Simples o caminho (campanha › grupo › aba) só repetia as abas logo acima: fica só o nome da aba */
+    modoSimples()?null:h('b',{},sys.campaignName||'Campanha'),
+    modoSimples()?null:h('span',{class:'sep'},'›'),
+    modoSimples()?null:h('button',{onclick:()=>{const a=abasVisiveis().find(t=>t.g===gAtual.k);if(a){S.tab=a.k;render();}}}, gAtual.ic+' '+gAtual.nome),
+    modoSimples()?null:h('span',{class:'sep'},'›'), h('b',{},tabLabel(S.tab)),
     h('span',{style:{flex:'1'}}),
     h('button',{class:'btn sm ghost',title:'Desfazer (Ctrl+Z)','aria-label':'Desfazer',onclick:()=>{undo();render();}},'↶'),
     h('button',{class:'btn sm ghost',title:'Refazer (Ctrl+Shift+Z)','aria-label':'Refazer',onclick:()=>{redo();render();}},'↷'),
@@ -309,9 +311,10 @@ function mestreView(){
     h('button',{class:'btn sm ghost',title:'Glossário: o que cada termo do app significa',
       onclick:()=>{S.ui.gloss={q:''};render();}},'📖 Glossário'),
     h('button',{class:'btn sm '+(modoSimples()?'emerald':'ghost'),
-      title:'O Modo Simples esconde Progressão, Escolhas, Condições, Tags e Técnicas.',
+      title:(modoSimples()?'Agora: Simples (esconde Progressão, Escolhas, Condições, Tags e Técnicas). Clique para mostrar tudo.':'Agora: Avançado (todas as abas). Clique para voltar ao Simples.'),
+      'aria-pressed':modoSimples()?'true':'false',
       onclick:()=>{ S.ui.modo=modoSimples()?'avancado':'simples'; store('nexus_modo',S.ui.modo); render(); }},
-      modoSimples()?'✓ Modo Simples':'◇ Modo Avançado'));
+      'Modo: '+(modoSimples()?'Simples':'Avançado')+' ⇄'));
 
   /* --- barra de progresso do sistema (item 6) --- */
   const passos=passosEssenciais(sys), feitos=passos.filter(p=>p.ok).length;
@@ -346,7 +349,7 @@ function mestreView(){
   const ant=iAtual>0?vis[iAtual-1]:null, prox=iAtual>=0&&iAtual<vis.length-1?vis[iAtual+1]:null;
   const rodape=h('div',{class:'prox'},
     ant?h('button',{class:'btn ghost sm',onclick:()=>{S.tab=ant.k;render();window.scrollTo(0,0);}},'← '+ant.ic+' '+ant.nome):h('span'),
-    h('span',{class:'hint'},'passo '+(iAtual+1)+' de '+vis.length),
+    h('span',{class:'hint',title:'Posição desta aba na sequência sugerida'},'aba '+(iAtual+1)+' de '+vis.length),
     prox?h('button',{class:'btn primary sm',onclick:()=>{S.tab=prox.k;render();window.scrollTo(0,0);}},'Próximo passo: '+prox.ic+' '+prox.nome+' →')
         :h('button',{class:'btn emerald sm',onclick:()=>{if(!S.draft)S.draft=initDraft(sys);S.view='jogador';render();window.scrollTo(0,0);}},'Testar como jogador 🎲'));
 
@@ -383,7 +386,7 @@ function tabCampanha(sys){
       h('div',{style:{marginTop:'10px'}}, field('Nome do sistema (regras)', h('input',{class:'in',value:sys.name,oninput:e=>{sys.name=e.target.value;persist();}})))),
     card('Tema(s) da Campanha','Marque os estilos de jogo. Pode combinar e criar os seus.',null,
       h('div',{class:'row wrapf',style:{marginBottom:'10px'}},
-        ...THEME_PRESETS.map(t=>h('button',{class:'btn sm '+(sys.themes.includes(t)?'emerald':'ghost'),onclick:()=>toggleTheme(t)},(sys.themes.includes(t)?'✓ ':'')+t)),
+        ...THEME_PRESETS.map(t=>h('button',{class:'btn sm '+(sys.themes.includes(t)?'emerald':'ghost'),onclick:()=>toggleTheme(t)},ck(sys.themes.includes(t)),t)),
         ...custom.map(t=>h('button',{class:'btn sm emerald',onclick:()=>toggleTheme(t)},'✓ '+t+'  ✕'))),
       h('input',{class:'in',placeholder:'Tema personalizado — digite e aperte Enter',
         onkeydown:e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v&&!sys.themes.includes(v))sys.themes.push(v);e.target.value='';render();}}})));
@@ -392,8 +395,13 @@ function tabRegras(sys){
   const p=levelPoints(sys,sys.maxLevel);
   return h('div',{},
     card('Criação Inicial','Com o que o personagem começa.',null,
+      h('div',{style:{marginBottom:'12px'}},
+        h('button',{class:'btn sm '+(sys.semNiveis?'emerald':'ghost'),type:'button','aria-pressed':sys.semNiveis?'true':'false',
+          title:'Esconde Nível em todo o sistema (tabelas por nível, seletor de nível, prévias). Tudo passa a valer no nível 1.',
+          onclick:()=>{ sys.semNiveis=!sys.semNiveis; if(sys.semNiveis){ sys.startLevel=1; sys.maxLevel=1; } render(); }},
+          ck(!!sys.semNiveis),'Meu sistema não usa níveis'), aj('semniveis')),
       h('div',{class:'grid g3'},
-        numField('Nível inicial',sys,'startLevel'), numField('Nível máximo',sys,'maxLevel'),
+        sys.semNiveis?null:numField('Nível inicial',sys,'startLevel'), sys.semNiveis?null:numField('Nível máximo',sys,'maxLevel'),
         numField('Pontos de atributo iniciais',sys,'attributePoints'), numField('Perícias iniciais',sys,'skillChoices'),
         numField('Valor inicial do atributo',sys,'startAttrValue'), numField('Mín. atributo',sys,'attrMin'), numField('Máx. atributo',sys,'attrMax')),
       h('div',{style:{marginTop:'12px'}},
@@ -578,7 +586,7 @@ function aplicarDescanso(tipo){
     const rc=r.recharge||{};
     if(rc.trig!==tipo) return;
     const max=r.max; if(Number.isNaN(max)) return;
-    const cur=d.resCurrent[r.id]==null?max:d.resCurrent[r.id];
+    const cur=d.resCurrent[r.id]==null?(r.inicio!=null?r.inicio:max):d.resCurrent[r.id];
     let novo=cur;
     if((rc.amt||'tudo')==='tudo') novo=max;
     else if(rc.amt==='metade') novo=Math.min(max, cur+Math.max(1,Math.floor(max/2)));

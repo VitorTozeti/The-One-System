@@ -34,9 +34,18 @@ function toggleMtab(k){
   const a=mopen(), i=a.indexOf(k);
   if(i>=0) a.splice(i,1); else a.push(k);
   render();
+  if(i<0) focarPainel(k);
 }
-/* Garante que a seção esteja aberta (usado pelos atalhos do Painel). */
-function irMtab(k){ if(!isOpen(k)) mopen().push(k); render(); }
+/* Garante que a seção esteja aberta (usado pelos atalhos do Painel) e LEVA a tela até ela.
+   Antes o painel abria no fim de uma página longa e o clique parecia não fazer nada. */
+function irMtab(k){ if(!isOpen(k)) mopen().push(k); render(); focarPainel(k); }
+function focarPainel(k){
+  requestAnimationFrame(()=>{
+    const el=document.querySelector('.mpane[data-k="'+k+'"]'); if(!el) return;
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    el.classList.add('mpane-flash'); setTimeout(()=>el.classList.remove('mpane-flash'),1400);
+  });
+}
 function fecharPainel(k){ const a=mopen(), i=a.indexOf(k); if(i>=0){ a.splice(i,1); render(); } }
 /* Ordem estável: seções da esquerda primeiro, depois as da direita. */
 function ordemAbertos(){
@@ -98,7 +107,7 @@ function mpane(k){
     h('div',{class:'mpane-title'}, h('span',{class:'mpane-ic'},t.ic), t.nome),
     h('button',{class:'mpane-x', title:'Fechar painel', onclick:()=>fecharPainel(k)},'✕'));
   /* o editor do Sistema precisa de largura: ocupa a linha inteira, no topo */
-  return h('section',{class:'mpane '+lado+(k==='sistema'?' wide':'')},
+  return h('section',{class:'mpane '+lado+(k==='sistema'?' wide':''),'data-k':k},
     head, h('div',{class:'mpane-body'}, secView(k)));
 }
 

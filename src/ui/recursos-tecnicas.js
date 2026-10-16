@@ -33,15 +33,15 @@ function tabRecursos(sys){
     texto:r=>r.name+' '+(r.desc||''),
     phCriar:'+ Novo recurso: digite o nome e Enter',
     aoCriar:v=>{ if(_tem(sys.resources,v)){ showToast('Já existe um recurso com esse nome.'); return null; }
-      const a0=(sys.attributes[0]||{}).name;
-      const r={id:uid(),name:v,icon:'',desc:'',type:'barra',formula:a0?(a0+' * 5 + 10'):'10',color:'#22d3ee',recharge:{trig:'nunca',amt:'tudo',formula:''},perRound:''};
-      sys.resources.push(r); S.ui.resAba='formula'; return r; },
+      /* nasce NEUTRO (10): antes herdava "<1º atributo> * 5 + 10" sem avisar e o mestre nem notava */
+      const r={id:uid(),name:v,icon:'',desc:'',type:'barra',formula:'10',color:'#22d3ee',recharge:{trig:'nunca',amt:'tudo',formula:''},perRound:'',start:'',gatilhos:[]};
+      sys.resources.push(r); S.ui.resAba='formula'; showToast('Recurso criado com máximo 10 — ajuste a fórmula se quiser ligar a um atributo.'); return r; },
     vazioTitulo:'Nenhum recurso ainda', vazioDica:'Use a biblioteca acima para criar Vida, Mana, Defesa… já configurados.',
     cartao:(r,sel)=>mdCartao({sel,cor:r.color,icone:r.icon||((r.type||'barra')==='valor'?'🔢':'📊'),nome:r.name,onclick:()=>{S.ui.resSel=r.id;render();},
       sub:((r.type||'barra')==='valor'?'valor':'barra')+' · ƒ '+(r.formula||'—')}),
     editor:r=>recursoEditor(sys,r,sampleVars)});
 }
-const RES_ABAS=[['formula','📐 Fórmula'],['recarga','♻ Recarga'],['quem','🔗 Quem mexe']];
+const RES_ABAS=[['formula','📐 Fórmula'],['recarga','♻ Recarga'],['gatilhos','⚡ Gatilhos'],['quem','🔗 Quem mexe']];
 function recursoEditor(sys,r,sampleVars){
   const aba=RES_ABAS.some(a=>a[0]===S.ui.resAba)?S.ui.resAba:'formula';
   const eValor=(r.type||'barra')==='valor';
@@ -49,6 +49,9 @@ function recursoEditor(sys,r,sampleVars){
     sub:h('div',{class:'row wrapf'},
       h('button',{class:'btn sm '+(!eValor?'emerald':'ghost'),type:'button',title:'Consumível: tem máximo e valor atual',onclick:()=>{r.type='barra';render();}},(!eValor?'✓ ':'')+'Barra'),
       h('button',{class:'btn sm '+(eValor?'emerald':'ghost'),type:'button',title:'Número calculado, sem gastar',onclick:()=>{r.type='valor';render();}},(eValor?'✓ ':'')+'Valor'),
+      !eValor?h('button',{class:'btn sm '+(r.contador?'emerald':'ghost'),type:'button','aria-pressed':r.contador?'true':'false',
+        title:'Contador: começa em 0 e sobe (Marca, Corrupção, Retornos). Equivale a uma barra com “Começa em” = 0.',
+        onclick:()=>{ r.contador=!r.contador; if(r.contador){ r.start='0'; } else if(String(r.start||'').trim()==='0'){ r.start=''; } render(); }},(r.contador?'✓ ':'')+'🔢 Contador (começa em 0)'):null,
       eValor?h('button',{class:'btn sm '+(r.ehDefesa?'emerald':'ghost'),type:'button','aria-pressed':r.ehDefesa?'true':'false',
         title:'Efeitos de “+N de defesa” (técnicas, itens, código) somam neste valor. Já vale sozinho para recursos chamados Defesa ou CA.',
         onclick:()=>{r.ehDefesa=!r.ehDefesa;render();}},(r.ehDefesa?'✓ ':'')+'🛡 É a Defesa'):null),
@@ -56,17 +59,21 @@ function recursoEditor(sys,r,sampleVars){
       ()=>{ const c=clonarComIds(r); c.name=r.name+' (cópia)'; sys.resources.splice(sys.resources.indexOf(r)+1,0,c); S.ui.resSel=c.id; render(); },
       ()=>comDesfazer('Recurso “'+(r.name||'sem nome')+'” excluído',()=>{ sys.resources.splice(sys.resources.indexOf(r),1);
         (sys.classes||[]).concat(sys.origins||[]).forEach(c=>{ c.recursos=(c.recursos||[]).filter(x=>x.resId!==r.id); }); }))});
-  const abas=eValor?RES_ABAS.filter(a=>a[0]!=='recarga'):RES_ABAS;
+  const abas=eValor?RES_ABAS.filter(a=>a[0]!=='recarga'&&a[0]!=='gatilhos'):RES_ABAS;
   const tabs=mdAbas(abas,'resAba');
   let corpo;
   if(aba==='recarga'&&!eValor) corpo=rechargeEditor(sys,r,sampleVars);
+  else if(aba==='gatilhos'&&!eValor) corpo=gatilhosEditor(sys,r);
   else if(aba==='quem') corpo=recursoQuemMexe(sys,r);
   else corpo=h('div',{},
     h('div',{style:{marginBottom:'10px'}},field('Para que serve',h('input',{class:'in',value:r.desc||'',maxlength:'140',placeholder:'Uma linha para o jogador entender',oninput:e=>{r.desc=e.target.value;persist();}}))),
     h('span',{class:'hint'},(eValor?'valor =':'máximo ='),aj(eValor?'recursovalor':'recursobarra')),
     campoFormula(sys,r,'formula',{tipo:eValor?'defesa':'recurso',placeholder:'Vigor * 10 + 15',aoMudar:()=>render()}),
-    h('div',{class:'sub-h'},'Valor em cada '+(sys.levelName||'Nível').toLowerCase()),
-    recursoTabelaNiveis(sys,r));
+    eValor?null:h('div',{style:{marginTop:'10px'}},field('Começa em (opcional)',
+      h('input',{class:'in mono',style:{maxWidth:'200px'},value:r.start||'',placeholder:'vazio = começa cheio',
+        title:'Fórmula ou número. 0 = começa vazio (contador). Aceita atributos, ex.: Vigor',oninput:e=>{r.start=e.target.value;persist();},onchange:()=>render()}))),
+    sys.semNiveis?null:h('div',{class:'sub-h'},'Valor em cada '+(sys.levelName||'Nível').toLowerCase()),
+    sys.semNiveis?null:recursoTabelaNiveis(sys,r));
   return h('section',{class:'arq-edit'},cab,tabs,h('div',{class:'arq-corpo'},corpo));
 }
 /* quanto vale o recurso em pontos de referência de nível (atributos no máximo) */
