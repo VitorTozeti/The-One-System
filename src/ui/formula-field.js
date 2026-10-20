@@ -340,6 +340,7 @@ function mestreView(){
   else if(S.tab==='tags') content=(typeof tabTagsNova==='function'?tabTagsNova(sys):tabTags(sys));   /* tags-ui.js */
   else if(S.tab==='dados') content=tabDados(sys);
   else if(S.tab==='tecnicas') content=tabTecnicas(sys);
+  else if(S.tab==='poderes') content=tabPoderes(sys);   /* poderes-ui.js */
   else if(S.tab==='ficha') content=tabFicha(sys);
   else if(S.tab==='livro') content=tabLivro(sys);
   else content=portCard();
@@ -599,6 +600,7 @@ function aplicarDescanso(tipo){
     novo=Math.max(0,Math.min(max,novo));
     if(novo!==cur){ d.resCurrent[r.id]=novo; n++; }
   });
+  if(typeof recarregarUsos==='function') n+=recarregarUsos(sys,d,tipo);   /* técnicas com usos limitados */
   render();
   showToast(n? (tipo==='curto'?'Descanso curto: ':'Descanso longo: ')+n+' recurso(s) recuperado(s)' : 'Nada a recuperar neste descanso');
 }

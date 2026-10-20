@@ -1,0 +1,67 @@
+/* ===== Editor de técnica em blocos e Sistemas de poder (2026-10-20) ===== */
+/* blocos */
+.blk-lista{display:grid;gap:8px;align-content:start}
+.tbk{border:1px solid var(--line);border-left:4px solid var(--tc,#6366f1);border-radius:10px;background:var(--surf);padding:8px 10px}
+.tbk-topo{background:color-mix(in srgb,var(--tc,#6366f1) 8%,var(--surf))}
+.blk-cab{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px}
+.blk-ic{font-size:16px}
+.blk-corpo{display:grid;gap:6px}
+.blk-frase{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;line-height:1.5}
+.blk-in{padding:3px 6px!important;height:auto!important;font-size:13px!important}
+select.blk-in{max-width:240px}
+.blk-media{font-size:11.5px;color:var(--ok-txt,#10b981);font-weight:600}
+.blk-media.ruim{color:var(--danger,#ef4444)}
+.blk-chips .chip{font-size:11.5px;padding:2px 8px}
+.blk-chk{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;cursor:pointer}
+.blk-paleta{margin-top:4px;padding:8px;border:1px dashed var(--line);border-radius:10px}
+.blk-pal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.blk-op{display:grid;grid-template-columns:auto 1fr;gap:0 6px;text-align:left;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.blk-op>span{grid-row:span 2;font-size:18px}
+.blk-op b{font-size:12.5px}
+.blk-op small{font-size:10.5px;color:var(--dim);line-height:1.25}
+.blk-op:hover{border-color:var(--tc,#6366f1);background:color-mix(in srgb,var(--tc,#6366f1) 8%,transparent)}
+.blk-receitas{padding:8px;border-radius:10px;background:color-mix(in srgb,var(--indigo,#6366f1) 6%,transparent)}
+/* aba de sistemas de poder */
+.pod-modelos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.pod-modelo{display:grid;grid-template-columns:auto 1fr;gap:0 8px;text-align:left;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer}
+.pod-modelo:hover{border-color:var(--indigo,#6366f1)}
+.pod-mic{grid-row:span 3;font-size:26px}
+.pod-msub{font-size:11px;color:var(--acc-txt,#a5b4fc)}
+.pod-modelo small{color:var(--dim);font-size:11.5px;line-height:1.35}
+.pod-lista{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.pod-tab{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.pod-tab.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 20%,var(--surf));font-weight:700}
+.pod-sec{border-top:3px solid var(--pc)}
+.pod-modos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:6px}
+.pod-modo{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.pod-modo small{color:var(--dim);font-size:11.5px}
+.pod-modo.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 14%,transparent)}
+.pod-grupo{margin-top:10px}
+.pod-grupo-t{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:6px 0 4px}
+.pod-forma{margin:6px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pod-forma>.hab{border:0;margin:0;border-radius:0}
+.pod-desb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 10px;background:color-mix(in srgb,var(--pc,#7c3aed) 9%,var(--surf));border-bottom:1px solid var(--line);font-size:12.5px}
+/* grimório na ficha */
+.graf{display:grid;gap:8px;margin-bottom:10px}
+.graf-p{border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:12px;background:color-mix(in srgb,var(--pc) 5%,var(--surf));overflow:hidden}
+.graf-cab{display:flex;gap:10px;align-items:center;width:100%;padding:8px 12px;border:0;background:transparent;color:var(--txt);cursor:pointer;text-align:left}
+.graf-pic{font-size:24px}
+.graf-pn{flex:1;display:flex;flex-direction:column}
+.graf-pn small{color:var(--dim);font-size:11.5px}
+.graf-corpo{padding:0 12px 10px}
+.graf-grupo{margin-top:6px}
+.graf-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;margin:4px 0;border-radius:8px;border:1px dashed var(--line)}
+.graf-f.on{display:block;border:0;padding:0}
+.graf-f.on .graf-ac{margin:-4px 0 6px 8px}
+.graf-ic{font-size:20px;opacity:.7}
+.graf-tx{flex:1;display:flex;flex-direction:column;min-width:0}
+.graf-tx small{color:var(--dim);font-size:11.5px}
+.graf-f.st-perdida{opacity:.55;text-decoration:line-through}
+.graf-f.st-perdida .graf-ac{text-decoration:none}
+.graf-f.st-nivel,.graf-f.st-requer{opacity:.7}
+.graf-f.st-ritual{border-color:color-mix(in srgb,#f59e0b 60%,var(--line))}
+.graf-f.st-escolher,.graf-f.st-guardada{border-style:solid}
+.graf-ac{display:flex;flex-wrap:wrap;gap:4px;flex-shrink:0}
+.graf-ac .btn,.blk-corpo>.btn{white-space:nowrap;font-size:11.5px;width:auto;padding:3px 8px}
+.graf-tx{min-width:140px}
+.graf-copia{margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:10px}

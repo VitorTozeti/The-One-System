@@ -636,7 +636,7 @@ function periciasInner(sys,d,ctx,b,mode){
 function habilidadesInner(sys,ctx,d,mode){
   /* traços físicos aparecem em Características; aqui ficam habilidades e técnicas */
   const nomeFonte=x=>x.tipo==='tecnica'?(((ctx.eff.cls||{}).tecnicas||{}).nome||'técnica'):x.src==='classe'?((ctx.eff.cls||{}).name||'classe'):x.src==='origem'?((ctx.eff.org||{}).name||'origem'):x.src;
-  const active=ctx.eff.active.filter(x=>x.tipo!=='traco').map(x=>
+  const active=ctx.eff.active.filter(x=>x.tipo!=='traco'&&x.tipo!=='poder').map(x=>
     cartaoTecnica(sys,d,ctx,x.ab,{ligada:x.ligada!==false,fonte:nomeFonte(x),play:mode==='play'}));
   const locked=ctx.eff.locked.filter(x=>x.tipo!=='tecnica').map(x=>h('div',{class:'abil locked'},
     h('div',{class:'t'},'🔒 '+x.ab.name+'  ', h('span',{style:{fontSize:'10px',color:'var(--dim)'}},'('+nomeFonte(x)+')')),
@@ -645,8 +645,9 @@ function habilidadesInner(sys,ctx,d,mode){
   const inv=(d&&typeof invocacoesInner==='function')?invocacoesInner(sys,d):null;
   const conc=(d&&d.concentrando)?h('div',{class:'conc-chip',role:'status'},'🧠 Concentrando em ',h('b',{},d.concentrando.nome),
     mode==='play'?h('button',{class:'btn mini ghost',onclick:()=>{ showToast(encerrarConcentracao(sys,d)); render(); }},'encerrar'):null):null;
-  if(!active.length&&!locked.length&&!inv) return h('div',{class:'hint'},'Nenhuma habilidade.');
-  return h('div',{}, conc, inv, ...active, ...locked);
+  const graf=(d&&typeof grimorioInner==='function')?grimorioInner(sys,d,ctx,mode):null;
+  if(!active.length&&!locked.length&&!inv&&!graf) return h('div',{class:'hint'},'Nenhuma habilidade.');
+  return h('div',{}, conc, inv, graf, ...active, ...locked);
 }
 function caracteristicasInner(ctx,sys,d,mode){
   const mov=(sys&&typeof movimentoInner==='function')?movimentoInner(sys,d,ctx,mode):null;

@@ -196,6 +196,7 @@ function usoHabResumo(sys,ab){
   if(te.attr) p.push('teste de '+te.attr+(te.cd?(' CD '+te.cd):'')+(te.sucesso==='nada'?' (anula)':te.sucesso==='sem'?'':' (metade)'));
   if(us.invoc) p.push('invoca '+(String(us.invoc.qtd||'1').trim()!=='1'?(us.invoc.qtd+'× '):'')+us.invoc.nome);
   if(us.duracao) p.push('dura '+us.duracao);
+  if(us.usos&&String(us.usos.max||'').trim()) p.push(us.usos.max+'× por '+(((typeof USOS_RECARGA!=='undefined'?USOS_RECARGA:[]).find(x=>x[0]===us.usos.recarga)||[])[1]||'descanso'));
   return p.join(' · ');
 }
 function usoHabEditor(sys,ab){
@@ -286,7 +287,8 @@ function usoHabEditor(sys,ab){
   return h('div',{class:'req-box uso-hab uso2',style:{'--tc':tp.cor}},
     h('div',{class:'row wrapf'},
       h('button',{type:'button',class:'btn sm '+(us.on?'emerald':'ghost'),'aria-pressed':us.on?'true':'false',onclick:()=>{us.on=!us.on;render();}},(us.on?'✓ ':'')+'Tem um botão na ficha'),
-      h('span',{class:'hint'},us.on?'O jogador clica para usar: paga o custo, rola e aplica.':'Ligue para magias, ataques especiais, curas, buffs, debuffs ou invocações.')),
+      h('span',{class:'hint'},us.on?'O jogador clica para usar: paga o custo, rola e aplica.':'Ligue para magias, ataques especiais, curas, buffs, debuffs ou invocações.'),
+      (typeof usoBlocos==='function')?h('button',{type:'button',class:'btn sm ghost',onclick:()=>{S.ui.usoDetalhado=false;us.blocos=null;render();}},'🧱 Voltar ao editor em blocos'):null),
     us.on?h('div',{class:'uso2-grid'},
       h('div',{class:'uso2-passos'},
         passo(1,'Que tipo é?',tipos,h('div',{class:'hint',style:{marginTop:'4px'}},tp.d)),
@@ -409,6 +411,10 @@ function _invoca(sys,d,ctx,ab){
 function usarHabilidade(sys,d,ctx,ab,opt){
   const us=ab.uso; if(!us||!us.on) return;
   opt=opt||{}; const extra=opt.extra||0;
+  /* usos limitados: ferramentas, 1× por descanso… (poderes.js) */
+  const lim=typeof usosRestantes==='function'&&!(us.modo==='ativa'&&(d.ativas||{})[ab.id])?usosRestantes(d,ab,ctx.varsTotal):Infinity;
+  if(lim<=0) return showToast('“'+ab.name+'” sem usos: volta no '+(((USOS_RECARGA.find(x=>x[0]===us.usos.recarga)||[])[1])||'descanso')+'.');
+  const gasta=()=>{ if(lim!==Infinity) gastarUso(d,ab); };
   const tipo=usoTipo(us), tp=tipoInfo(tipo);
   if(!Array.isArray(d.invocacoes)) d.invocacoes=[];
   const {r:rc,custo}=_custoDe(ctx,us,extra);
@@ -428,7 +434,7 @@ function usarHabilidade(sys,d,ctx,ab,opt){
       if(S.ui.usoUlt&&S.ui.usoUlt.abId===ab.id) S.ui.usoUlt=null;
       render(); return showToast(ab.name+' desligada.'); }
     if(rc&&custo>0){ if(rc.cur<custo) return showToast('Sem '+rc.name+' para ligar “'+ab.name+'”: custa '+custo+', você tem '+rc.cur+'.'); d.resCurrent[rc.id]=rc.cur-custo; }
-    preparaConj();
+    preparaConj(); gasta();
     d.ativas[ab.id]=true;
     const c=_cond(sys,us.condId);
     if(c&&us.condEm==='eu') _ligaCondEu(d,c.id,true);
@@ -439,7 +445,8 @@ function usarHabilidade(sys,d,ctx,ab,opt){
     render(); return showToast(tp.ic+' '+ab.name+' ligada'+(rc&&custo>0?(' (−'+custo+' '+rc.name+')'):'')+'.');
   }
   if(rc&&custo>0&&rc.cur<custo) return showToast('Sem '+rc.name+' suficiente para “'+ab.name+'”: custa '+custo+', você tem '+rc.cur+'.');
-  preparaConj();
+  preparaConj(); gasta();
+  if(lim!==Infinity) conj.push('🔁 Usos: '+(lim-1)+' restante(s)');
   const linhas=[...conj], cur={}; ctx.allRes.forEach(x=>cur[x.id]=x.cur);
   if(rc&&custo>0){ cur[rc.id]=rc.cur-custo; d.resCurrent[rc.id]=cur[rc.id]; linhas.push('−'+custo+(extra?(' (aumentada +'+extra+')'):'')+' '+rc.name); }
   let destaque=null, erro=false, atq=null;
@@ -482,13 +489,15 @@ function usoResultado(sys,ab){
 function botaoUsoHab(sys,d,ctx,ab,ligada){
   const us=ab.uso; if(!us||!us.on) return null;
   const {r:rc,custo}=_custoDe(ctx,us);
-  const semRec=rc&&custo>0&&rc.cur<custo&&!(us.modo==='ativa'&&ligada);
+  const lim=typeof usosRestantes==='function'?usosRestantes(d,ab,ctx.varsTotal):Infinity;
+  const semRec=(rc&&custo>0&&rc.cur<custo&&!(us.modo==='ativa'&&ligada))||(lim<=0&&!(us.modo==='ativa'&&ligada));
+  const usosTxt=lim===Infinity?'':(' · '+lim+'/'+usosMax(us,ctx.varsTotal));
   const tit=usoHabResumo(sys,ab), tp=tipoInfo(usoTipo(us));
   const verbo={cura:'💚 Curar',dano:'🔥 Lançar',buff:'🛡️ Usar',debuff:'🌀 Lançar',invocacao:'🐺 Invocar',utilidade:'✨ Usar'}[tp.k]||'✨ Usar';
   if(us.modo==='ativa') return h('button',{type:'button',class:'btn sm '+(ligada?'emerald':'ghost'),title:tit,'aria-pressed':ligada?'true':'false',disabled:semRec||null,
-    onclick:()=>usarHabilidade(sys,d,ctx,ab)},ligada?'⏻ Ligada':('⏻ Ligar'+(rc&&custo>0?(' · '+custo+' '+rc.name):'')));
+    onclick:()=>usarHabilidade(sys,d,ctx,ab)},ligada?'⏻ Ligada':('⏻ Ligar'+(rc&&custo>0?(' · '+custo+' '+rc.name):'')+usosTxt));
   return h('button',{type:'button',class:'btn sm uso-btn',style:{'--tc':tp.cor},title:tit,disabled:semRec||null,
-    onclick:()=>(typeof usarComOpcoes==='function'?usarComOpcoes(sys,d,ctx,ab):usarHabilidade(sys,d,ctx,ab))},verbo+(rc&&custo>0?(' · '+custo+' '+rc.name):''));
+    onclick:()=>(typeof usarComOpcoes==='function'?usarComOpcoes(sys,d,ctx,ab):usarHabilidade(sys,d,ctx,ab))},verbo+(rc&&custo>0?(' · '+custo+' '+rc.name):'')+usosTxt);
 }
 /* chips do cartão: tipo, alcance/área, teste, condição, duração */
 function usoChips(sys,us){
@@ -502,6 +511,7 @@ function usoChips(sys,us){
   if(te.attr) ch.push(h('span',{class:'uso-chip'},'🎲 '+te.attr+(te.cd?(' CD '+te.cd):'')));
   const c=_cond(sys,us.condId); if(c) ch.push(h('span',{class:'uso-chip cond',style:{'--cc':c.color||'#e11d48'}},(c.icon||'⚠')+' '+c.name));
   if(us.duracao) ch.push(h('span',{class:'uso-chip'},'⏳ '+us.duracao));
+  if(us.usos&&String(us.usos.max||'').trim()) ch.push(h('span',{class:'uso-chip'},'🔁 '+us.usos.max+'× por '+(((USOS_RECARGA.find(x=>x[0]===us.usos.recarga)||[])[1])||'descanso')));
   if(typeof conjChips==='function') ch.push(...conjChips(us));
   return h('div',{class:'uso-chips'},...ch);
 }

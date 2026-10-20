@@ -64,6 +64,9 @@ function sanitizarUsoHab(ab){
   u.ataque.on=!!u.ataque.on; if(typeof u.ataque.bonus!=='string') u.ataque.bonus=String(u.ataque.bonus==null?'':u.ataque.bonus);
   if(!u.aumenta||typeof u.aumenta!=='object') u.aumenta={formula:'',custo:'',max:''};
   ['formula','custo','max'].forEach(k=>{ if(typeof u.aumenta[k]!=='string') u.aumenta[k]=String(u.aumenta[k]==null?'':u.aumenta[k]); });
+  if(!u.usos||typeof u.usos!=='object') u.usos={max:'',recarga:'longo'};   /* usos limitados (poderes.js) */
+  if(typeof u.usos.max!=='string') u.usos.max=String(u.usos.max==null?'':u.usos.max); if(!['longo','curto','cena','nunca'].includes(u.usos.recarga)) u.usos.recarga='longo';
+  if(u.blocos!=null&&!Array.isArray(u.blocos)) u.blocos=null;
   u.concentracao=!!u.concentracao; u.ritual=!!u.ritual; u.repete=!!u.repete;
   u.circulo=Math.max(0,Math.min(20,Number(u.circulo)||0));
   if(!['','acao','bonus','reacao','livre','movimento','completa','minuto','hora'].includes(u.execucao)) u.execucao='';

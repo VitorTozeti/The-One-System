@@ -20,6 +20,7 @@ const TAB_META=[
   {k:'pericias',  ic:'🎯',  nome:'Perícias',      g:'personagem'},
   {k:'classes',   ic:'🎭',  nome:'Classes',       g:'personagem'},
   {k:'racas',     ic:'🌱',  nome:'Origem / Raça', g:'personagem'},
+  {k:'poderes',   ic:'🔮',  nome:'Poderes',       g:'personagem'},
   {k:'progressao',ic:'📈',  nome:'Progressão',    g:'fundacao',   adv:true},
   {k:'escolhas',  ic:'🌿',  nome:'Escolhas',      g:'personagem', adv:true},
   {k:'itens',     ic:'🎒',  nome:'Itens',         g:'mundo'},

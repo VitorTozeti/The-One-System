@@ -792,7 +792,7 @@ function effectRowCore(sys,arr,ef,depth){
   const grupos=[
     ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['recursoNovo','✨ Cria um recurso especial (cargas, fôlego…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],
     ['Defesa e corpo',[['resistencia','🛡 Resistência / imunidade / vulnerabilidade'],['capacidade','🪽 Capacidade (voo, natação, visão no escuro…)'],['caracteristica','🏷 Característica (etiqueta ou número)']]],
-    ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra'],['pontosAtributo','💪 +Pontos de atributo para distribuir'],['pontosPericia','🎯 +Perícias para escolher'],['treino','🎓 +Melhorias de treino (subir grau)']]],
+    ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra'],['pontosAtributo','💪 +Pontos de atributo para distribuir'],['pontosPericia','🎯 +Perícias para escolher'],['treino','🎓 +Melhorias de treino (subir grau)'],['poder','🔮 Concede um sistema de poder']]],
     ['Especial',depth===0?[['livre','✨ Efeito único (texto + várias modificações)'],['codigo','⌨ Efeito por código (JavaScript)']]:[['codigo','⌨ Efeito por código (JavaScript)']]],
   ];
   const kindSel=h('select',{class:'in ef-kind',onchange:e=>{
@@ -808,6 +808,7 @@ function effectRowCore(sys,arr,ef,depth){
     else if(ef.kind==='capacidade'){ if(!ef.text)ef.text='Voo'; }
     else if(ef.kind==='tecnicas'||ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino'){ ef.value=ef.kind==='pontosAtributo'?2:1; }
     else if(ef.kind==='codigo'){ if(ef.code==null) ef.code=CODIGO_EXEMPLO; }
+    else if(ef.kind==='poder'){ ef.targetId=((sys.poderes||[])[0]||{}).id||''; }
     render();
   }});
   grupos.forEach(([g,l])=>{ const og=h('optgroup',{label:g});
@@ -854,6 +855,12 @@ function effectRowCore(sys,arr,ef,depth){
   /* TÉCNICA EXTRA — quantas técnicas de classe a mais o personagem escolhe */
   if(ef.kind==='tecnicas'){
     return h('div',{}, h('div',{class:'ef-row'}, kindSel, valCtl('70px'), fBtnV, h('span',{class:'hint'},'técnica(s) de classe a mais para escolher'), del), fCaixa('Quantas'));
+  }
+  if(ef.kind==='poder'){
+    const ps=sys.poderes||[];
+    const s2=h('select',{class:'in',style:{maxWidth:'240px'},'aria-label':'Qual sistema de poder',onchange:e=>{ef.targetId=e.target.value;render();}},h('option',{value:''},'— escolha —'),
+      ...ps.map(p=>h('option',{value:p.id,selected:p.id===ef.targetId},(p.icone||'🔮')+' '+p.nome)));
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel, s2, ps.length?h('span',{class:'hint'},'o personagem ganha este conjunto de técnicas'):h('button',{type:'button',class:'btn sm ghost',onclick:()=>{S.tab='poderes';render();}},'Criar na aba 🔮 Poderes →'), del));
   }
   if(ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino'){
     const rot={pontosAtributo:'ponto(s) de atributo a mais para distribuir',pontosPericia:'perícia(s) a mais para escolher',treino:'melhoria(s) de treino (subir o grau de uma perícia)'}[ef.kind];

@@ -81,7 +81,7 @@ function habCard(sys,arr,ab,opts){
       h('div',{class:'row wrapf',style:{marginTop:'6px'}},
         receitaSelect(sys,ab.effects),
         h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ab.effects.push(newEffect(sys));render();}},'+ Efeito em branco')));
-  else if(aba==='uso'&&temUso) conteudo=usoHabEditor(sys,ab);
+  else if(aba==='uso'&&temUso) conteudo=(typeof usoBlocos==='function'&&!S.ui.usoDetalhado)?usoBlocos(sys,ab):usoHabEditor(sys,ab);   /* blocos-uso.js */
   else conteudo=h('div',{},
       h('textarea',{class:'in',rows:'2',value:ab.description||'',placeholder:'O que é, em uma frase (aparece na ficha)',oninput:e=>{ab.description=e.target.value;persist();}}),
       opts.semReq?null:reqEditor(sys,ab,!!opts.nivel),

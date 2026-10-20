@@ -356,6 +356,7 @@ function sanitizeSystem(sys){
   sys.semNiveis=!!sys.semNiveis;
   if(typeof sanitizeRegrasGerais==='function') sanitizeRegrasGerais(sys);   /* morte e movimento (regras-gerais.js) */
   if(typeof sanitizeGanhos==='function') sanitizeGanhos(sys);   /* regras de ganho por nível (progressao.js) */
+  if(typeof sanitizePoderes==='function') sanitizePoderes(sys);   /* sistemas de poder (poderes.js) */
   if(typeof sanitizarGraus==='function'){ sanitizarGraus(sys); (sys.resources||[]).forEach(sanitizarTesteRec); }   /* regras-extra.js */
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
@@ -591,6 +592,7 @@ function sanitizeDraft(d,sys){
   });
   d.conditions.forEach(c=>{ if(!c.cid) c.cid=uid(); if(typeof c.nivel!=='number') c.nivel=1; });
   d.techniques.forEach(t=>{ if(!t.id) t.id=uid(); if(!t.campos||typeof t.campos!=='object') t.campos={}; });
+  if(typeof sanitizePoderDraft==='function') sanitizePoderDraft(d);   /* estado dos sistemas de poder e usos limitados */
   return d;
 }
 
@@ -683,7 +685,7 @@ function attrOnlyTo(ef, tot1, level, sys){
     let v=+ef.value||0;
     if(efEmFormula(ef)){ const f=ef.formula.trim(); const r=(f&&sys)?evalFormula(f,varsDoEfeito(sys,level,tot1)):0; v=Number.isNaN(r)?0:r; }
     tot1[ef.targetId]=(tot1[ef.targetId]||0)+v; } }
-  else if(ef.kind==='tecnicas'||ef.kind==='codigo'||ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino') return;   /* não mexem em atributo na 1ª passagem */
+  else if(ef.kind==='tecnicas'||ef.kind==='poder'||ef.kind==='codigo'||ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino') return;   /* não mexem em atributo na 1ª passagem */
   else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1,level,sys)); }
 }
 /* efeitos com requisitos (2 passagens p/ liberar habilidades) */
@@ -746,6 +748,8 @@ function gatherEffects(sys,d){
     equipped.push({it,entry}); });
   /* PEÇA 5 — condições entram como fonte, com o nível multiplicando os valores */
   const condAtivas=expandirCondicoes(sys,d);
+  /* sistemas de poder: formas liberadas, combinações e cópias entram como fontes (poderes.js) */
+  if(typeof fontesDePoder==='function') sources.push(...fontesDePoder(sys,d,sources,equipped));
   /* 1ª passagem: base + fontes incondicionais + itens equipados alimentam os requisitos */
   const tot1={}; sys.attributes.forEach(a=>tot1[a.id]=(d.attrs[a.id]??0));
   sources.forEach(({ab})=>{ if(isUncond(ab)&&habLigada(ab,d))(ab.effects||[]).forEach(ef=>attrOnlyTo(ef,tot1,level,sys)); });
@@ -817,6 +821,7 @@ function effectLabelBase(sys,ef){
   if(ef.kind==='resistencia') return resistLabel(ef.text,ef.modo||'reduz',efEmFormula(ef)?('('+(ef.formula.trim()||'?')+')'):(+ef.value||0));
   if(ef.kind==='capacidade'){const c=capInfo(ef.text); return c.ic+' '+(ef.text||'?')+(efEmFormula(ef)?(' ('+(ef.formula.trim()||'?')+')'):((+ef.value||0)>0?(' '+ef.value+(c.un||'')):''));}
   if(ef.kind==='tecnicas') return '🌀 '+efValTxt(ef)+' técnica(s) de classe';
+  if(ef.kind==='poder'){ const p=((sys&&sys.poderes)||[]).find(x=>x.id===ef.targetId); return '🔮 Sistema de poder: '+(p?((p.icone?p.icone+' ':'')+p.nome):'(escolha)'); }
   if(ef.kind==='pontosAtributo') return '💪 '+efValTxt(ef)+' ponto(s) de atributo';
   if(ef.kind==='pontosPericia') return '🎯 '+efValTxt(ef)+' perícia(s)';
   if(ef.kind==='treino') return '🎓 '+efValTxt(ef)+' melhoria(s) de treino';
