@@ -354,6 +354,7 @@ function sanitizeSystem(sys){
         n:Number.isFinite(+a.n)?+a.n:0, modo:a.modo==='inicio'?'inicio':'max', texto:typeof a.texto==='string'?a.texto.slice(0,200):'' })) }));
   });
   sys.semNiveis=!!sys.semNiveis;
+  if(typeof sanitizeRegrasGerais==='function') sanitizeRegrasGerais(sys);   /* morte e movimento (regras-gerais.js) */
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
     const sh=sys.sheet;

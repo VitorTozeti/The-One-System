@@ -381,6 +381,7 @@ function arqNiveis(sys,kind,c){
         h('button',{class:'btn sm ghost',onclick:()=>add(lv)},'+ aqui')),
       h('div',{class:'tl-itens'}, ...lista.filter(a=>nivelDe(a)===lv).map(a=>habCard(sys,lista,a,{nivel:true,ph:'Nome da habilidade'})))))),
     arqCopiarDe(sys,kind,c),
+    botoesAssistente({arr:lista,habArr:lista,nivel:S.ui.arqNovoLv!=null?S.ui.arqNovoLv:novoLv,origem:kind==='origem'?c:null}),
     modelosRapidos(sys,lista,S.ui.arqNovoLv!=null?S.ui.arqNovoLv:novoLv,'Criar de um modelo pronto (no nível escolhido abaixo)'),
     h('div',{class:'row wrapf tl-add'},
       h('span',{},'Nova habilidade no'),
@@ -419,6 +420,7 @@ function arqTecnicas(sys,c){
     ...t.opcoes.slice().sort((a,b)=>((a.req||{}).level||0)-((b.req||{}).level||0)).map(o=>habCard(sys,t.opcoes,o,{nivel:true,ph:'Nome da técnica'})),
     h('div',{class:'row wrapf',style:{marginTop:'10px'}},
       h('button',{class:'btn primary sm',onclick:()=>{ const o=sanitizarUsoHab({id:uid(),name:'Nova técnica',description:'',req:{level:0,attrs:[]},effects:[]}); t.opcoes.push(o); S.ui.open[o.id]=true; render(); }},'+ Técnica em branco')),
+    botoesAssistente({arr:t.opcoes,habArr:t.opcoes,nivel:null}),
     modelosRapidos(sys,t.opcoes,0,'… ou comece de um modelo pronto (já vem com ícone, efeitos e custo)'));
 }
 const TRACOS_PRONTOS=[
@@ -434,6 +436,7 @@ function arqTracos(sys,c){
     h('div',{class:'row wrapf',style:{marginBottom:'12px'}}, h('span',{class:'hint'},'Prontos:'),
       ...TRACOS_PRONTOS.map(([ic,n,d,efs])=>{ const tem=_tem(c.traits,n);
         return h('button',{type:'button',class:'chip'+(tem?' on':''),disabled:tem,title:d,onclick:()=>{ c.traits.push({id:uid(),icon:ic,name:n,description:d,req:{level:0,attrs:[]},effects:efs()}); render(); }},(tem?'✓ ':'+ ')+ic+' '+n); })),
+    botoesAssistente({arr:c.traits,habArr:c.abilities,nivel:0,origem:c,tracos:true}),
     ...c.traits.map(t=>habCard(sys,c.traits,t,{icone:true,semReq:true,semUso:true,ph:'Ex.: Asas'})),
     h('button',{class:'btn primary sm',style:{marginTop:'8px'},onclick:()=>{ const t={id:uid(),icon:'✦',name:'Novo traço',description:'',req:{level:0,attrs:[]},effects:[]}; c.traits.push(t); S.ui.open[t.id]=true; render(); }},'+ Traço'));
 }

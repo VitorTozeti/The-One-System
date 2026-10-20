@@ -327,6 +327,7 @@ function mestreView(){
   if(S.tab==='inicio') content=tabInicio(sys);
   else if(S.tab==='campanha') content=tabCampanha(sys);
   else if(S.tab==='regras') content=tabRegras(sys);
+  else if(S.tab==='combate') content=tabMorteMovimento(sys);   /* regras-gerais-ui.js */
   else if(S.tab==='progressao') content=tabProgressao(sys);
   else if(S.tab==='atributos') content=tabAtributos(sys);
   else if(S.tab==='recursos') content=tabRecursos(sys);
@@ -372,6 +373,7 @@ function mestreView(){
     crumb, barra, grupos, subtabs, content, rodape,
     fichaVivaView(),
     S.ui.versoes?versoesOverlay():null,
+    assistenteOverlay(),
     tourOverlay(),
     S.ui.busca?buscaOverlay():null,
     S.ui.gloss?glossOverlay():null);

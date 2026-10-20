@@ -14,6 +14,7 @@ const TAB_META=[
   {k:'inicio',    ic:'🧭',  nome:'Início',        g:'fundacao'},
   {k:'campanha',  ic:'📛',  nome:'Campanha',      g:'fundacao'},
   {k:'regras',    ic:'⚙️',  nome:'Regras',        g:'fundacao'},
+  {k:'combate',   ic:'☠️',  nome:'Morte & Movimento', g:'fundacao'},
   {k:'atributos', ic:'💪',  nome:'Atributos',     g:'personagem'},
   {k:'recursos',  ic:'❤️',  nome:'Recursos',      g:'personagem'},
   {k:'pericias',  ic:'🎯',  nome:'Perícias',      g:'personagem'},
@@ -63,6 +64,12 @@ function problemasDaAba(sys,k){
       p.push('São '+lp.skillCount+' perícias iniciais, mas só existem '+escolhiveis+' escolhíveis.');
     if(sys.maxLevel<sys.startLevel) p.push('O nível máximo é menor que o inicial.');
     if(sys.attrMode==='modificador'&&formulaRuim(sys.modFormula,{V:10})) p.push('A fórmula do modificador é inválida.');
+  }
+  if(k==='combate'){
+    const m=sys.morte||{}, mv=sys.movimento||{};
+    if(m.on&&!(sys.resources||[]).some(r=>r.id===m.resId)) p.push('A regra de morte está ligada sem recurso de Vida escolhido.');
+    if(mv.on&&formulaRuim(mv.base,v)) p.push('A fórmula do deslocamento é inválida.');
+    if(!m.on&&!mv.on) p.push('Morte e movimento estão desligados: a ficha não mostra o que acontece a 0 de Vida nem quanto o personagem anda.');
   }
   if(k==='atributos' && !(sys.attributes||[]).length) p.push('Nenhum atributo cadastrado.');
   if(k==='recursos'){
@@ -267,6 +274,8 @@ const BUSCA_EXTRA=[
   ['Valor inicial do atributo','regras'],['Mínimo e máximo do atributo','regras'],
   ['Baixar atributo para ganhar pontos (dump)','regras'],['Modificador estilo D&D','regras'],
   ['Fórmula do modificador','regras'],['Perícias iniciais','regras'],
+  ['Morte: testes contra a morte, caído, morrendo','combate'],['Salvar personagem (resgate, ponto de heroísmo)','combate'],['Cicatrizes / ferimento permanente','combate'],
+  ['Deslocamento / movimento','combate'],['Ações por turno (padrão, movimento, reação)','combate'],['Terreno difícil e corrida','combate'],['Assistente de técnica / magia / poder','classes'],['Modificação física (asas, garras)','racas'],
   ['Nome do eixo (Nível, NEX, Grau)','progressao'],['Tabela de progressão','progressao'],
   ['Sigla do atributo (FOR, AGI)','atributos'],
   ['Barra de Vida / Mana','recursos'],['Fórmula do recurso','recursos'],['Descanso curto e longo','recursos'],

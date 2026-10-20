@@ -359,6 +359,8 @@ function recursosInner(sys,d,ctx,b,mode){
     d.resCurrent[id]=Math.max(0,Math.min(max,cur));
     /* regras de evento (aba ⚡ Gatilhos do recurso): morrer e voltar, colapso, etc. */
     const feitos=(mode==='play'&&antes!=null)?executarGatilhos(sys,d,id,antes,d.resCurrent[id]):[];
+    /* regra de morte do sistema (aba ☠ Morte & Movimento): caído, testes, contagem, vida negativa */
+    if(mode==='play'&&antes!=null&&typeof morteAoMudar==='function') feitos.push(...morteAoMudar(sys,d,id,antes,d.resCurrent[id],cur));
     if(feitos.length){ render(); showToast('⚡ '+feitos.join(' · ')); return; }
     render();
   };
@@ -370,7 +372,8 @@ function recursosInner(sys,d,ctx,b,mode){
         temDescanso('longo')?h('button',{class:'btn sm emerald',title:'Recupera os recursos marcados como "descanso longo"',
           onclick:()=>aplicarDescanso('longo')},'🌙 Descanso longo'):null)
     : null;
-  return h('div',{}, barraDescanso, ...bars.map(r=>h('div',{style:{marginBottom:'12px'}},
+  const painelMorte=(typeof morteInner==='function')?morteInner(sys,d,ctx,mode):null;
+  return h('div',{}, painelMorte, barraDescanso, ...bars.map(r=>h('div',{style:{marginBottom:'12px'}},
     h('div',{class:'row between',style:{fontSize:'13px',marginBottom:'4px'}},
       h('span',{style:{fontWeight:'600'}},(r.granted?(r.icon||'✨')+' ':'')+r.name,
         (r.granted&&r.fontes&&r.fontes.length?h('span',{class:'hint',style:{marginLeft:'6px',fontWeight:'400'}},'· '+r.fontes.join(', ')):null),
@@ -633,7 +636,12 @@ function habilidadesInner(sys,ctx,d,mode){
   if(!active.length&&!locked.length&&!inv) return h('div',{class:'hint'},'Nenhuma habilidade.');
   return h('div',{}, inv, ...active, ...locked);
 }
-function caracteristicasInner(ctx){
+function caracteristicasInner(ctx,sys,d,mode){
+  const mov=(sys&&typeof movimentoInner==='function')?movimentoInner(sys,d,ctx,mode):null;
+  const base=caracteristicasBase(ctx);
+  return mov?h('div',{},mov,base):base;
+}
+function caracteristicasBase(ctx){
   const e=ctx.eff, race=e.org; const traits=(race&&race.traits)||[];
   const tags=e.charTags||[]; const nums=e.charNum||{}; const numKeys=Object.keys(nums);
   const caps=Object.keys(e.caps||{}), res=Object.keys(e.resist||{}), rol=Object.keys(e.rollBonus||{}).filter(k=>e.rollBonus[k]);
@@ -1016,7 +1024,7 @@ function blockInner(sys,d,ctx,b,mode){
     case 'recursos':        return recursosInner(sys,d,ctx,b,mode);
     case 'pericias':        return periciasInner(sys,d,ctx,b,mode);
     case 'habilidades':     return habilidadesInner(sys,ctx,d,mode);
-    case 'caracteristicas': return caracteristicasInner(ctx);
+    case 'caracteristicas': return caracteristicasInner(ctx,sys,d,mode);
     case 'anotacoes':       return anotacoesInner(d,mode);
     case 'dados':           return dadosInner(sys,ctx,mode);
     case 'progressao':      return progressaoInner(sys,d);
