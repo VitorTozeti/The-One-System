@@ -328,7 +328,7 @@ function mestreView(){
   else if(S.tab==='campanha') content=tabCampanha(sys);
   else if(S.tab==='regras') content=tabRegras(sys);
   else if(S.tab==='combate') content=tabMorteMovimento(sys);   /* regras-gerais-ui.js */
-  else if(S.tab==='progressao') content=tabProgressao(sys);
+  else if(S.tab==='progressao') content=(typeof tabProgressaoNova==='function'?tabProgressaoNova(sys):tabProgressao(sys));   /* progressao-ui.js */
   else if(S.tab==='atributos') content=tabAtributos(sys);
   else if(S.tab==='recursos') content=tabRecursos(sys);
   else if(S.tab==='pericias') content=tabPericias(sys);
@@ -337,7 +337,7 @@ function mestreView(){
   else if(S.tab==='escolhas') content=tabEscolhas(sys);
   else if(S.tab==='itens') content=tabItens(sys);
   else if(S.tab==='condicoes') content=tabCondicoes(sys);
-  else if(S.tab==='tags') content=tabTags(sys);
+  else if(S.tab==='tags') content=(typeof tabTagsNova==='function'?tabTagsNova(sys):tabTags(sys));   /* tags-ui.js */
   else if(S.tab==='dados') content=tabDados(sys);
   else if(S.tab==='tecnicas') content=tabTecnicas(sys);
   else if(S.tab==='ficha') content=tabFicha(sys);
@@ -623,6 +623,8 @@ function profCard(sys){
     h('span',{class:'hint'}, sys.profMode==='mult'
       ? ('= '+Math.floor(4*(t.mult||0))+' com proficiência 4')
       : ('= '+sign(t.bonus||0)+' fixo')),
+    field('libera no '+(sys.levelName||'nível').toLowerCase(), h('input',{class:'in',type:'number',min:'0',style:{width:'70px'},value:t.nivelMin||0,title:'0 = desde a criação. Ex.: Veterano só a partir do 7 (NEX 35%)',
+      onchange:e=>{t.nivelMin=Math.max(0,parseInt(e.target.value)||0);render();}})),
     h('button',{class:'btn danger sm',onclick:()=>{sys.profTiers=sys.profTiers.filter(x=>x.id!==t.id);render();}},'✕')));
   return card(tit('Graus de Treino','proficiencia'),
     'Substitui o "bônus fixo ao treinar" por graus reais. Uma peça só cobre proficiência/Expertise de D&D e os graus fixos do Ordem.',

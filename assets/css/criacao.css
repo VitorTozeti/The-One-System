@@ -1,0 +1,74 @@
+/* ===== Progressão nova, Tags, criar habilidades e editor de técnica em passos (2026-10-20) ===== */
+/* progressão */
+.prog-modelos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.prog-modelo{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer}
+.prog-modelo:hover{border-color:var(--indigo,#6366f1)}
+.prog-modelo small{color:var(--dim);font-size:11.5px;line-height:1.35}
+.prog-ic{font-size:22px}
+.ganho{padding:8px 10px;margin:6px 0;border-radius:10px;background:var(--surf);border:1px solid var(--line)}
+.ganho-l1{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ganho-qtd{width:70px}
+.ganho-cada{gap:4px;align-items:center}
+.ganho-cada .in{width:64px}
+.ganho-modo button{padding:4px 10px;font-size:12px}
+.ganho-frase{margin-top:6px;font-size:13px;font-weight:600}
+.prog-res{margin-top:10px;padding:8px 12px;border-left:4px solid var(--emerald,#10b981);background:var(--surf);border-radius:6px;font-size:13px}
+.prog-tl-wrap{overflow-x:auto;max-height:520px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.prog-tl{width:100%;border-collapse:collapse;font-size:13px}
+.prog-tl th{position:sticky;top:0;background:var(--panel);padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+.prog-tl td{padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);vertical-align:top}
+.prog-tl td.n{text-align:center;white-space:nowrap}
+.prog-tl td.n small{color:var(--ok-txt,#10b981);font-weight:700}
+.prog-tl td.lv{white-space:nowrap}
+.prog-tl tr.tl-vazio td{opacity:.55}
+.tl-chip{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--indigo,#6366f1) 18%,transparent);font-size:12px}
+.tl-chip.cls{background:color-mix(in srgb,#f59e0b 22%,transparent)}
+.tl-chip.ini{background:color-mix(in srgb,#10b981 22%,transparent)}
+/* tags */
+.tag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-top:8px}
+.tag-card{display:grid;gap:6px;padding:8px;border-radius:10px;border:1px solid var(--line);border-left:5px solid var(--tc);background:var(--surf)}
+.tag-cor{width:34px;height:34px;border:none;padding:0;background:transparent;cursor:pointer}
+.tag-ic{width:48px;text-align:center}
+.mx-wrap{overflow:auto;max-height:480px;margin-top:8px}
+.mx{border-collapse:collapse;font-size:12px}
+.mx th,.mx td{border:1px solid var(--line);padding:0;text-align:center}
+.mx-canto{font-size:10px;color:var(--dim);padding:4px 6px!important}
+.mx-th{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg);padding:6px 2px;white-space:nowrap;font-weight:700}
+.mx-row{text-align:left!important;padding:4px 8px!important;white-space:nowrap;font-weight:700}
+.mx-c{width:42px;height:32px;border:0;background:transparent;color:var(--dim);cursor:pointer;font-weight:800}
+.mx-c.on{background:color-mix(in srgb,var(--mc) 30%,transparent);color:var(--txt)}
+.mx-c:hover{outline:2px solid var(--indigo,#6366f1);outline-offset:-2px}
+/* criar habilidade */
+.criar-hab{margin:12px 0;padding:10px;border-radius:12px;border:1px dashed var(--line);background:color-mix(in srgb,var(--indigo,#6366f1) 5%,transparent)}
+.criar-hab-t{font-weight:700;margin-bottom:8px;font-size:13px}
+.criar-hab-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.criar-op{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer}
+.criar-op small{color:var(--dim);font-size:11.5px}
+.criar-op.rec{border-color:var(--indigo,#6366f1);box-shadow:0 0 0 1px color-mix(in srgb,var(--indigo,#6366f1) 40%,transparent)}
+.criar-op.on{background:color-mix(in srgb,var(--indigo,#6366f1) 15%,var(--surf))}
+.criar-ic{font-size:20px}
+.bib{margin-top:10px}
+.bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;margin-top:8px;max-height:420px;overflow:auto}
+.bib-card{display:grid;grid-template-columns:auto 1fr;gap:0 8px;text-align:left;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer}
+.bib-card:hover{border-color:var(--indigo,#6366f1)}
+.bib-ic{grid-row:span 3;font-size:22px}
+.bib-card small{color:var(--dim);font-size:11px;line-height:1.3}
+.bib-cat{font-size:10px;color:var(--acc-txt,#a5b4fc)}
+/* cartão de habilidade */
+.hab-frase{margin:2px 0 8px;padding:6px 10px;border-radius:8px;background:var(--surf);font-size:12.5px;line-height:1.4;border-left:3px solid var(--indigo,#6366f1)}
+.hab-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px;flex-wrap:wrap}
+.hab-tab{padding:6px 12px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--dim);cursor:pointer;font-weight:600}
+.hab-tab.on{color:var(--txt);border-bottom-color:var(--indigo,#6366f1)}
+.hab-guia{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:10px}
+.hab-guia-op{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border-radius:10px;border:1px dashed var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.hab-guia-op small{color:var(--dim);font-size:11.5px}
+/* editor de uso em passos */
+.uso2-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;margin-top:10px}
+.uso2{container-type:inline-size}
+@container (max-width:780px){.uso2-grid{grid-template-columns:1fr}.uso2-prev{position:static}}
+.uso2-prev{align-self:start;position:sticky;top:8px;display:grid;gap:8px}
+.uso2-frase{font-size:12.5px;padding:8px;border-radius:8px;background:var(--surf)}
+.uso-passo{padding:10px 0;border-bottom:1px dashed var(--line)}
+.uso-passo:last-child{border-bottom:0}
+.uso-passo-t{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:8px}
+.uso-n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tc,#6366f1);color:#fff;font-size:12px}

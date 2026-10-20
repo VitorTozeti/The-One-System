@@ -247,7 +247,7 @@ function usoHabEditor(sys,ab){
       h('button',{type:'button',class:'btn sm '+(aplicaEm==='eu'?'emerald':'ghost'),onclick:()=>{us.aplicaEm='eu';render();}},(aplicaEm==='eu'?'✓ ':'')+'Em mim (mexe na minha ficha)'),
       h('button',{type:'button',class:'btn sm '+(aplicaEm==='alvo'?'emerald':'ghost'),onclick:()=>{us.aplicaEm='alvo';render();}},(aplicaEm==='alvo'?'✓ ':'')+'No alvo (rola e mostra o resultado)')),
     h('div',{class:'grid g2'},
-      aplicaEm==='eu'?field('Qual recurso meu',resSel(us,'alvoId','— nenhum (só texto) —')):field('Tipo de dano / energia',txt(us,'tipoDano',tipo==='cura'?'Luz, Natureza…':'Fogo, Gelo, Raio…')),
+      aplicaEm==='eu'?field('Qual recurso meu',resSel(us,'alvoId','— nenhum (só texto) —')):field('Tipo de dano / energia',(()=>{ const i=txt(us,'tipoDano',tipo==='cura'?'Luz, Natureza…':'Fogo, Gelo, Raio… (suas tags aparecem aqui)'); i.setAttribute('list','dl-tags'); return i; })()),
       field(aplicaEm==='alvo'?(tipo==='cura'?'Cura (dados)':'Dano (dados)'):'Quanto (aceita dados; negativo = perde)',txt(us,'formula',ph,'mono'))),
     h('div',{class:'hint',style:{marginTop:'4px'}},media(us.formula)||'Sem fórmula: só mostra o texto ao usar.'));
 
@@ -280,24 +280,31 @@ function usoHabEditor(sys,ab){
   else if(tipo==='invocacao') corpoTipo=[us.invoc?invocEditor(sys,us):null,secAlcance,secExtras];
   else corpoTipo=[secAlcance,secFormula('Efeito em recurso (opcional)',''),secExtras,secCond];
 
-  return h('div',{class:'req-box uso-hab',style:{'--tc':tp.cor}},
-    h('div',{class:'lbl'},'🪄 USAR NA FICHA (opcional)'),
+  /* layout em passos numerados (esquerda) + prévia do cartão e frase (direita, fixa) */
+  const passo=(n,tit,...f)=>h('div',{class:'uso-passo'},h('div',{class:'uso-passo-t'},h('span',{class:'uso-n'},String(n)),tit),...f);
+  const custoTxt=(()=>{ const r=(sys.resources||[]).find(x=>x.id===us.custoId); return r&&String(us.custo||'').trim()?(us.custo+' '+r.name):'grátis'; })();
+  return h('div',{class:'req-box uso-hab uso2',style:{'--tc':tp.cor}},
     h('div',{class:'row wrapf'},
-      h('button',{type:'button',class:'btn sm '+(us.on?'emerald':'ghost'),'aria-pressed':us.on?'true':'false',onclick:()=>{us.on=!us.on;render();}},(us.on?'✓ ':'')+'Pode ser usada'),
-      h('span',{class:'hint'},us.on?'O jogador ganha um botão nesta técnica, na ficha.':'Ligue para magias com custo, curas, ataques, buffs, debuffs ou invocações.')),
-    us.on?h('div',{style:{marginTop:'10px'}},
-      h('div',{class:'uso-sec-t'},'Que tipo de técnica é?'), tipos,
-      h('div',{class:'hint',style:{margin:'4px 0 8px'}},tp.d),
-      h('div',{class:'row wrapf'},modoBtn('instantaneo','✨ Instantânea','Clica em Usar: paga o custo e aplica o efeito uma vez'),
-        modoBtn('ativa','⏻ Liga/desliga','Os efeitos do cartão (e a invocação/condição em mim) só valem enquanto estiver ligada; ligar paga o custo')),
-      h('div',{class:'grid g2',style:{marginTop:'10px'}},
-        field('Custo — recurso',resSel(us,'custoId','— sem custo —')),
-        field('Custo — quanto (fórmula)',us.custoId?campoFormula(sys,us,'custo',{tipo:'custo',placeholder:'3',aoMudar:()=>render()}):h('div',{class:'hint'},'Escolha o recurso (ex.: Mana).'))),
-      us.modo==='ativa'?h('div',{class:'hint',style:{marginTop:'8px'}},'Ligada: aplica todos os efeitos do cartão'+(tipo==='invocacao'?' e a criatura aparece':'')+'. Desligada: some. O custo é pago ao ligar.'):null,
-      ...corpoTipo.filter(Boolean),
-      (typeof conjuracaoEditor==='function')?conjuracaoEditor(sys,ab):null,
-      h('div',{style:{marginTop:'10px'}},field('Texto ao usar (opcional)',h('input',{class:'in',value:us.texto||'',placeholder:'Ex.: Uma luz suave fecha os ferimentos.',oninput:e=>{us.texto=e.target.value;persist();}}))),
-      h('div',{class:'uso-prev'},h('div',{class:'uso-sec-t'},'👁 Como aparece na ficha'),cartaoTecnica(sys,null,null,ab,{prev:true})))
+      h('button',{type:'button',class:'btn sm '+(us.on?'emerald':'ghost'),'aria-pressed':us.on?'true':'false',onclick:()=>{us.on=!us.on;render();}},(us.on?'✓ ':'')+'Tem um botão na ficha'),
+      h('span',{class:'hint'},us.on?'O jogador clica para usar: paga o custo, rola e aplica.':'Ligue para magias, ataques especiais, curas, buffs, debuffs ou invocações.')),
+    us.on?h('div',{class:'uso2-grid'},
+      h('div',{class:'uso2-passos'},
+        passo(1,'Que tipo é?',tipos,h('div',{class:'hint',style:{marginTop:'4px'}},tp.d)),
+        passo(2,'O que ela faz',...corpoTipo.filter(Boolean)),
+        passo(3,'Custo e duração',
+          h('div',{class:'row wrapf'},modoBtn('instantaneo','✨ Usa e pronto','Clica em Usar: paga o custo e aplica o efeito uma vez'),
+            modoBtn('ativa','⏻ Liga / desliga','Os efeitos do cartão (e a invocação/condição em mim) só valem enquanto estiver ligada; ligar paga o custo')),
+          h('div',{class:'grid g2',style:{marginTop:'10px'}},
+            field('Paga com',resSel(us,'custoId','— grátis —')),
+            field('Quanto (fórmula)',us.custoId?campoFormula(sys,us,'custo',{tipo:'custo',placeholder:'3',aoMudar:()=>render()}):h('div',{class:'hint'},'Escolha o recurso (ex.: Mana).'))),
+          us.modo==='ativa'?h('div',{class:'hint',style:{marginTop:'6px'}},'Ligada: aplica os efeitos “⚙️ Sempre ativo” do cartão'+(tipo==='invocacao'?' e a criatura aparece':'')+'. O custo é pago ao ligar.'):null),
+        (typeof conjuracaoEditor==='function')?passo(4,'Regras de magia (opcional)',conjuracaoEditor(sys,ab)):null,
+        passo(5,'Texto ao usar (opcional)',h('input',{class:'in',value:us.texto||'',placeholder:'Ex.: Uma luz suave fecha os ferimentos.',oninput:e=>{us.texto=e.target.value;persist();}}))),
+      h('div',{class:'uso2-prev'},
+        h('div',{class:'uso-sec-t'},'👁 Como aparece na ficha'),cartaoTecnica(sys,null,null,ab,{prev:true}),
+        h('div',{class:'uso2-frase'},h('b',{},'Em resumo: '),usoHabResumo(sys,ab)||'—'),
+        h('div',{class:'hint'},'Custo: '+custoTxt+(us.modo==='ativa'?' · liga/desliga':''))),
+      typeof datalistTags==='function'?datalistTags(sys,'dl-tags'):null)
     :null);
 }
 /* desenho pequeno da área (círculo, cone, linha…) para o mestre ver o formato */

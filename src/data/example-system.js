@@ -355,6 +355,7 @@ function sanitizeSystem(sys){
   });
   sys.semNiveis=!!sys.semNiveis;
   if(typeof sanitizeRegrasGerais==='function') sanitizeRegrasGerais(sys);   /* morte e movimento (regras-gerais.js) */
+  if(typeof sanitizeGanhos==='function') sanitizeGanhos(sys);   /* regras de ganho por nível (progressao.js) */
   if(typeof sanitizarGraus==='function'){ sanitizarGraus(sys); (sys.resources||[]).forEach(sanitizarTesteRec); }   /* regras-extra.js */
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
@@ -594,12 +595,17 @@ function sanitizeDraft(d,sys){
 }
 
 /* progressão por nível */
-function levelPoints(sys, level){
-  const steps=Math.max(0,(level||sys.startLevel)-sys.startLevel);
+function levelPoints(sys, level, eff){
+  const lv=level||sys.startLevel;
+  const steps=Math.max(0,lv-sys.startLevel);
   const p=sys.perLevel||{};
   const ax=(p.attrEveryN>0)?Math.floor(steps/p.attrEveryN)*(p.attrPoints||0):0;
   const sx=(p.skillEveryN>0)?Math.floor(steps/p.skillEveryN)*(p.skillPoints||0):0;
-  return { attrPoints:(sys.attributePoints||0)+ax, skillCount:(sys.skillChoices||0)+sx };
+  /* regras de ganho por nível (progressao.js) + pontos dados por habilidades de classe/origem */
+  const g=k=>(typeof ganhoTotal==='function')?ganhoTotal(sys,k,lv):0;
+  const h=(typeof pontosDeHabilidades==='function')?pontosDeHabilidades(eff):{atributo:0,pericia:0,treino:0};
+  return { attrPoints:(sys.attributePoints||0)+ax+g('atributo')+h.atributo, skillCount:(sys.skillChoices||0)+sx+g('pericia')+h.pericia,
+           treino:g('treino')+h.treino, tecnicas:g('tecnica') };
 }
 /* ---- Aplicação de efeitos ----
    Um efeito pode ser: bônus de atributo, bônus de recurso, concede perícia,
@@ -658,6 +664,7 @@ function applyEffectTo(ef, B, mult){
   else if(ef.kind==='resistencia'){ const nm=String(ef.text||'').trim(); if(nm) registrarResist(B,nm,ef.modo||'reduz',v); }
   else if(ef.kind==='capacidade'){ const nm=String(ef.text||'').trim(); if(nm) B.caps[nm]=Math.max(B.caps[nm]||0, v); }
   else if(ef.kind==='tecnicas'){ B.techExtra+=v; }
+  else if(ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino'){ B.pts=B.pts||{}; const k={pontosAtributo:'atributo',pontosPericia:'pericia',treino:'treino'}[ef.kind]; B.pts[k]=(B.pts[k]||0)+v; }
   else if(ef.kind==='codigo'){ rodarEfeitoCodigo(ef,B,k); }
   else if(ef.kind==='pericia'){ if(ef.targetId && !B.grantedSkills.includes(ef.targetId)) B.grantedSkills.push(ef.targetId); }
   else if(ef.kind==='caracteristica'){ const nm=(ef.text||'').trim(); if(nm){
@@ -676,7 +683,7 @@ function attrOnlyTo(ef, tot1, level, sys){
     let v=+ef.value||0;
     if(efEmFormula(ef)){ const f=ef.formula.trim(); const r=(f&&sys)?evalFormula(f,varsDoEfeito(sys,level,tot1)):0; v=Number.isNaN(r)?0:r; }
     tot1[ef.targetId]=(tot1[ef.targetId]||0)+v; } }
-  else if(ef.kind==='tecnicas'||ef.kind==='codigo') return;   /* não mexem em atributo na 1ª passagem */
+  else if(ef.kind==='tecnicas'||ef.kind==='codigo'||ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino') return;   /* não mexem em atributo na 1ª passagem */
   else if(ef.kind==='livre'){ (ef.mods||[]).forEach(m=>attrOnlyTo(m,tot1,level,sys)); }
 }
 /* efeitos com requisitos (2 passagens p/ liberar habilidades) */
@@ -771,6 +778,7 @@ function gatherEffects(sys,d){
     B.ctx.fonte=cond.name||'condição';
     (cond.effects||[]).forEach(ef=>applyEffectTo(ef,B,k));
   });
+  if(typeof aplicaGanhosAuto==='function') aplicaGanhosAuto(sys,d,B);   /* ganhos automáticos por nível (progressao.js) */
   return {cls,org,active,locked,equipped,escolhidas,condAtivas,
     attrBonus:B.attrBonus,resBonus:B.resBonus,grantedSkills:B.grantedSkills,
     charNum:B.charNum,charTags:B.charTags,diceMod:B.diceMod,B,
@@ -809,6 +817,9 @@ function effectLabelBase(sys,ef){
   if(ef.kind==='resistencia') return resistLabel(ef.text,ef.modo||'reduz',efEmFormula(ef)?('('+(ef.formula.trim()||'?')+')'):(+ef.value||0));
   if(ef.kind==='capacidade'){const c=capInfo(ef.text); return c.ic+' '+(ef.text||'?')+(efEmFormula(ef)?(' ('+(ef.formula.trim()||'?')+')'):((+ef.value||0)>0?(' '+ef.value+(c.un||'')):''));}
   if(ef.kind==='tecnicas') return '🌀 '+efValTxt(ef)+' técnica(s) de classe';
+  if(ef.kind==='pontosAtributo') return '💪 '+efValTxt(ef)+' ponto(s) de atributo';
+  if(ef.kind==='pontosPericia') return '🎯 '+efValTxt(ef)+' perícia(s)';
+  if(ef.kind==='treino') return '🎓 '+efValTxt(ef)+' melhoria(s) de treino';
   if(ef.kind==='codigo') return '⌨ '+(String(ef.text||'').trim()||'efeito por código');
   return '';
 }

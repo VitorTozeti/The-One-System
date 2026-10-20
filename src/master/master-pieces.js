@@ -792,7 +792,7 @@ function effectRowCore(sys,arr,ef,depth){
   const grupos=[
     ['Números da ficha',[['atributo','💪 Bônus de atributo'],['recurso','❤️ Bônus de recurso (Vida, Mana…)'],['recursoNovo','✨ Cria um recurso especial (cargas, fôlego…)'],['rolagem','⚔ Bônus em rolagem (ataque, dano, defesa…)'],['dados','🎲 Mais/menos DADOS na rolagem']]],
     ['Defesa e corpo',[['resistencia','🛡 Resistência / imunidade / vulnerabilidade'],['capacidade','🪽 Capacidade (voo, natação, visão no escuro…)'],['caracteristica','🏷 Característica (etiqueta ou número)']]],
-    ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra']]],
+    ['Progressão',[['pericia','🎯 Concede perícia'],['tecnicas','🌀 Técnica(s) de classe extra'],['pontosAtributo','💪 +Pontos de atributo para distribuir'],['pontosPericia','🎯 +Perícias para escolher'],['treino','🎓 +Melhorias de treino (subir grau)']]],
     ['Especial',depth===0?[['livre','✨ Efeito único (texto + várias modificações)'],['codigo','⌨ Efeito por código (JavaScript)']]:[['codigo','⌨ Efeito por código (JavaScript)']]],
   ];
   const kindSel=h('select',{class:'in ef-kind',onchange:e=>{
@@ -806,7 +806,7 @@ function effectRowCore(sys,arr,ef,depth){
     else if(ef.kind==='rolagem'){ if(!ef.escopo)ef.escopo='ataque'; if(!ef.value)ef.value=1; }
     else if(ef.kind==='resistencia'){ if(!ef.modo)ef.modo='reduz'; if(ef.value==null||ef.value<0)ef.value=2; }
     else if(ef.kind==='capacidade'){ if(!ef.text)ef.text='Voo'; }
-    else if(ef.kind==='tecnicas'){ ef.value=1; }
+    else if(ef.kind==='tecnicas'||ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino'){ ef.value=ef.kind==='pontosAtributo'?2:1; }
     else if(ef.kind==='codigo'){ if(ef.code==null) ef.code=CODIGO_EXEMPLO; }
     render();
   }});
@@ -854,6 +854,10 @@ function effectRowCore(sys,arr,ef,depth){
   /* TÉCNICA EXTRA — quantas técnicas de classe a mais o personagem escolhe */
   if(ef.kind==='tecnicas'){
     return h('div',{}, h('div',{class:'ef-row'}, kindSel, valCtl('70px'), fBtnV, h('span',{class:'hint'},'técnica(s) de classe a mais para escolher'), del), fCaixa('Quantas'));
+  }
+  if(ef.kind==='pontosAtributo'||ef.kind==='pontosPericia'||ef.kind==='treino'){
+    const rot={pontosAtributo:'ponto(s) de atributo a mais para distribuir',pontosPericia:'perícia(s) a mais para escolher',treino:'melhoria(s) de treino (subir o grau de uma perícia)'}[ef.kind];
+    return h('div',{}, h('div',{class:'ef-row'}, kindSel, valCtl('70px'), fBtnV, h('span',{class:'hint'},rot+' — use "⏱ Vale" para dar só a partir de um nível'), del), fCaixa('Quantos'));
   }
   /* RECURSO ESPECIAL — uma barra nova (cargas, fôlego, fúria…) que existe enquanto a fonte valer */
   if(ef.kind==='recursoNovo'){

@@ -16,8 +16,8 @@ function jogadorView(){
   const labels=passos.map(p=>p.l);
   const atual=passos[S.step].k;
   const ultimo=S.step===passos.length-1;
-  const lp=levelPoints(sys,d.level);
   const eff=gatherEffects(sys,d);
+  const lp=levelPoints(sys,d.level,eff);
   const effMin=sys.allowDump?sys.attrMin:sys.startAttrValue;
   const used=sys.attributes.reduce((s,a)=>s+((d.attrs[a.id]??0)-sys.startAttrValue),0);
   const left=lp.attrPoints-used;
@@ -113,12 +113,21 @@ function jogadorView(){
       ? 'O mestre pediu '+lp.skillCount+' perícias, mas só existem '+choosable.length+' escolhíveis. Avise o mestre: a regra está impossível.'
       : null;
     /* peça 2: seletor de grau para cada perícia que o personagem tem */
+    const tiersT=sys.profTiers||[];
+    const baseTreino=Math.max(0,tiersT.findIndex(x=>(sys.profMode==='mult'?x.mult:x.bonus)>0));
+    const controlaTreino=(sys.ganhos||[]).some(g=>g.tipo==='treino')||lp.treino>0;
+    const usadoTreino=d.skills.reduce((s,id)=>{ const i=tiersT.findIndex(t=>t.id===(d.skillTier||{})[id]); return s+Math.max(0,i-baseTreino); },0);
+    const sobraTreino=Math.max(0,(lp.treino||0)-usadoTreino);
     const tierBox=(sys.profMode==='nenhum'||!(sys.profTiers||[]).length)?null:h('div',{style:{marginTop:'14px'}},
       h('div',{class:'hint',style:{marginBottom:'6px',color:'var(--acc-txt)'}},'Grau de treino:'),
+      controlaTreino?h('div',{class:'badge '+(usadoTreino<=(lp.treino||0)?'ok':'warn'),style:{marginBottom:'8px'}},'🎓 Melhorias de treino: '+usadoTreino+'/'+(lp.treino||0)):null,
       ...skillRows(sys,d,computeSheet(sys,d)).map(r=>{
         const sel=h('select',{class:'in',style:{maxWidth:'160px'},onchange:e=>{d.skillTier[r.s.id]=e.target.value;render();}});
         sel.appendChild(h('option',{value:''},'— destreinado —'));
-        (sys.profTiers||[]).forEach(t=>{const o=h('option',{value:t.id},t.name);if(t.id===(d.skillTier||{})[r.s.id])o.selected=true;sel.appendChild(o);});
+        /* grau só abre a partir do nível dele; com regras de treino, cada grau acima do básico gasta 1 melhoria */
+        const tiers=sys.profTiers||[], cur=tiers.findIndex(t=>t.id===(d.skillTier||{})[r.s.id]);
+        tiers.forEach((t,i)=>{ const bloq=(t.nivelMin&&t.nivelMin>d.level)||(controlaTreino&&i>Math.max(cur,baseTreino)&&(i-Math.max(cur,baseTreino))>sobraTreino);
+          const o=h('option',{value:t.id,disabled:bloq?true:null},t.name+(t.nivelMin&&t.nivelMin>d.level?(' (a partir do '+t.nivelMin+')'):''));if(t.id===(d.skillTier||{})[r.s.id])o.selected=true;sel.appendChild(o);});
         return h('div',{class:'row between',style:{marginBottom:'6px'}},
           h('span',{style:{fontWeight:'600',fontSize:'13px'}},r.s.name),
           h('div',{class:'row'}, sel, h('span',{class:'attrval'},sign(r.value))));

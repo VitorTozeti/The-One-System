@@ -136,10 +136,7 @@ function statblockExtras(sys,sb){
     sb.habs.length?null:h('div',{class:'hint'},'Magias, sopros, teias, gritos… usam o mesmo editor das técnicas dos jogadores. No combate, o botão ✨ rola ataque/teste e aplica nos alvos.'),
     ...sb.habs.map(ab=>h('div',{class:'sb-hab'},habCard(sys,sb.habs,ab,{ph:'Nome da técnica'}),
       ab.uso&&ab.uso.on?h('button',{type:'button',class:'btn sm primary',title:'Rola agora (fora do combate)',onclick:()=>usarHabInimigo(sb,ab)},'🎲 Usar'):null)),
-    h('div',{class:'row wrapf',style:{marginTop:'8px'}},
-      h('button',{type:'button',class:'btn sm',onclick:()=>{ const ab=sanitizarUsoHab({id:uid(),name:'Nova técnica',description:'',req:{level:0,attrs:[]},effects:[]}); ab.uso.on=true; sb.habs.push(ab); S.ui.open[ab.id]=true; render(); }},'+ Técnica'),
-      botoesAssistente({arr:sb.habs,habArr:sb.habs,nivel:0})),
-    modelosRapidos(sys,sb.habs,0,'Pronto para usar (inclui magias de D&D):'));
+    barraCriarHab(sys,{arr:sb.habs,habArr:sb.habs,nivel:0},{chave:'sb'+sb.id,titulo:'Dar uma técnica / magia a esta criatura',nomePadrao:'Nova técnica'}));
   else if(aba==='perfil') corpo=h('div',{class:'grid g2'},
     field('Nível / ND',h('input',{class:'in',value:sb.nivel,placeholder:'3, 1/2, Grau 2…',onchange:e=>{sb.nivel=e.target.value;render();}})),
     field('Deslocamento',h('input',{class:'in',value:sb.mov,placeholder:'9 m, voo 18 m',onchange:e=>{sb.mov=e.target.value;render();}})),
