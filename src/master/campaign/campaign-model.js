@@ -32,6 +32,8 @@ function defaultCampaign(){
     xp:{ total:0, history:[] },       /* XP do grupo */
     present:{ live:false, handoutId:null, blank:false, showMap:true, showInit:true, showRoll:false, showTrackers:true, lastRoll:null },
     meta:{ changes:0, lastBackup:0 }, /* lembrete de backup */
+    arcos:[], missoes:[], pistas:[], faccoes:[],   /* missões & mundo (mundo.js) */
+    calendario:null, seguranca:null,
   };
 }
 
@@ -257,6 +259,7 @@ function sanitizeCampaign(c){
   c.present=Object.assign(d.present, c.present&&typeof c.present==='object'?c.present:{});
   c.present.live=false;   /* a transmissão sempre recomeça desligada ao abrir */
   c.meta=Object.assign({changes:0,lastBackup:0}, c.meta&&typeof c.meta==='object'?c.meta:{});
+  if(typeof sanitizeMundo==='function') sanitizeMundo(c);   /* missões, pistas, facções, calendário, segurança (mundo.js) */
   return c;
 }
 

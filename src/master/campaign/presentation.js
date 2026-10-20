@@ -57,7 +57,7 @@ function presSnapshot(){
   const c=S.campaign, p=c.present, cb=c.combat, m=curMap();
   const hd=p.handoutId&&c.handouts.find(x=>x.id===p.handoutId);
   const snap={ t:'snap', ts:Date.now(), camp:c.name||S.system.campaignName||S.system.name||'Campanha',
-    blank:!!p.blank, handout:hd?{title:hd.title,text:hd.text,image:hd.image||null}:null,
+    blank:!!(p.blank||p.pausa), cartaX:!!p.pausa, handout:hd?{title:hd.title,text:hd.text,image:hd.image||null}:null,
     map:null, init:null, roll:(p.showRoll&&p.lastRoll)?p.lastRoll:null, trackers:null };
   if(p.showMap&&m){ snap.map=presMapa(m); snap.map.key=telaChaveMapa(m); }
   if(p.showInit&&cb.on){
@@ -248,7 +248,7 @@ function telaRender(){
     r.appendChild(raiz); return;
   }
   if(s.blank){
-    raiz.appendChild(h('div',{class:'tela-espera'}, h('div',{class:'tela-logo'}, s.camp), h('div',{class:'tela-dica'},'⏸ Pausa')));
+    raiz.appendChild(h('div',{class:'tela-espera'}, h('div',{class:'tela-logo'}, s.cartaX?'✋':s.camp), h('div',{class:'tela-dica'},s.cartaX?'Cena pausada — vamos seguir por outro caminho.':'⏸ Pausa')));
     r.appendChild(raiz); return;
   }
   const main=h('div',{class:'tela-main'});

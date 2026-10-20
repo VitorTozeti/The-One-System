@@ -119,6 +119,10 @@ function modeloEmHab(sys,m,nivel){
       invoc:u.invoc?Object.assign({},u.invoc):null,
       extras:(u.extras||[]).map(x=>{ const r=_recPor(sys,x.rec); return r?{id:uid(),resId:r.id,formula:x.formula,quem:x.quem||'eu'}:null; }).filter(Boolean)});
     if(u.cond) ab.uso.condId=_garanteCond(sys,u.cond);
+    /* regras de magia (conjuracao.js) */
+    ['execucao','concentracao','ritual','componentes','circulo','escola','repete'].forEach(k=>{ if(u[k]!=null) ab.uso[k]=u[k]; });
+    if(u.ataque) ab.uso.ataque={on:true,bonus:String(u.ataque)};
+    if(u.aumenta) ab.uso.aumenta=Object.assign({formula:'',custo:'',max:''},u.aumenta);
     sanitizarUsoHab(ab);
   }
   return ab;
@@ -291,6 +295,7 @@ function usoHabEditor(sys,ab){
         field('Custo — quanto (fórmula)',us.custoId?campoFormula(sys,us,'custo',{tipo:'custo',placeholder:'3',aoMudar:()=>render()}):h('div',{class:'hint'},'Escolha o recurso (ex.: Mana).'))),
       us.modo==='ativa'?h('div',{class:'hint',style:{marginTop:'8px'}},'Ligada: aplica todos os efeitos do cartão'+(tipo==='invocacao'?' e a criatura aparece':'')+'. Desligada: some. O custo é pago ao ligar.'):null,
       ...corpoTipo.filter(Boolean),
+      (typeof conjuracaoEditor==='function')?conjuracaoEditor(sys,ab):null,
       h('div',{style:{marginTop:'10px'}},field('Texto ao usar (opcional)',h('input',{class:'in',value:us.texto||'',placeholder:'Ex.: Uma luz suave fecha os ferimentos.',oninput:e=>{us.texto=e.target.value;persist();}}))),
       h('div',{class:'uso-prev'},h('div',{class:'uso-sec-t'},'👁 Como aparece na ficha'),cartaoTecnica(sys,null,null,ab,{prev:true})))
     :null);
@@ -368,10 +373,11 @@ function invocacoesInner(sys,d){
 }
 
 /* ---------- usar / ligar na ficha ---------- */
-function _custoDe(ctx,us){
+function _custoDe(ctx,us,extra){
   const r=us.custoId?ctx.allRes.find(x=>x.id===us.custoId):null;
   let custo=0;
   if(r&&String(us.custo||'').trim()){ const c=evalFormula(us.custo,ctx.varsTotal); custo=Number.isNaN(c)?0:Math.max(0,Math.round(c)); }
+  if(r&&extra&&typeof custoAumento==='function') custo+=custoAumento(us,ctx.varsTotal,extra);
   return {r,custo};
 }
 function _aplicaRec(ctx,d,cur,resId,valor){
@@ -393,38 +399,51 @@ function _invoca(sys,d,ctx,ab){
   for(let i=0;i<q;i++) d.invocacoes.push(invocInstancia(sys,ab,us,ctx,q>1?(i+1):0));
   return q;
 }
-function usarHabilidade(sys,d,ctx,ab){
+function usarHabilidade(sys,d,ctx,ab,opt){
   const us=ab.uso; if(!us||!us.on) return;
+  opt=opt||{}; const extra=opt.extra||0;
   const tipo=usoTipo(us), tp=tipoInfo(tipo);
   if(!Array.isArray(d.invocacoes)) d.invocacoes=[];
-  const {r:rc,custo}=_custoDe(ctx,us);
+  const {r:rc,custo}=_custoDe(ctx,us,extra);
+  const conj=[];   /* avisos de execução/concentração (conjuracao.js) */
+  const preparaConj=()=>{
+    if(typeof gastaExecucao==='function'){ const t=gastaExecucao(sys,d,us.execucao); if(t) conj.push(t); }
+    if(us.concentracao&&typeof encerrarConcentracao==='function'){
+      if(d.concentrando&&d.concentrando.abId!==ab.id){ const t=encerrarConcentracao(sys,d); if(t) conj.push(t); }
+      d.concentrando={abId:ab.id,nome:ab.name}; conj.push('🧠 Concentrando em '+ab.name); }
+  };
   if(us.modo==='ativa'){
     if(!d.ativas) d.ativas={};
     if(d.ativas[ab.id]){ delete d.ativas[ab.id];
+      if(d.concentrando&&d.concentrando.abId===ab.id) d.concentrando=null;
       if(us.condEm==='eu') _ligaCondEu(d,us.condId,false);
       if(us.invoc) d.invocacoes=d.invocacoes.filter(v=>v.abId!==ab.id);
       if(S.ui.usoUlt&&S.ui.usoUlt.abId===ab.id) S.ui.usoUlt=null;
       render(); return showToast(ab.name+' desligada.'); }
     if(rc&&custo>0){ if(rc.cur<custo) return showToast('Sem '+rc.name+' para ligar “'+ab.name+'”: custa '+custo+', você tem '+rc.cur+'.'); d.resCurrent[rc.id]=rc.cur-custo; }
+    preparaConj();
     d.ativas[ab.id]=true;
     const c=_cond(sys,us.condId);
     if(c&&us.condEm==='eu') _ligaCondEu(d,c.id,true);
     const nInv=us.invoc?_invoca(sys,d,ctx,ab):0;
-    const linhas=[(rc&&custo>0)?('−'+custo+' '+rc.name):null,nInv?('Invocou '+nInv+'× '+us.invoc.nome):null,
+    const linhas=[...conj,(rc&&custo>0)?('−'+custo+' '+rc.name):null,nInv?('Invocou '+nInv+'× '+us.invoc.nome):null,
       c?((us.condEm==='eu'?'Você fica ':'Alvo fica ')+(c.icon||'')+' '+c.name):null,us.duracao?('Dura '+us.duracao):null].filter(Boolean);
     S.ui.usoUlt=linhas.length||us.texto?{abId:ab.id,tipo,linhas,texto:us.texto||''}:null;
     render(); return showToast(tp.ic+' '+ab.name+' ligada'+(rc&&custo>0?(' (−'+custo+' '+rc.name+')'):'')+'.');
   }
   if(rc&&custo>0&&rc.cur<custo) return showToast('Sem '+rc.name+' suficiente para “'+ab.name+'”: custa '+custo+', você tem '+rc.cur+'.');
-  const linhas=[], cur={}; ctx.allRes.forEach(x=>cur[x.id]=x.cur);
-  if(rc&&custo>0){ cur[rc.id]=rc.cur-custo; d.resCurrent[rc.id]=cur[rc.id]; linhas.push('−'+custo+' '+rc.name); }
-  let destaque=null, erro=false;
-  if(String(us.formula||'').trim()){
-    const rl=rollExpr(us.formula,ctx.varsTotal); const v=rl.erro?NaN:rl.total;
+  preparaConj();
+  const linhas=[...conj], cur={}; ctx.allRes.forEach(x=>cur[x.id]=x.cur);
+  if(rc&&custo>0){ cur[rc.id]=rc.cur-custo; d.resCurrent[rc.id]=cur[rc.id]; linhas.push('−'+custo+(extra?(' (aumentada +'+extra+')'):'')+' '+rc.name); }
+  let destaque=null, erro=false, atq=null;
+  if(us.ataque&&us.ataque.on&&typeof rolarAtaqueMagia==='function'){ atq=rolarAtaqueMagia(sys,us,ctx.varsTotal); linhas.push('🎯 '+atq.txt+' contra a Defesa do alvo'); }
+  const formula=(typeof formulaComAumento==='function')?formulaComAumento(us.formula,us,extra):us.formula;
+  if(String(formula||'').trim()){
+    const rl=rollExpr(formula,ctx.varsTotal,{crit:!!(atq&&atq.crit),critMult:2}); const v=rl.erro?NaN:rl.total;
     if(Number.isNaN(v)) erro=true;
     else if(usoAplicaEm(us)==='alvo'){
       const n=Math.abs(v); const metade=us.teste&&us.teste.attr&&us.teste.sucesso==='metade';
-      destaque={n,rot:tipo==='cura'?'de cura no alvo':'de dano'+(us.tipoDano?(' de '+us.tipoDano):''),sub:metade?('se passar no teste: '+Math.floor(n/2)):''};
+      destaque={n,rot:tipo==='cura'?'de cura no alvo':'de dano'+(us.tipoDano?(' de '+us.tipoDano):''),sub:[metade?('se passar no teste: '+Math.floor(n/2)):'',atq&&atq.total!=null?('acerto '+atq.total+(atq.crit?' ★':'')):''].filter(Boolean).join(' · ')};
     } else if(us.alvoId){ const t=_aplicaRec(ctx,d,cur,us.alvoId,v); if(t) linhas.push(t); destaque={n:Math.abs(v),rot:(v<0?'de ':'em ')+_nomeRec(sys,us.alvoId)+(v<0?' perdidos':'')}; }
   }
   (us.extras||[]).forEach(x=>{ if(!x.resId||!String(x.formula||'').trim()) return;
@@ -436,7 +455,7 @@ function usarHabilidade(sys,d,ctx,ab){
     else linhas.push('Alvo fica '+(c.icon||'')+' '+c.name+(us.duracao?(' ('+us.duracao+')'):'')); }
   else if(us.duracao) linhas.push('Dura '+us.duracao);
   if(us.teste&&us.teste.attr){ const cd=_avalia(us.teste.cd,ctx.varsTotal,null);
-    linhas.push('Alvo testa '+us.teste.attr+(cd!=null?(' contra CD '+cd):'')+(us.teste.sucesso==='nada'?' — se passar: nada acontece':us.teste.sucesso==='sem'?' — se passar: evita a condição':' — se passar: metade')); }
+    linhas.push('Alvo testa '+us.teste.attr+(cd!=null?(' contra CD '+cd):'')+(us.teste.sucesso==='nada'?' — se passar: nada acontece':us.teste.sucesso==='sem'?' — se passar: evita a condição':' — se passar: metade')+(us.repete?' (repete no fim de cada turno)':'')); }
   if(us.invoc){ const n=_invoca(sys,d,ctx,ab); linhas.push('Invocou '+n+'× '+us.invoc.nome); }
   if(us.alcance==='area'&&us.area&&us.area.forma) linhas.push('Área: '+_formaNome(us.area.forma).replace(/^\S+\s/,'')+(us.area.tam?(' de '+us.area.tam+'m'):''));
   if(erro) linhas.push('⚠ Uma fórmula desta técnica está inválida — avise o Mestre.');
@@ -462,7 +481,7 @@ function botaoUsoHab(sys,d,ctx,ab,ligada){
   if(us.modo==='ativa') return h('button',{type:'button',class:'btn sm '+(ligada?'emerald':'ghost'),title:tit,'aria-pressed':ligada?'true':'false',disabled:semRec||null,
     onclick:()=>usarHabilidade(sys,d,ctx,ab)},ligada?'⏻ Ligada':('⏻ Ligar'+(rc&&custo>0?(' · '+custo+' '+rc.name):'')));
   return h('button',{type:'button',class:'btn sm uso-btn',style:{'--tc':tp.cor},title:tit,disabled:semRec||null,
-    onclick:()=>usarHabilidade(sys,d,ctx,ab)},verbo+(rc&&custo>0?(' · '+custo+' '+rc.name):''));
+    onclick:()=>(typeof usarComOpcoes==='function'?usarComOpcoes(sys,d,ctx,ab):usarHabilidade(sys,d,ctx,ab))},verbo+(rc&&custo>0?(' · '+custo+' '+rc.name):''));
 }
 /* chips do cartão: tipo, alcance/área, teste, condição, duração */
 function usoChips(sys,us){
@@ -476,6 +495,7 @@ function usoChips(sys,us){
   if(te.attr) ch.push(h('span',{class:'uso-chip'},'🎲 '+te.attr+(te.cd?(' CD '+te.cd):'')));
   const c=_cond(sys,us.condId); if(c) ch.push(h('span',{class:'uso-chip cond',style:{'--cc':c.color||'#e11d48'}},(c.icon||'⚠')+' '+c.name));
   if(us.duracao) ch.push(h('span',{class:'uso-chip'},'⏳ '+us.duracao));
+  if(typeof conjChips==='function') ch.push(...conjChips(us));
   return h('div',{class:'uso-chips'},...ch);
 }
 /* cartão completo de técnica (ficha do jogador e prévia no editor) */

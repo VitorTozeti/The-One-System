@@ -355,6 +355,7 @@ function sanitizeSystem(sys){
   });
   sys.semNiveis=!!sys.semNiveis;
   if(typeof sanitizeRegrasGerais==='function') sanitizeRegrasGerais(sys);   /* morte e movimento (regras-gerais.js) */
+  if(typeof sanitizarGraus==='function'){ sanitizarGraus(sys); (sys.resources||[]).forEach(sanitizarTesteRec); }   /* regras-extra.js */
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
     const sh=sys.sheet;

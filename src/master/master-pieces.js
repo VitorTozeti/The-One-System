@@ -186,6 +186,7 @@ function tabDados(sys){
         sys.critSoDados
           ? 'Com 1d8+4 e crítico ×2: rola 2d8 e soma +4 uma vez só. (Regra de D&D e da maioria dos sistemas.)'
           : 'Com 1d8+4 e crítico ×2: o total inteiro dobra, modificador incluído.')),
+    typeof cardGraus==='function'?cardGraus(sys):null,
     card('Vantagem e Desvantagem','Rolam 2 dados com álgebra própria: não somam entre si e se cancelam.',null,
       h('div',{class:'hint'},
         'Estão sempre disponíveis no rolador da ficha. Vantagem vira "2d20 pega o maior"; desvantagem, "2d20 pega o menor". '+
@@ -206,7 +207,7 @@ function tabDados(sys){
    NÃO passa por evalFormula: ele arredonda para baixo no fim, e a média de
    1d8 (4,5) viraria 4 — o que afrouxa o teto do tier em meio ponto. */
 function mediaExpr(expr, vars){
-  const media=String(expr==null?'':expr).replace(DICE_RE,(m,q,f)=>{
+  const media=expandeDadosDinamicos(expr,vars).replace(DICE_RE,(m,q,f)=>{
     const qtd=Math.max(1,parseInt(q||'1')||1), faces=Math.max(2,parseInt(f)||2);
     return '('+(qtd*(faces+1)/2)+')';
   });

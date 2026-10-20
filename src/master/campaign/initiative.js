@@ -246,14 +246,16 @@ function cbAplicarTexto(x,txt){
   if(txt[0]==='=') cbSetHp(x,num); else cbHpDelta(x, txt[0]==='+'?num:-Math.abs(num), true);
   if(txt[0]==='=') { cbLog(x.name+' PV definido para '+num); render(); }
 }
-function cbHpDelta(x,delta,aviso){
+function cbHpDelta(x,delta,aviso,semRender){
   const antes=cbHp(x); if(antes==null) return;
   const mx=cbHpMax(x);
   cbSetHp(x, antes+delta);
   const depois=cbHp(x);
   cbLog(x.name+(delta<0?' sofreu '+(-delta)+' de dano':' recuperou '+delta)+' ('+antes+' → '+depois+')');
-  if(antes>0&&depois<=0){ cbLog('☠️ '+x.name+' caiu'); if(aviso||true) showToast('☠️ '+x.name+' caiu'); }
-  render();
+  if(antes>0&&depois<=0){ cbLog('☠️ '+x.name+' caiu'); if(!semRender) showToast('☠️ '+x.name+' caiu'); }
+  /* regra de morte do sistema, fases do chefe e concentração (combate-acoes.js) */
+  if(typeof cbAposDano==='function') cbAposDano(x,antes,depois,delta);
+  if(!semRender) render();
 }
 
 /* ---------- Destaque do token da vez no mapa ---------- */
@@ -286,7 +288,7 @@ function cbLinha(x,i){
   const cb=cbSt(), cur=cb.on&&cb.order[cb.turn]===x, ui=cmp();
   const hp=cbHp(x), mx=cbHpMax(x), aberto=ui.cbOpen===x.id, down=cbCaido(x);
   const marks=cbMarks(x);
-  const chips=[...marks.map(mk=>h('span',{class:'mv-chip'},mk)), ...x.conds.map(cn=>h('span',{class:'mv-chip txt'},cn))];
+  const chips=[...marks.map(mk=>h('span',{class:'mv-chip'},mk)), ...x.conds.map(cn=>h('span',{class:'mv-chip txt'},cn)), ...(typeof cbChipsExtras==='function'?cbChipsExtras(x):[])];
   if(!x.res) cbIniciaRecursos(x);
   const recsX=cbOutrosRecursos().filter(r=>x.res&&x.res[r.id]);
   const recChips=recsX.length?h('div',{class:'mv-res'},recsX.map(r=>{ const a=x.res[r.id];
@@ -332,6 +334,7 @@ function cbLinha(x,i){
           if(t[0]==='=') cbResDelta(x,r,n-a.cur); else cbResDelta(x,r,t[0]==='+'?n:-Math.abs(n)); }})); });
   const extra=h('div',{class:'mv-cb-more'},
     recLinhas.length?h('div',{},...recLinhas):null,
+    typeof cbAcoesExtra==='function'?cbAcoesExtra(x):null,
     h('div',{class:'row wrapf'}, h('span',{class:'hint'},'Marcas:'), marcasBtns),
     h('div',{class:'row wrapf'}, h('span',{class:'hint'},'Condições:'), condBtns),
     ataques,
@@ -385,7 +388,7 @@ function combateView(){
   return h('div',{},
     card('Iniciativa'+(cur?' — vez de '+cur.name:''),
       'Toque nos números para editar. HP aceita 7 (dano), +5 (cura), =12 (definir). Atalhos: N próximo · P anterior.',
-      null, topo, add, lista),
+      null, topo, add, typeof cbPainelUsar==='function'?cbPainelUsar():null, lista),
     card('Registro do combate',null,null, log));
 }
 

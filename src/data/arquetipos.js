@@ -47,7 +47,11 @@ function sanitizarUsoHab(ab){
      area/teste/alcance: alcance, forma da área e teste de resistência · invoc: criatura invocada (cartão estilizado na ficha) */
   const base={on:false,modo:'instantaneo',custoId:'',custo:'',alvoId:'',formula:'',texto:'',
     tipo:'',aplicaEm:'',alcance:'',alvos:'',tipoDano:'',duracao:'',extras:[],condId:'',condEm:'alvo',
-    area:{forma:'',tam:''},teste:{attr:'',cd:'',sucesso:'metade'},invoc:null};
+    area:{forma:'',tam:''},teste:{attr:'',cd:'',sucesso:'metade'},invoc:null,
+    /* conjuração (2026-10-20): tempo de execução, concentração, ritual, componentes, círculo/nível da magia,
+       rolagem de ataque contra a Defesa do alvo e "aumentar" (mais potência pagando mais custo) */
+    execucao:'',concentracao:false,ritual:false,componentes:'',circulo:0,escola:'',repete:false,
+    ataque:{on:false,bonus:''},aumenta:{formula:'',custo:'',max:''}};
   ab.uso=Object.assign({},base,(ab.uso&&typeof ab.uso==='object')?ab.uso:{});
   if(ab.uso.modo!=='ativa') ab.uso.modo='instantaneo';
   const u=ab.uso;
@@ -56,6 +60,14 @@ function sanitizarUsoHab(ab){
   if(!u.area||typeof u.area!=='object') u.area={forma:'',tam:''};
   if(!u.teste||typeof u.teste!=='object') u.teste={attr:'',cd:'',sucesso:'metade'};
   if(u.invoc&&typeof u.invoc!=='object') u.invoc=null;
+  if(!u.ataque||typeof u.ataque!=='object') u.ataque={on:false,bonus:''};
+  u.ataque.on=!!u.ataque.on; if(typeof u.ataque.bonus!=='string') u.ataque.bonus=String(u.ataque.bonus==null?'':u.ataque.bonus);
+  if(!u.aumenta||typeof u.aumenta!=='object') u.aumenta={formula:'',custo:'',max:''};
+  ['formula','custo','max'].forEach(k=>{ if(typeof u.aumenta[k]!=='string') u.aumenta[k]=String(u.aumenta[k]==null?'':u.aumenta[k]); });
+  u.concentracao=!!u.concentracao; u.ritual=!!u.ritual; u.repete=!!u.repete;
+  u.circulo=Math.max(0,Math.min(20,Number(u.circulo)||0));
+  if(!['','acao','bonus','reacao','livre','movimento','completa','minuto','hora'].includes(u.execucao)) u.execucao='';
+  ['componentes','escola'].forEach(k=>{ if(typeof u[k]!=='string') u[k]=''; });
   if(u.invoc) u.invoc=Object.assign({nome:'Criatura',icone:'🐺',cor:'#8b5cf6',vida:'10',defesa:'12',ataque:'+4',dano:'1d6',mov:'9',qtd:'1',duracao:'',desc:'',estilo:'fera'},u.invoc);
   if(typeof ab.icon!=='string') ab.icon='';
   return ab;

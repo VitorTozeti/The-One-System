@@ -295,6 +295,8 @@ function ligaViewport(vp){
     ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
     if(ptrs.size===2){ const v=viewDe(m); g={t:'pinch',d0:dist(),s0:v.s,c:meio(),vx:v.x,vy:v.y}; return; }
     const te=ev.target.closest('[data-tid]'), v=viewDe(m);
+    /* 📏 régua: arrasta para medir (botão da barra ou segurando Shift) */
+    if((mesa().regua||ev.shiftKey)&&ev.button!==1){ g={t:'regua',p0:paraPct(ev),moved:false,sx:ev.clientX,sy:ev.clientY}; return; }
     if(te&&ev.button!==1){
       const t=achaToken(te.dataset.tid); if(!t) return;
       if(mesa().sel!==t.id) selecionaToken(t.id);
@@ -314,6 +316,7 @@ function ligaViewport(vp){
     const dx=ev.clientX-g.sx, dy=ev.clientY-g.sy;
     if(!g.moved&&Math.hypot(dx,dy)<4) return;
     g.moved=true;
+    if(g.t==='regua'){ reguaDesenha(m,g.p0,paraPct(ev)); return; }
     if(g.t==='pan'){ v.x=g.vx+dx; v.y=g.vy+dy; v.fit=false; aplicaView(); }
     else if(g.t==='tok'){
       const t=achaToken(g.id); if(!t) return;
@@ -327,6 +330,7 @@ function ligaViewport(vp){
     ptrs.delete(ev.pointerId);
     if(ptrs.size<2&&g&&g.t==='pinch') g=null;
     if(ptrs.size>0||!g) return;
+    if(g.t==='regua'){ const el=MT.area&&MT.area.querySelector('.mt-regua'); if(el) setTimeout(()=>el.remove(),2500); g=null; return; }
     if(g.t==='tok'){ g.el.classList.remove('arrastando'); if(g.moved){ persistSoon(); atualizaLateral(); } }
     else if(g.t==='pan'&&!g.moved&&g.fundo&&mesa().sel){ mesa().sel=null; MT.layer.querySelectorAll('.mt-tok.sel').forEach(e=>e.classList.remove('sel')); atualizaLateral(); }
     g=null;
@@ -394,6 +398,7 @@ function mapaView(){
         onchange:e=>{ m.grid.size=Math.max(12,Math.min(300,parseInt(e.target.value)||50)); persistNow(); render(); }})):null,
     m.grid.on?h('button',{class:'btn sm '+(m.grid.snap?'emerald':'ghost'),type:'button',title:'Tokens encaixam no centro da casa (segure Alt para soltar livre)',
       onclick:()=>{ m.grid.snap=!m.grid.snap; persistNow(); render(); }},(m.grid.snap?'✓ ':'')+'Ímã'):null,
+    h('button',{class:'btn sm '+(u.regua?'emerald':'ghost'),type:'button','aria-pressed':u.regua?'true':'false',title:'Arraste no mapa para medir a distância (ou segure Shift e arraste)',onclick:()=>{ u.regua=!u.regua; render(); }},(u.regua?'✓ ':'')+'📏 Régua'),
     h('button',{class:'btn sm danger',type:'button',title:'Excluir este mapa',onclick:async()=>{
       if(await uiConfirm('Excluir o mapa “'+m.name+'” e os '+m.tokens.length+' token(s) dele?',{titulo:'Excluir mapa',okText:'Excluir',perigo:true})) excluirMapa(m); }},'🗑'));
 
@@ -708,4 +713,24 @@ function abrirFichaJogador(refId){
   if(!p.sheet) return showToast('Esse jogador ainda não tem ficha importada.');
   S.ui.verFicha=p.id;
   if(typeof irMtab==='function') irMtab('jogadores'); else render();
+}
+
+/* ---------- 📏 régua de distância ----------
+   Converte o arrasto em casas da grade e em metros pela regra de movimento (1 casa = sys.movimento.quadrado, padrão 1,5 m). */
+function reguaDesenha(m,a,b){
+  if(!MT.area) return;
+  let el=MT.area.querySelector('.mt-regua');
+  const H=mapaH(m), ns='http://www.w3.org/2000/svg';
+  if(!el){ el=document.createElementNS(ns,'svg'); el.setAttribute('class','mt-regua'); el.setAttribute('viewBox','0 0 '+MAPA_W+' '+H);
+    el.innerHTML='<line stroke="#facc15" stroke-width="4" stroke-dasharray="10 6" stroke-linecap="round"/><circle r="7" fill="#facc15"/><circle r="7" fill="#facc15"/><g><rect rx="8" fill="rgba(15,23,42,.88)" stroke="#facc15"/><text fill="#fde68a" font-size="22" font-weight="700" text-anchor="middle"/></g>';
+    MT.area.appendChild(el); }
+  const x1=a.x/100*MAPA_W, y1=a.y/100*H, x2=b.x/100*MAPA_W, y2=b.y/100*H;
+  const casa=(m.grid&&m.grid.size)||50, mv=(S.system&&S.system.movimento)||{};
+  const casas=Math.hypot(x2-x1,y2-y1)/casa, q=mv.quadrado||1.5, un=mv.unidade==='ft'?' ft':' m';
+  const txt=(mv.unidade==='q'?(Math.round(casas*10)/10+' quadrados'):(Math.round(casas*q*10)/10+un+' · '+Math.round(casas)+' casas'));
+  const ln=el.querySelector('line'); ln.setAttribute('x1',x1); ln.setAttribute('y1',y1); ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+  const cs=el.querySelectorAll('circle'); cs[0].setAttribute('cx',x1); cs[0].setAttribute('cy',y1); cs[1].setAttribute('cx',x2); cs[1].setAttribute('cy',y2);
+  const t=el.querySelector('text'), r=el.querySelector('rect'), mx=(x1+x2)/2, my=(y1+y2)/2-18;
+  t.textContent=txt; t.setAttribute('x',mx); t.setAttribute('y',my+8);
+  const w=txt.length*12+20; r.setAttribute('x',mx-w/2); r.setAttribute('y',my-18); r.setAttribute('width',w); r.setAttribute('height',34);
 }

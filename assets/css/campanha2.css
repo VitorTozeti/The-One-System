@@ -1,0 +1,32 @@
+/* ===== Bestiário rápido, técnicas no combate, Missões & Mundo, régua, conjuração (2026-10-20) ===== */
+.best-rapido{display:grid;gap:4px;margin-top:8px;padding:10px;border-radius:10px;background:var(--surf);border:1px dashed var(--line)}
+.sb-extra{margin:10px 0;padding:10px;border-radius:10px;background:var(--surf2,var(--surf));border:1px solid var(--line)}
+.sb-abas{margin-bottom:8px}
+.sb-hab{display:flex;gap:6px;align-items:flex-start}
+.sb-hab>.hab{flex:1;min-width:0}
+.cb-usar{border:2px solid var(--tc,#6366f1);background:color-mix(in srgb,var(--tc,#6366f1) 8%,var(--panel))}
+.cb-usar h3{margin:0}
+.cb-acoes{display:grid;gap:6px;margin:6px 0;padding:6px 8px;border-radius:8px;background:var(--surf)}
+.cb-acoes .btn{border-left:3px solid var(--tc,transparent)}
+/* Missões & Mundo */
+.mundo-arco{border-left:4px solid var(--indigo,#6366f1)}
+.mundo-m{border:1px solid var(--line);border-radius:10px;margin:6px 0;background:var(--surf)}
+.mundo-m.on{padding-bottom:10px}
+.mundo-m>*:not(.mundo-m-cab){margin-left:12px;margin-right:12px}
+.mundo-m-cab{padding:8px 10px;cursor:pointer;align-items:center;gap:8px}
+.mundo-est{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;background:var(--c)}
+.mundo-pista{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0;border-bottom:1px dashed var(--line)}
+.mundo-pista.achada input.in{opacity:.6;text-decoration:line-through}
+.mundo-fac{border-left:6px solid var(--c)}
+.mundo-rep{align-items:center;margin:8px 0}
+.rep-b{width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surf);color:var(--txt);cursor:pointer;font-weight:700}
+.rep-b.on{background:var(--c,#6366f1);color:#fff;border-color:transparent}
+.mundo-ev{padding:4px 0;border-bottom:1px dashed var(--line);gap:8px;align-items:center}
+.mundo-ev.passou{opacity:.5}
+.mundo-ev.hoje{font-weight:700;color:var(--warn-txt,#f59e0b)}
+/* ficha */
+.conc-chip{display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;border-radius:8px;background:color-mix(in srgb,#8b5cf6 15%,transparent);border:1px solid #8b5cf6;font-size:13px}
+.subir-nv{margin-top:6px}
+.uso-sec.conj{border-top:1px dashed var(--line);padding-top:8px}
+/* régua do mapa */
+.mt-regua{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}

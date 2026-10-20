@@ -388,7 +388,8 @@ function recursosInner(sys,d,ctx,b,mode){
         ? h('button',{class:'btn sm ghost',title:'Volta a 0',onclick:()=>setRes(r.id,0,r.max)},'Zerar')
         : h('button',{class:'btn sm danger',onclick:()=>setRes(r.id,r.cur-5,r.max)},'Dano 5'),
       r.contador?null:h('button',{class:'btn sm',title:'Enche até o máximo',onclick:()=>setRes(r.id,r.max,r.max)},'Cheio'),
-      (r.inicio!=null&&r.inicio!==r.max)?h('button',{class:'btn sm ghost',title:'Volta ao valor com que começou',onclick:()=>setRes(r.id,r.inicio,r.max)},'↺ Início'):null):null)));
+      (r.inicio!=null&&r.inicio!==r.max)?h('button',{class:'btn sm ghost',title:'Volta ao valor com que começou',onclick:()=>setRes(r.id,r.inicio,r.max)},'↺ Início'):null,
+      ...(typeof botoesTesteRecurso==='function'&&mode==='play'?botoesTesteRecurso(sys,d,r,setRes):[])):null)));
 }
 /* Inventário: carga + lista de itens do personagem, com equipar/remover e adicionar do catálogo.
    Os controles aparecem também no editor (inertes via pointer-events:none) para o
@@ -633,8 +634,10 @@ function habilidadesInner(sys,ctx,d,mode){
     x.ab.description?h('div',{class:'d'},x.ab.description):null,
     h('div',{class:'lk'},'Requer: '+x.reasons.join(', '))));
   const inv=(d&&typeof invocacoesInner==='function')?invocacoesInner(sys,d):null;
+  const conc=(d&&d.concentrando)?h('div',{class:'conc-chip',role:'status'},'🧠 Concentrando em ',h('b',{},d.concentrando.nome),
+    mode==='play'?h('button',{class:'btn mini ghost',onclick:()=>{ showToast(encerrarConcentracao(sys,d)); render(); }},'encerrar'):null):null;
   if(!active.length&&!locked.length&&!inv) return h('div',{class:'hint'},'Nenhuma habilidade.');
-  return h('div',{}, inv, ...active, ...locked);
+  return h('div',{}, conc, inv, ...active, ...locked);
 }
 function caracteristicasInner(ctx,sys,d,mode){
   const mov=(sys&&typeof movimentoInner==='function')?movimentoInner(sys,d,ctx,mode):null;
@@ -667,13 +670,15 @@ function anotacoesInner(d,mode){
     ? h('textarea',{class:'in',style:{height:'calc(100% - 4px)',minHeight:'40px'},value:d.notes||'',placeholder:'História, inventário, objetivos…',oninput:e=>{d.notes=e.target.value;persist();}})
     : h('div',{class:'hint'}, d.notes||'—');
 }
-function nomeInner(sys,d,ctx,b){
+function nomeInner(sys,d,ctx,b,mode){
   const o=b.opts;
   const sz=o.size==='p'?'15px':o.size==='m'?'18px':'22px';
   const sub=[ctx.eff.cls&&ctx.eff.cls.name, ctx.eff.org&&ctx.eff.org.name, sys.semNiveis?null:levelLabel(sys,d.level)].filter(Boolean).join(' • ');
   return h('div',{style:{textAlign:o.align||'left'}},
     h('div',{class:'sheet-name',style:{fontSize:sz}}, d.name||'Personagem'),
-    o.showSub!==false?h('div',{class:'sheet-sub'},sub):null);
+    o.showSub!==false?h('div',{class:'sheet-sub'},sub):null,
+    (mode==='play'&&!sys.semNiveis&&d.level<(sys.maxLevel||d.level)&&typeof subirNivel==='function')
+      ?h('button',{class:'btn sm emerald subir-nv',title:'Sobe um degrau e mostra tudo o que mudou',onclick:()=>subirNivel(sys,d)},'⬆ Subir para '+levelLabel(sys,d.level+1)):null);
 }
 /* Mostra o que o degrau atual concede, direto da tabela de progressão. */
 function progressaoInner(sys,d){
@@ -741,8 +746,14 @@ function rolarPericia(sys,ctx,s,valor,vd){
   const res=rollExpr(expr+soma,ctx.varsTotal);
   const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
   const crit=nat>=(sys.critNat||20);
-  S.dice.result={livre:true,titulo:s.name+(crit?'  ★ CRÍTICO':'')+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
-    total:res.erro?null:res.total,sub:res.erro?('⚠ '+res.erro):(expr+soma+'   '+textoRolagem(res))};
+  /* graus de sucesso: "abaixo" (d100 <= perícia) usa o próprio valor como alvo; "acima" usa a CD do bloco Dados */
+  const gm=(sys.graus&&sys.graus.on)?sys.graus.modo:null;
+  let total=res.erro?null:res.total;
+  if(gm==='abaixo'&&!res.erro){ const r2=rollExpr(expr,ctx.varsTotal); total=r2.total; res.detalhes=r2.detalhes; }
+  const faces=res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null;
+  const gr=(typeof grauDeSucesso==='function')?grauDeSucesso(sys,total,gm==='abaixo'?valor:S.dice.cd,nat,faces):null;
+  S.dice.result={livre:true,titulo:s.name+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
+    total,sub:res.erro?('⚠ '+res.erro):((gm==='abaixo'?(expr+' ≤ '+valor):(expr+soma+(S.dice.cd?(' vs CD '+S.dice.cd):'')))+'   '+textoRolagem(res))};
   avisaResultado(S.dice.result);
 }
 /* ============ PEÇA 3 — ROLADOR ESTRUTURADO ============
@@ -772,8 +783,9 @@ function dadosInner(sys,ctx,mode){
     const res=rollExpr(expr, varsTotal);
     const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
     const crit=nat>=(sys.critNat||20);
+    const gr=(typeof grauDeSucesso==='function'&&!res.erro)?grauDeSucesso(sys,res.total,dc.cd,nat,res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null):null;
     dc.result={livre:true,
-      titulo:(dc.livre?'Rolagem livre':(attr?attr.name:'Rolagem'))+(crit?'  ★ CRÍTICO':'')+
+      titulo:(dc.livre?'Rolagem livre':(attr?attr.name:'Rolagem'))+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+
              (dc.vd>0?'  (vantagem)':dc.vd<0?'  (desvantagem)':''),
       total:res.erro?null:res.total, sub:res.erro?('⚠ '+res.erro):(expr+'   '+textoRolagem(res))};
     avisaResultado(dc.result);
@@ -794,6 +806,8 @@ function dadosInner(sys,ctx,mode){
             oninput:e=>{dc.expr=e.target.value;persist();},onchange:()=>render()}))
         : field('+ Atributo', attrSel),
       field('Tipo', escSel),
+      (sys.graus&&sys.graus.on)?field(sys.graus.modo==='abaixo'?'Valor-alvo':'CD',h('input',{class:'in',type:'number',style:{width:'72px'},value:dc.cd==null?'':dc.cd,placeholder:'—',
+        title:'Com graus de sucesso ligados, o resultado mostra crítico / sucesso / falha',onchange:e=>{dc.cd=e.target.value===''?null:parseInt(e.target.value);render();}})):null,
       h('button',{class:'btn primary',onclick:roll},'🎲 Rolar')),
     h('div',{class:'row wrapf',style:{marginTop:'6px'}},
       vdBtn(1,'⬆ Vantagem','Rola um dado a mais e pega o maior'),
@@ -1017,7 +1031,7 @@ function imagemInner(sys,b,mode){
 /* ============ Montagem do canvas ============ */
 function blockInner(sys,d,ctx,b,mode){
   switch(b.key){
-    case 'nome':            return nomeInner(sys,d,ctx,b);
+    case 'nome':            return nomeInner(sys,d,ctx,b,mode);
     case 'foto':            return fotoInner(sys,d,b,mode);
     case 'atributos':       return statsInner(sys,ctx,b,'atributos');
     case 'valores':         return statsInner(sys,ctx,b,'valores');

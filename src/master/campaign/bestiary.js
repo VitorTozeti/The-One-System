@@ -51,8 +51,8 @@ function inimigosInner(){
     h('span',{class:'hint'},'Criar já na medida do seu sistema:'),
     ...MODELOS_INIMIGO.map(m=>h('button',{class:'chip',type:'button',title:m.d+' Atributos escalam entre o valor inicial e o máximo do sistema; PV pela fórmula.',onclick:()=>novo(m)},m.ic+' '+m.n)));
   return h('div',{},
-    card('Inimigos',lista.length+' criatura(s). Atributos, PV, recursos do sistema e ataques roláveis.',
-      h('button',{class:'btn primary', onclick:()=>novo(null)},'+ Novo inimigo'), modelos),
+    card('Inimigos',lista.length+' criatura(s). Atributos, PV, recursos do sistema, ataques e técnicas roláveis.',
+      h('button',{class:'btn primary', onclick:()=>novo(null)},'+ Novo inimigo'), criacaoRapidaInimigo()),
     lista.length?h('div',{},barra,tagsBar):null,
     lista.length?(vis.length?h('div',{class:'best-grid'}, cards):h('div',{class:'pj-empty'},'Nenhum inimigo bate com a busca/filtro.')):h('div',{class:'pj-empty'},'Nenhum inimigo ainda. Use um modelo acima para começar já com números coerentes.'));
 }
@@ -79,7 +79,7 @@ function statblockCard(sys, sb){
       h('div',{class:'row wrapf', style:{alignItems:'center'}}, imgBtn(sb),
         h('div',{style:{flex:'1',minWidth:'120px'}},
           h('div',{style:{fontWeight:'700'}},sb.name),
-          h('div',{class:'hint'},(rv?rv.name:'PV')+' '+sb.hpMax+(sb.defesa?(' · Defesa '+sb.defesa):'')+' · '+(sb.ataques.length)+' ataque(s)'+((sb.tags||[]).length?(' · '+sb.tags.join(', ')):''))),
+          h('div',{class:'hint'},(rv?rv.name:'PV')+' '+sb.hpMax+(sb.defesa?(' · Defesa '+sb.defesa):'')+' · '+(sb.ataques.length)+' ataque(s)'+(sbResumoExtra(sb)?(' · '+sbResumoExtra(sb)):'')+((sb.tags||[]).length?(' · '+sb.tags.join(', ')):''))),
         ...(sb.ataques[0]?[h('button',{class:'btn sm primary',title:'Rola '+sb.ataques[0].nome+' (acerto e dano)',onclick:()=>rolarAtaque(sb,sb.ataques[0])},'🎲 '+sb.ataques[0].nome)]:[]),
         ...botoes,
         h('button',{class:'btn ghost sm', title:'Abrir para editar', onclick:()=>{ ui.bestAberto[sb.id]=true; render(); }},'▾')));
@@ -134,7 +134,7 @@ function statblockCard(sys, sb){
       onchange:e=>{sb.conds=e.target.value.split(',').map(s=>s.trim()).filter(Boolean);render();}})));
   const notas=field('Notas', h('textarea',{class:'in', rows:'2', onchange:e=>{sb.notes=e.target.value;render();}}, sb.notes||''));
 
-  return h('div',{class:'best-card', id:'bx-'+sb.id}, head, vida, calcVida?h('div',{style:{margin:'4px 0'}},calcVida):null, attrs, recursos, ataques, meta, notas, notasLigadas('enemy',sb.id));
+  return h('div',{class:'best-card', id:'bx-'+sb.id}, head, vida, calcVida?h('div',{style:{margin:'4px 0'}},calcVida):null, attrs, recursos, ataques, statblockExtras(sys,sb), meta, notas, notasLigadas('enemy',sb.id));
 }
 function rolarAtaque(sb, at){
   const vars={}; (S.system.attributes||[]).forEach(a=>{ vars[a.name]=sb.attrs[a.id]||0; });
@@ -166,7 +166,9 @@ function npcCard(np){
     h('div',{class:'row wrapf'},
       field('Papel', h('input',{class:'in', style:{flex:'1'}, placeholder:'ferreiro, chefe…', value:np.papel, onchange:e=>{np.papel=e.target.value;render();}})),
       field('Local', h('input',{class:'in', style:{flex:'1'}, value:np.local, onchange:e=>{np.local=e.target.value;render();}})),
-      field('Relação', relSel)),
+      field('Relação', relSel),
+      (S.campaign.faccoes||[]).length?field('Facção', h('select',{class:'in', onchange:e=>{np.faccaoId=e.target.value;render();}},
+        h('option',{value:''},'—'), ...S.campaign.faccoes.map(f=>h('option',{value:f.id,selected:np.faccaoId===f.id},f.ic+' '+f.nome)))):null),
     field('Personalidade', h('input',{class:'in', value:np.personalidade, placeholder:'traços, jeito de falar…', onchange:e=>{np.personalidade=e.target.value;render();}})),
     field('Notas', h('textarea',{class:'in', rows:'2', onchange:e=>{np.notes=e.target.value;render();}}, np.notes||'')),
     notasLigadas('npc',np.id));

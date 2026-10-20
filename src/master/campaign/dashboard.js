@@ -20,10 +20,11 @@ const MTAB_META=[
   {k:'notas',     ic:'📓', nome:'Notas'},
   {k:'dados',     ic:'🎲', nome:'Dados'},
   {k:'ferramentas',ic:'🧰', nome:'Ferramentas'},
+  {k:'mundo',     ic:'📜', nome:'Missões & Mundo'},
 ];
 /* quais seções pertencem a cada lado */
 const MLEFT =['painel','sistema','jogadores','bestiario','itens'];
-const MRIGHT=['mapa','combate','diario','notas','dados','ferramentas'];
+const MRIGHT=['mapa','combate','diario','notas','dados','ferramentas','mundo'];
 function metaOf(k){ return MTAB_META.find(t=>t.k===k); }
 function sideOf(k){ return MRIGHT.includes(k)?'R':'L'; }
 
@@ -65,6 +66,7 @@ function secView(k){
     case 'combate':   return combateView();            /* initiative.js */
     case 'diario':    return diarioView();             /* sessions.js */
     case 'ferramentas': return ferramentasView();      /* table-tools.js */
+    case 'mundo':     return mundoView();              /* mundo.js */
     case 'sistema':   return mestreView();            /* editor de sistema existente */
     case 'painel':    return painelView();
     default:          return painelView();
@@ -81,6 +83,7 @@ function tabBadge(k){
   if(k==='combate'&&c.combat&&c.combat.on) return 'R'+c.combat.round;
   if(k==='diario'&&c.sessions.length) return c.sessions.length;
   if(k==='notas'&&(c.notebook.length+c.handouts.length)) return c.notebook.length+c.handouts.length;
+  if(k==='mundo'&&(c.missoes||[]).some(m=>m.estado==='ativa')) return (c.missoes||[]).filter(m=>m.estado==='ativa').length;
   return null;
 }
 

@@ -10,11 +10,31 @@
    Todo efeito diz em qual canal mexe. */
 function rolarDado(faces){ return 1+Math.floor(Math.random()*faces); }
 const DICE_RE=/(\d*)d(\d+)(?:(kh|kl|dh|dl)(\d+))?/gi;
+/* Quantidade de dados por fórmula: "(1 + piso(Nível / 4))d6" ou "(Nível)d8" — a parte entre
+   parênteses colada no "d" vira um número antes de rolar (truques que crescem, magia aumentada). */
+function expandeDadosDinamicos(expr, vars){
+  let s=String(expr==null?'':expr), out='', i=0;
+  /* procura ")d<faces>" e volta até o "(" que casa (aceita parênteses aninhados) */
+  const re=/\)\s*d(\d+)/g; let m;
+  while((m=re.exec(s))){
+    const fim=m.index; let nivel=0, ini=-1;
+    for(let k=fim;k>=0;k--){ if(s[k]===')') nivel++; else if(s[k]==='('){ nivel--; if(nivel===0){ ini=k; break; } } }
+    if(ini<0) continue;
+    if(ini>0&&/[A-Za-zÀ-ÿ_]/.test(s[ini-1])) continue;   /* era chamada de função: piso(...)d6 não se expande */
+    const n=evalFormula(s.slice(ini+1,fim),vars||{});
+    if(Number.isNaN(n)) continue;
+    const q=Math.max(0,Math.min(300,Math.floor(n)));
+    const troca=q===0?'0':(q+'d'+m[1]);
+    s=s.slice(0,ini)+troca+s.slice(m.index+m[0].length);
+    re.lastIndex=ini+troca.length;
+  }
+  return s;
+}
 /* Resolve os termos de dado de uma expressão e devolve total + detalhamento. */
 function rollExpr(expr, vars, opts){
   opts=opts||{};
   const detalhes=[]; let erro=null;
-  const resolvida=String(expr==null?'':expr).replace(DICE_RE,(m,q,f,keep,k)=>{
+  const resolvida=expandeDadosDinamicos(expr,vars).replace(DICE_RE,(m,q,f,keep,k)=>{
     let qtd=Math.max(1,parseInt(q||'1')||1);
     const faces=Math.max(2,parseInt(f)||2);
     /* CRÍTICO: multiplica só a QUANTIDADE DE DADOS, nunca o modificador fixo. */

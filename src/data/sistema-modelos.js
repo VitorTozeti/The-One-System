@@ -104,5 +104,6 @@ function construirSistema(k, cfg){
     attrMode:'direto', modFormula:'(V - 10) / 2',
     rollBase:m.rollBase,
     attributes:A, resources:R, skills:K, classes:grupo(m.cls), origins:grupo(m.ori) };
+  if(typeof m.pos==='function'){ sanitizeSystem(sys); m.pos(sys); }   /* ajustes dos modelos inspirados (regras-extra.js) */
   return sanitizeSystem(sys);
 }
