@@ -57,7 +57,8 @@ function recursoEditor(sys,r,sampleVars){
         onclick:()=>{ r.teste=r.teste||{}; r.teste.on=!r.teste.on; render(); }},((r.teste||{}).on?'✓ ':'')+'😱 Teste e perda X/Y'):null,
       eValor?h('button',{class:'btn sm '+(r.ehDefesa?'emerald':'ghost'),type:'button','aria-pressed':r.ehDefesa?'true':'false',
         title:'Efeitos de “+N de defesa” (técnicas, itens, código) somam neste valor. Já vale sozinho para recursos chamados Defesa ou CA.',
-        onclick:()=>{r.ehDefesa=!r.ehDefesa;render();}},(r.ehDefesa?'✓ ':'')+'🛡 É a Defesa'):null),
+        onclick:()=>{r.ehDefesa=!r.ehDefesa;render();}},(r.ehDefesa?'✓ ':'')+'🛡 É a Defesa'):null,
+      typeof botoesVisualRecurso==='function'?botoesVisualRecurso(r):null),
     botoes:mdBotoes(sys.resources,r,'recurso',
       ()=>{ const c=clonarComIds(r); c.name=r.name+' (cópia)'; sys.resources.splice(sys.resources.indexOf(r)+1,0,c); S.ui.resSel=c.id; render(); },
       ()=>comDesfazer('Recurso “'+(r.name||'sem nome')+'” excluído',()=>{ sys.resources.splice(sys.resources.indexOf(r),1);

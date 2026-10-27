@@ -159,19 +159,26 @@ function tabTags(sys){
 const ESTILOS_ROLAGEM=[
   {n:'d20 + bônus',ex:'D&D, Tormenta, F&M',f:s=>{ s.rollMode='soma'; s.rollBase='1d20'; s.faixas.on=false; s.graus.on=false; }},
   {n:'2d6 em faixas',ex:'Powered by the Apocalypse',f:s=>{ s.rollMode='soma'; s.rollBase='2d6'; s.faixas={on:true,lista:FAIXAS_PRONTAS.pbta.l.map(x=>({...x}))}; s.graus.on=false; }},
-  {n:'Dados Fate',ex:'Fate, Fate Acelerado',f:s=>{ s.rollMode='soma'; s.rollBase='4dF'; s.faixas={on:true,lista:FAIXAS_PRONTAS.fate.l.map(x=>({...x}))}; s.graus.on=false; }},
+  {n:'Dados Fate',ex:'Fate (com aspectos e estresse)',f:s=>{ s.rollMode='soma'; s.rollBase='4dF'; s.faixas={on:true,lista:FAIXAS_PRONTAS.fate.l.map(x=>({...x}))}; s.graus.on=false;
+    const pd=garantirRecursoVisual(s,'Pontos de Destino',3,'barra','#eab308','🪙'); pd.contador=false; pd.start=''; pd.recharge={trig:'longo',amt:'tudo',formula:''};
+    garantirRecursoVisual(s,'Estresse físico',3,'caixas','#ef4444','💢'); garantirRecursoVisual(s,'Estresse mental',3,'caixas','#8b5cf6','🧠');
+    sanitizarAspectos(s); Object.assign(s.aspectos,{on:true,nome:'Aspectos',bonus:2,livres:3,recursoId:pd.id,
+      fixos:[{id:uid(),nome:'Conceito'},{id:uid(),nome:'Dificuldade'},{id:uid(),nome:'Consequência leve (2)'},{id:uid(),nome:'Consequência moderada (4)'},{id:uid(),nome:'Consequência grave (6)'}]});
+    garantirBlocoFicha(s,'aspectos'); }},
   {n:'Pool de d10, conta 6+',ex:'Vampiro V5, Mundo das Trevas',f:s=>{ s.rollMode='sucessos'; s.poolFaces=10; s.sucAlvo=6; s.sucExplode=false; s.faixas={on:true,lista:FAIXAS_PRONTAS.sucessos.l.map(x=>({...x}))}; s.graus.on=false; }},
   {n:'Pool de d6, conta 5+',ex:'Shadowrun',f:s=>{ s.rollMode='sucessos'; s.poolFaces=6; s.sucAlvo=5; s.sucExplode=false; s.faixas={on:true,lista:FAIXAS_PRONTAS.sucessos.l.map(x=>({...x}))}; s.graus.on=false; }},
-  {n:'Maior d6 do pool',ex:'Blades in the Dark',f:s=>{ s.rollMode='pool'; s.poolFaces=6; s.faixas={on:true,lista:FAIXAS_PRONTAS.blades.l.map(x=>({...x}))}; s.graus.on=false; }},
+  {n:'Maior d6 do pool',ex:'Blades in the Dark (com estresse e relógio)',f:s=>{ s.rollMode='pool'; s.poolFaces=6; s.faixas={on:true,lista:FAIXAS_PRONTAS.blades.l.map(x=>({...x}))}; s.graus.on=false;
+    garantirRecursoVisual(s,'Estresse',9,'caixas','#ef4444','💢'); garantirRecursoVisual(s,'Trauma',4,'caixas','#7c2d12','🩸');
+    garantirRecursoVisual(s,'Relógio pessoal',4,'relogio','#f59e0b','🕒'); }},
   {n:'Dado que explode',ex:'Savage Worlds (alvo 4)',f:s=>{ s.rollMode='soma'; s.rollBase='1d6!'; s.faixas={on:true,lista:[{ate:3,ic:'❌',t:'Falha'},{ate:7,ic:'✅',t:'Sucesso'},{ate:11,ic:'🌟',t:'Sucesso com 1 ampliação'},{ate:null,ic:'🌟',t:'2+ ampliações'}]}; s.graus.on=false; }},
   {n:'3d6 ≤ perícia',ex:'GURPS',f:s=>{ s.rollMode='soma'; s.rollBase='3d6'; s.faixas.on=false; Object.assign(s.graus,{on:true,modo:'sob',critSob:4,desSob:17}); }},
   {n:'d100 ≤ perícia %',ex:'Call of Cthulhu, BRP',f:s=>{ s.rollMode='soma'; s.rollBase='1d100'; s.faixas.on=false; Object.assign(s.graus,{on:true,modo:'abaixo'}); }},
 ];
 function cardEstilosDeRolagem(sys){
   const aplicar=st=>{
-    const snap=JSON.stringify({rollMode:sys.rollMode,rollBase:sys.rollBase,poolFaces:sys.poolFaces,sucAlvo:sys.sucAlvo,sucExplode:sys.sucExplode,faixas:sys.faixas,graus:sys.graus});
+    const snap=JSON.stringify(sys);   /* inteiro: Fate/Blades também criam recursos e blocos na ficha */
     sanitizarGraus(sys); sanitizarFaixas(sys); st.f(sys); sanitizarFaixas(sys); render();
-    uiToastUndo('Estilo “'+st.n+'” aplicado',()=>{ Object.assign(sys,JSON.parse(snap)); render(); },10000);
+    uiToastUndo('Estilo “'+st.n+'” aplicado',()=>{ S.system=migrateSystem(JSON.parse(snap)); render(); },10000);
   };
   return card('🎲 Estilos prontos','Não sabe por onde começar? Escolha o jeito de rolar do seu jogo — dá para ajustar tudo depois.',null,
     h('div',{class:'estilos-rol'}, ...ESTILOS_ROLAGEM.map(st=>h('button',{type:'button',class:'btn ghost estilo-rol',onclick:()=>aplicar(st)},
@@ -212,6 +219,7 @@ function tabDados(sys){
                     onclick:()=>{sys.sucExplode=!sys.sucExplode;render();}},(sys.sucExplode?'✓ ':'')+'Dado no máximo rola de novo (explode)'))),
       h('div',{class:'hint',style:{marginTop:'10px'}},'Prévia: ', h('span',{class:'tg-fx'},exemplo))),
     typeof cardFaixas==='function'?cardFaixas(sys):null,
+    typeof cardAspectos==='function'?cardAspectos(sys):null,
     (typeof critD20==='function'&&!critD20(sys))
     ? card('Crítico',(sys.faixas&&sys.faixas.on)||sys.rollMode==='sucessos'?'Aqui o resultado ganha nome pelas Faixas de resultado acima — não existe “natural 20”.'
         :/dF/i.test(sys.rollBase||'')?'Dados Fate não têm “natural 20”: use as Faixas de resultado acima.'

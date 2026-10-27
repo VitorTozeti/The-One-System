@@ -26,6 +26,7 @@ const BLOCK_TYPES = {
   ataques:        {label:'Ataques & Armas',         title:'Ataques',      icon:'⚔', multi:false, w:420, h:200},
   tecnicas:       {label:'Técnicas Autorais',       title:'Técnicas',     icon:'🌀', multi:false, w:420, h:220},
   escolhas:       {label:'Escolhas (trilhas/talentos)', title:'Escolhas', icon:'🌿', multi:false, w:410, h:180},
+  aspectos:       {label:'Aspectos (frases invocáveis)', title:'Aspectos', icon:'🏷', multi:false, w:420, h:220},
   /* --- decorativos: livres, repetíveis, sem dados --- */
   texto:          {label:'Texto livre',            title:'Texto',        icon:'🔤', multi:true,  w:300, h:60},
   divisor:        {label:'Divisor / Linha',        title:'',             icon:'➖', multi:true,  w:400, h:20},
@@ -350,6 +351,7 @@ function sanitizeSystem(sys){
     /* campos novos: "começa em", contador e gatilhos de evento (validados: o arquivo pode vir de fora) */
     r.start=typeof r.start==='string'?r.start.slice(0,120):(typeof r.start==='number'?String(r.start):'');
     r.contador=!!r.contador;
+    r.visual=['caixas','relogio'].includes(r.visual)?r.visual:'barra';   /* desenho na ficha (aspectos-caixas.js) */
     r.gatilhos=(Array.isArray(r.gatilhos)?r.gatilhos:[]).filter(g=>g&&typeof g==='object').slice(0,20).map(g=>({
       id:typeof g.id==='string'?g.id:uid(), quando:g.quando==='cheio'?'cheio':'zero',
       acoes:(Array.isArray(g.acoes)?g.acoes:[]).filter(a=>a&&typeof a==='object').slice(0,20).map(a=>({
@@ -360,6 +362,7 @@ function sanitizeSystem(sys){
   if(typeof sanitizeRegrasGerais==='function') sanitizeRegrasGerais(sys);   /* morte e movimento (regras-gerais.js) */
   if(typeof sanitizeGanhos==='function') sanitizeGanhos(sys);   /* regras de ganho por nível (progressao.js) */
   if(typeof sanitizePoderes==='function') sanitizePoderes(sys);   /* sistemas de poder (poderes.js) */
+  if(typeof sanitizarAspectos==='function') sanitizarAspectos(sys);
   if(typeof sanitizarGraus==='function'){ sanitizarGraus(sys); (sys.resources||[]).forEach(sanitizarTesteRec); }   /* regras-extra.js */
   /* aparência do papel (editor reformado) */
   if(sys.sheet&&typeof sys.sheet==='object'){
@@ -583,6 +586,7 @@ function sanitizeDraft(d,sys){
   if(!d.choices||typeof d.choices!=='object') d.choices={};
   if(!d.skillTier||typeof d.skillTier!=='object') d.skillTier={};
   if(!d.pct||typeof d.pct!=='object'||Array.isArray(d.pct)) d.pct={};
+  if(typeof sanitizarAspectosFicha==='function') sanitizarAspectosFicha(d);
   if(!Array.isArray(d.conditions)) d.conditions=[];
   if(!Array.isArray(d.techniques)) d.techniques=[];
   if(!Array.isArray(d.classTechs)) d.classTechs=[];

@@ -384,7 +384,12 @@ function recursosInner(sys,d,ctx,b,mode){
           onclick:()=>aplicarDescanso('longo')},'🌙 Descanso longo'):null)
     : null;
   const painelMorte=(typeof morteInner==='function')?morteInner(sys,d,ctx,mode):null;
-  return h('div',{}, painelMorte, barraDescanso, ...bars.map(r=>h('div',{style:{marginBottom:'12px'}},
+  return h('div',{}, painelMorte, barraDescanso, ...bars.map(r=>visualDoRecurso(r)!=='barra'
+    ? h('div',{style:{marginBottom:'12px'}},
+        h('div',{class:'row between',style:{fontSize:'13px',marginBottom:'4px'}},
+          h('span',{style:{fontWeight:'600'}},(r.icon?r.icon+' ':'')+r.name), h('span',{class:'hint'},r.cur+' / '+(Number.isNaN(r.max)?'—':r.max))),
+        visualDoRecurso(r)==='caixas'?caixasInner(r,setRes,ctrl):relogioInner(r,setRes,ctrl))
+    : h('div',{style:{marginBottom:'12px'}},
     h('div',{class:'row between',style:{fontSize:'13px',marginBottom:'4px'}},
       h('span',{style:{fontWeight:'600'}},(r.granted?(r.icon||'✨')+' ':'')+r.name,
         (r.granted&&r.fontes&&r.fontes.length?h('span',{class:'hint',style:{marginLeft:'6px',fontWeight:'400'}},'· '+r.fontes.join(', ')):null),
@@ -792,6 +797,7 @@ function rolarPericia(sys,ctx,s,valor,vd){
   }
   const faces=res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null;
   const sob=gm==='abaixo'||gm==='sob';
+  if(typeof guardarRolagem==='function') guardarRolagem(()=>rolarPericia(sys,ctx,s,valor,vd));
   const gr=rotuloResultado(sys,total,sob?valor:S.dice.cd,gm==='abaixo'?total:nat,faces);
   S.dice.result={livre:true,titulo:s.name+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
     total,sub:res.erro?('⚠ '+res.erro):((sob?(expr+' ≤ '+valor):(expr+soma+(S.dice.cd?(' vs CD '+S.dice.cd):'')))+'   '+textoRolagem(res))};
@@ -819,6 +825,7 @@ function dadosInner(sys,ctx,mode){
     return {expr, attr, bonus};
   };
   const roll=()=>{
+    if(typeof guardarRolagem==='function') guardarRolagem(roll);
     const {expr,attr}=montar();
     const res=rollExpr(expr, varsTotal);
     const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
@@ -1087,6 +1094,7 @@ function blockInner(sys,d,ctx,b,mode){
     case 'ataques':         return ataquesInner(sys,d,ctx,b,mode);
     case 'tecnicas':        return tecnicasInner(sys,d,ctx,b,mode);
     case 'escolhas':        return escolhasInner(sys,d,ctx);
+    case 'aspectos':        return aspectosInner(sys,d,ctx,b,mode);
     case 'texto':           return textoInner(b);
     case 'divisor':         return divisorInner(b);
     case 'forma':           return formaInner(b);

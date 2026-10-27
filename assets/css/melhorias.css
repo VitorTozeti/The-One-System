@@ -63,3 +63,14 @@
 .estilos-rol{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .estilo-rol{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal}
 .faixa-lin{gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
+
+/* caixas marcáveis, relógio e aspectos (aspectos-caixas.js) */
+.cx-linha{display:flex;flex-wrap:wrap;gap:6px}
+.cx{width:26px;height:26px;border:2px solid;border-radius:6px;background:transparent;color:#fff;font-weight:700;cursor:pointer;padding:0;line-height:1}
+.cx:disabled{cursor:default}
+.relogio-box{display:flex;gap:12px;align-items:center}
+.relogio-btn{background:none;border:0;padding:0;cursor:pointer;color:var(--muted)}
+.relogio{width:64px;height:64px;display:block}
+.asp-lin{margin-bottom:8px}
+.asp-rot{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.asp-in{flex:1;min-width:0}
