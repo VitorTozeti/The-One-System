@@ -765,17 +765,25 @@ function avisaResultado(r){
   if(!r) return render();
   showToast('🎲 '+(r.titulo||'Rolagem')+': '+(r.total==null?'—':r.total)+(r.sub&&r.total!=null&&String(r.sub).length<60?('  ('+r.sub+')'):''),4500);
 }
+/* Crítico por "dado natural ≥ X" só faz sentido em dado + bônus sem graus de rolar-abaixo. */
+function critD20(sys){
+  const g=sys.graus; if(g&&g.on&&(g.modo==='abaixo'||g.modo==='sob')) return false;
+  if(sys.faixas&&sys.faixas.on) return false;                    /* faixas já dão nome ao resultado */
+  if(sys.rollMode==='soma'&&/dF/i.test(sys.rollBase||'')) return false;   /* dado Fate não tem "natural 20" */
+  return sys.rollMode!=='sucessos';
+}
 /* Rola uma perícia com um clique: dado base do sistema + valor da perícia (já com atributo e proficiência). */
 function rolarPericia(sys,ctx,s,valor,vd){
   const dmDados=diceModDe(ctx.eff,'pericia');
-  let expr=sys.rollMode==='pool'?poolExpr(valor,sys.poolFaces||20):(sys.rollBase||'1d20');
-  expr=aplicarVD(aplicarModDados(expr,dmDados),vd||0);
-  const soma=sys.rollMode==='pool'?'':(valor?(' + '+valor):'');
+  const gm=(sys.graus&&sys.graus.on)?sys.graus.modo:null;
+  const md=exprDoModo(sys,valor);
+  let expr=aplicarVD(aplicarModDados(md.expr,dmDados),vd||0);
+  /* "sob" (rolar ≤ valor): o valor é o alvo, não soma na rolagem */
+  const soma=gm==='sob'?'':md.soma;
   const res=rollExpr(expr+soma,ctx.varsTotal);
   const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
-  const crit=!(sys.graus&&sys.graus.on&&sys.graus.modo==='abaixo')&&nat>=(sys.critNat||20);
-  /* graus de sucesso: "abaixo" (d100 <= perícia) usa o próprio valor como alvo; "acima" usa a CD do bloco Dados */
-  const gm=(sys.graus&&sys.graus.on)?sys.graus.modo:null;
+  const crit=critD20(sys)&&nat>=(sys.critNat||20);
+  /* graus de sucesso: "abaixo" (d100 <= perícia) usa o % como alvo; "sob" usa o valor; "acima" usa a CD do bloco Dados */
   let total=res.erro?null:res.total;
   if(gm==='abaixo'){
     /* d100 contra o % da perícia — sem somar bônus e sem crítico de d20 */
@@ -783,9 +791,10 @@ function rolarPericia(sys,ctx,s,valor,vd){
     const r2=rollExpr(expr,{}); total=r2.erro?null:r2.total; res.detalhes=r2.detalhes; res.erro=r2.erro;
   }
   const faces=res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null;
-  const gr=(typeof grauDeSucesso==='function')?grauDeSucesso(sys,total,gm==='abaixo'?valor:S.dice.cd,gm==='abaixo'?total:nat,faces):null;
+  const sob=gm==='abaixo'||gm==='sob';
+  const gr=rotuloResultado(sys,total,sob?valor:S.dice.cd,gm==='abaixo'?total:nat,faces);
   S.dice.result={livre:true,titulo:s.name+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
-    total,sub:res.erro?('⚠ '+res.erro):((gm==='abaixo'?(expr+' ≤ '+valor):(expr+soma+(S.dice.cd?(' vs CD '+S.dice.cd):'')))+'   '+textoRolagem(res))};
+    total,sub:res.erro?('⚠ '+res.erro):((sob?(expr+' ≤ '+valor):(expr+soma+(S.dice.cd?(' vs CD '+S.dice.cd):'')))+'   '+textoRolagem(res))};
   avisaResultado(S.dice.result);
 }
 /* ============ PEÇA 3 — ROLADOR ESTRUTURADO ============
@@ -804,8 +813,7 @@ function dadosInner(sys,ctx,mode){
     const bonus=attr?(varsTotal[attr.name]||0):0;
     let expr;
     if(dc.livre&&(dc.expr||'').trim()) expr=dc.expr;
-    else if(sys.rollMode==='pool') expr=poolExpr(bonus, sys.poolFaces||20);
-    else expr=(sys.rollBase||'1d20')+(bonus?(' + '+bonus):'');
+    else { const md=exprDoModo(sys,bonus); expr=md.expr+(sys.graus&&sys.graus.on&&sys.graus.modo==='sob'?'':md.soma); }
     expr=aplicarModDados(expr,dmDados);
     expr=aplicarVD(expr,dc.vd);
     return {expr, attr, bonus};
@@ -814,8 +822,8 @@ function dadosInner(sys,ctx,mode){
     const {expr,attr}=montar();
     const res=rollExpr(expr, varsTotal);
     const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
-    const crit=nat>=(sys.critNat||20);
-    const gr=(typeof grauDeSucesso==='function'&&!res.erro)?grauDeSucesso(sys,res.total,dc.cd,nat,res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null):null;
+    const crit=critD20(sys)&&nat>=(sys.critNat||20);
+    const gr=res.erro?null:rotuloResultado(sys,res.total,dc.cd,nat,res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null);
     dc.result={livre:true,
       titulo:(dc.livre?'Rolagem livre':(attr?attr.name:'Rolagem'))+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+
              (dc.vd>0?'  (vantagem)':dc.vd<0?'  (desvantagem)':''),
@@ -838,7 +846,7 @@ function dadosInner(sys,ctx,mode){
             oninput:e=>{dc.expr=e.target.value;persist();},onchange:()=>render()}))
         : field('+ Atributo', attrSel),
       field('Tipo', escSel),
-      (sys.graus&&sys.graus.on)?field(sys.graus.modo==='abaixo'?'Valor-alvo':'CD',h('input',{class:'in',type:'number',style:{width:'72px'},value:dc.cd==null?'':dc.cd,placeholder:'—',
+      (sys.graus&&sys.graus.on)?field(sys.graus.modo==='acima'?'CD':'Valor-alvo',h('input',{class:'in',type:'number',style:{width:'72px'},value:dc.cd==null?'':dc.cd,placeholder:'—',
         title:'Com graus de sucesso ligados, o resultado mostra crítico / sucesso / falha',onchange:e=>{dc.cd=e.target.value===''?null:parseInt(e.target.value);render();}})):null,
       h('button',{class:'btn primary',onclick:roll},'🎲 Rolar')),
     h('div',{class:'row wrapf',style:{marginTop:'6px'}},
@@ -902,14 +910,14 @@ function ataquesInner(sys,d,ctx,b,mode){
   return h('div',{}, ...ats.map(a=>{
     const dmDados=diceModDe(ctx.eff,'ataque');
     const rolar=(vd)=>{
-      let expr=sys.rollMode==='pool' ? poolExpr(a.bonus,sys.poolFaces||20) : (sys.rollBase||'1d20');
-      expr=aplicarModDados(expr,dmDados);
+      const md=exprDoModo(sys,a.bonus);
+      let expr=aplicarModDados(md.expr,dmDados);
       expr=aplicarVD(expr,vd);
-      const somaBonus = sys.rollMode==='pool' ? '' : (' + '+a.bonus);
+      const somaBonus = md.soma;
       const res=rollExpr(expr+somaBonus, ctx.varsTotal);
       /* crítico: dado natural do primeiro termo ≥ faixa da arma */
       const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
-      const crit=nat>=(a.at.critRange||20);
+      const crit=critD20(sys)&&nat>=(a.at.critRange||20);
       const dano=rollExpr(a.at.dano||'0', ctx.varsTotal,
         {crit:crit&&sys.critSoDados, critMult:a.at.critMult||2});
       if(crit && !sys.critSoDados && dano.total!=null) dano.total=dano.total*(a.at.critMult||2);

@@ -122,7 +122,11 @@ function problemasDaAba(sys,k){
     (sys.tagMatrix||[]).forEach(m=>{ if(!m.from||!m.to) p.push('Há uma relação da matriz sem tag de origem ou destino.'); });
   }
   if(k==='dados'){
-    if(sys.rollMode==='soma'&&!/\d*d\d+/i.test(sys.rollBase||'')) p.push('A rolagem base “'+sys.rollBase+'” não tem nenhum dado (ex.: 1d20).');
+    if(sys.rollMode==='soma'){
+      const r=rollExpr(sys.rollBase||'',{});
+      if(r.erro) p.push('Os dados de cada teste (“'+sys.rollBase+'”) têm um erro: '+r.erro);
+      else if(!(r.detalhes||[]).length) p.push('Os dados de cada teste (“'+sys.rollBase+'”) não têm nenhum dado (ex.: 1d20, 2d6, 4dF).');
+    }
   }
   if(k==='tecnicas'&&sys.techAtivo){
     if(!(sys.techTiers||[]).length) p.push('O construtor está ligado sem nenhum tier.');

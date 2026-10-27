@@ -282,7 +282,10 @@ function sanitizeSystem(sys){
   if(typeof sys.sintoniaMax!=='number'||Number.isNaN(sys.sintoniaMax)) sys.sintoniaMax=0;  /* 0 = sem sintonização */
   /* --- peça 3: como o sistema rola. O motor NÃO sabe o nome de nenhum sistema
      (Regra #25): "1d20 + bônus" e "pool de d20" são só configurações. --- */
-  if(!['soma','pool'].includes(sys.rollMode)) sys.rollMode='soma';
+  if(!['soma','pool','sucessos'].includes(sys.rollMode)) sys.rollMode='soma';
+  /* pool de sucessos (Vampiro, Shadowrun): cada dado ≥ sucAlvo conta 1; sucExplode = máximo rola de novo */
+  sys.sucAlvo=Math.max(1,Math.min(1000,parseInt(sys.sucAlvo)||6)); sys.sucExplode=!!sys.sucExplode;
+  if(typeof sanitizarFaixas==='function') sanitizarFaixas(sys);
   if(typeof sys.rollBase!=='string'||!sys.rollBase.trim()) sys.rollBase='1d20';
   if(typeof sys.poolFaces!=='number'||Number.isNaN(sys.poolFaces)) sys.poolFaces=20;
   if(typeof sys.critNat!=='number'||Number.isNaN(sys.critNat)) sys.critNat=20;

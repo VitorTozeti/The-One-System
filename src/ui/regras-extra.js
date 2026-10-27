@@ -9,10 +9,13 @@
    Depende de dice-engine, regras-gerais, livro.js, sistema-modelos.js (tudo chamado em tempo de execução). */
 
 /* ---------------- GRAUS DE SUCESSO ---------------- */
-function grausBase(){ return {on:false,modo:'acima',margem:10,nat:true}; }
+function grausBase(){ return {on:false,modo:'acima',margem:10,nat:true,critSob:4,desSob:17}; }
 function sanitizarGraus(sys){
   sys.graus=Object.assign(grausBase(),(sys.graus&&typeof sys.graus==='object')?sys.graus:{});
-  sys.graus.on=!!sys.graus.on; if(!['acima','abaixo'].includes(sys.graus.modo)) sys.graus.modo='acima';
+  sys.graus.on=!!sys.graus.on; if(!['acima','abaixo','sob'].includes(sys.graus.modo)) sys.graus.modo='acima';
+  /* "sob" (GURPS e afins): rola a expressão base e passa se der ≤ valor; crítico/desastre por limiar */
+  const nI=(v,p)=>{ const n=parseInt(v); return Number.isNaN(n)?p:Math.max(-100,Math.min(1000,n)); };
+  sys.graus.critSob=nI(sys.graus.critSob,4); sys.graus.desSob=nI(sys.graus.desSob,17);
   sys.graus.margem=Math.max(1,Math.min(50,parseInt(sys.graus.margem)||10)); sys.graus.nat=sys.graus.nat!==false;
   return sys.graus;
 }
@@ -27,6 +30,54 @@ function pctDe(sys,d,s){
   const n=(typeof v==='number'&&!Number.isNaN(v))?v:(typeof s.basePct==='number'?s.basePct:20);
   return Math.max(0,Math.min(99,Math.round(n)));
 }
+/* ---------------- FAIXAS DE RESULTADO ----------------
+   Dão nome ao total: PbtA (6- falha · 7–9 parcial · 10+ sucesso), Blades (maior d6), Fate (escada),
+   pool de sucessos (0 = falha). Cada faixa vale "até X"; a última vale "dali pra cima". */
+const FAIXAS_PRONTAS={
+  pbta:{n:'Powered by the Apocalypse (2d6)',l:[{ate:6,ic:'❌',t:'Falha — o mestre faz um movimento'},{ate:9,ic:'⚠️',t:'Sucesso com custo'},{ate:null,ic:'✅',t:'Sucesso total'}]},
+  blades:{n:'Blades in the Dark (maior d6)',l:[{ate:3,ic:'❌',t:'Falha (consequência)'},{ate:5,ic:'⚠️',t:'Sucesso parcial'},{ate:null,ic:'✅',t:'Sucesso total'}]},
+  fate:{n:'Fate (escada de adjetivos)',l:[{ate:-2,ic:'💀',t:'Terrível'},{ate:-1,ic:'❌',t:'Ruim'},{ate:0,ic:'➖',t:'Medíocre'},{ate:1,ic:'✔',t:'Regular'},{ate:2,ic:'✔',t:'Razoável'},{ate:3,ic:'✅',t:'Bom'},{ate:4,ic:'✅',t:'Ótimo'},{ate:5,ic:'🌟',t:'Excelente'},{ate:6,ic:'🌟',t:'Fantástico'},{ate:7,ic:'🌟',t:'Épico'},{ate:null,ic:'🌟',t:'Lendário'}]},
+  sucessos:{n:'Pool de sucessos (0 / 1–2 / 3+)',l:[{ate:0,ic:'❌',t:'Falha'},{ate:2,ic:'✅',t:'Sucesso'},{ate:null,ic:'🌟',t:'Sucesso excepcional'}]},
+};
+function sanitizarFaixas(sys){
+  const f=(sys.faixas&&typeof sys.faixas==='object')?sys.faixas:{};
+  f.on=!!f.on;
+  f.lista=(Array.isArray(f.lista)?f.lista:[]).slice(0,30).map(x=>({
+    ate:(x&&x.ate!==null&&x.ate!==''&&!Number.isNaN(parseInt(x.ate)))?parseInt(x.ate):null,
+    ic:String((x&&x.ic)||'').slice(0,4), t:String((x&&x.t)||'').slice(0,60)}));
+  sys.faixas=f; return f;
+}
+function faixaDe(sys,total){
+  const f=sys.faixas; if(!f||!f.on||!f.lista.length||total==null) return null;
+  const lista=f.lista.slice().sort((a,b)=>(a.ate==null?1e9:a.ate)-(b.ate==null?1e9:b.ate));
+  return lista.find(x=>x.ate==null||total<=x.ate)||lista[lista.length-1];
+}
+/* rótulo único para o resultado: grau (se ligado) senão faixa */
+function cardFaixas(sys){
+  const f=sanitizarFaixas(sys);
+  const usar=k=>{ f.lista=FAIXAS_PRONTAS[k].l.map(x=>({...x})); f.on=true; render(); };
+  const linha=(x,i)=>h('div',{class:'row faixa-lin'},
+    h('input',{class:'in',style:{width:'52px'},value:x.ic,maxlength:'4','aria-label':'Ícone da faixa',oninput:e=>{x.ic=e.target.value;persist();}}),
+    h('span',{class:'hint'},'até'),
+    h('input',{class:'in',type:'number',style:{width:'70px'},value:x.ate==null?'':x.ate,placeholder:'∞','aria-label':'Até qual total',
+      title:'Vazio = “dali pra cima”',onchange:e=>{ const n=parseInt(e.target.value); x.ate=Number.isNaN(n)?null:n; render(); }}),
+    h('input',{class:'in',style:{flex:'1',minWidth:'120px'},value:x.t,maxlength:'60','aria-label':'Nome da faixa',oninput:e=>{x.t=e.target.value;persist();}}),
+    h('button',{class:'btn danger sm',type:'button','aria-label':'Remover faixa',onclick:()=>{f.lista.splice(i,1);render();}},'✕'));
+  const ord=f.lista.map((x,i)=>[x,i]).sort((a,b)=>(a[0].ate==null?1e9:a[0].ate)-(b[0].ate==null?1e9:b[0].ate));
+  return card('📶 Faixas de resultado','Dão nome ao total da rolagem: “7–9 = sucesso com custo”, “0 sucessos = falha”, “+3 = Bom”.',
+    h('button',{class:'btn sm '+(f.on?'emerald':'ghost'),'aria-pressed':f.on?'true':'false',onclick:()=>{f.on=!f.on; if(f.on&&!f.lista.length) f.lista=FAIXAS_PRONTAS.pbta.l.map(x=>({...x})); render();}},(f.on?'✓ Ligado':'Desligado')),
+    f.on?h('div',{},
+      h('div',{class:'row wrapf',style:{marginBottom:'8px'}}, h('span',{class:'hint'},'Prontas:'),
+        ...Object.keys(FAIXAS_PRONTAS).map(k=>h('button',{type:'button',class:'btn sm ghost',onclick:()=>usar(k)},FAIXAS_PRONTAS[k].n))),
+      ...ord.map(([x,i])=>linha(x,i)),
+      h('button',{type:'button',class:'btn sm ghost',style:{marginTop:'6px'},onclick:()=>{f.lista.push({ate:null,ic:'✔',t:'Nova faixa'});render();}},'+ Faixa'),
+      h('div',{class:'hint',style:{marginTop:'6px'}},'Se os Graus de sucesso também estiverem ligados, eles têm prioridade.'))
+    :h('div',{class:'hint'},'Desligado: a rolagem mostra só o número.'));
+}
+function rotuloResultado(sys,total,alvo,nat,faces){
+  const gr=grauDeSucesso(sys,total,alvo,nat,faces); if(gr) return gr;
+  return faixaDe(sys,total);
+}
 function grauDeSucesso(sys,total,alvo,nat,faces){
   const g=sanitizarGraus(sys); if(!g.on||alvo==null||alvo===''||Number.isNaN(Number(alvo))||total==null) return null;
   alvo=Number(alvo);
@@ -37,6 +88,11 @@ function grauDeSucesso(sys,total,alvo,nat,faces){
     if(total<=Math.floor(alvo/2)) return {ic:'✅',t:'Sucesso difícil'};
     if(total<=alvo) return {ic:'✔',t:'Sucesso'};
     return {ic:'❌',t:'Falha'};
+  }
+  if(g.modo==='sob'){
+    if(total<=g.critSob) return {ic:'🌟',t:'Sucesso crítico'};
+    if(total>=g.desSob) return {ic:'💀',t:'Falha crítica'};
+    return total<=alvo?{ic:'✅',t:'Sucesso (margem '+(alvo-total)+')'}:{ic:'❌',t:'Falha (por '+(total-alvo)+')'};
   }
   let k=total>=alvo+g.margem?3:total>=alvo?2:total<=alvo-g.margem?0:1;
   if(g.nat&&faces&&nat===faces) k=Math.min(3,k+1);
@@ -50,7 +106,15 @@ function cardGraus(sys){
     g.on?h('div',{},
       h('div',{class:'row wrapf'},
         h('button',{class:'btn sm '+(g.modo==='acima'?'emerald':'ghost'),onclick:()=>{g.modo='acima';render();}},'d20 contra CD (Pathfinder 2e)'),
-        h('button',{class:'btn sm '+(g.modo==='abaixo'?'emerald':'ghost'),onclick:()=>{g.modo='abaixo'; if(!/d100/.test(sys.rollBase||'')&&sys.rollMode!=='pool'){} render();}},'d100 ≤ perícia (Call of Cthulhu)')),
+        h('button',{class:'btn sm '+(g.modo==='abaixo'?'emerald':'ghost'),onclick:()=>{g.modo='abaixo'; render();}},'d100 ≤ perícia % (Call of Cthulhu)'),
+        h('button',{class:'btn sm '+(g.modo==='sob'?'emerald':'ghost'),onclick:()=>{g.modo='sob'; render();}},'Rolar ≤ valor (GURPS)')),
+      g.modo==='sob'?h('div',{style:{marginTop:'8px'}},
+        h('div',{class:'row wrapf'},
+          h('span',{class:'hint'},'Sucesso crítico se der ≤'),
+          h('input',{class:'in',type:'number',style:{width:'70px'},value:g.critSob,onchange:e=>{const n=parseInt(e.target.value); if(!Number.isNaN(n)) g.critSob=n; render();}}),
+          h('span',{class:'hint'},'· falha crítica se der ≥'),
+          h('input',{class:'in',type:'number',style:{width:'70px'},value:g.desSob,onchange:e=>{const n=parseInt(e.target.value); if(!Number.isNaN(n)) g.desSob=n; render();}})),
+        h('div',{class:'hint',style:{marginTop:'6px'}},'Rola os “dados de cada teste” (ex.: 3d6) sem somar bônus; passa se der ≤ valor da perícia. O resultado mostra a margem.')):
       g.modo==='acima'?h('div',{class:'row wrapf',style:{marginTop:'8px'}},h('span',{class:'hint'},'Crítico ao passar/errar a CD por'),
         h('input',{class:'in',type:'number',min:'1',style:{width:'70px'},value:g.margem,onchange:e=>{g.margem=Math.max(1,parseInt(e.target.value)||10);render();}}),
         h('button',{class:'btn sm '+(g.nat?'emerald':'ghost'),onclick:()=>{g.nat=!g.nat;render();}},(g.nat?'✓ ':'')+'20 natural sobe um grau, 1 natural desce')):
