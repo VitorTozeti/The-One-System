@@ -1,9 +1,12 @@
 /* ============================================================ HELPERS ============================================================ */
+/* atributos booleanos: qualquer valor "falso" (0, '') tem que sumir — senão disabled="0" desativa o botão */
+const _ATTR_BOOL=new Set(['disabled','checked','readonly','required','hidden','selected','multiple','autofocus']);
 function h(tag, attrs){
   const e = document.createElement(tag);
   if(attrs) for(const k in attrs){
     const v = attrs[k];
     if(v==null || v===false) continue;
+    if(!v && _ATTR_BOOL.has(k)) continue;
     if(k==='class') e.className = v;
     else if(k==='html') e.innerHTML = v;
     else if(k==='value') e.value = v;
