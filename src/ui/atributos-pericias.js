@@ -237,6 +237,10 @@ function painelPericia(sys,s){
     field('Nome',nome),
     field('Atributo ligado',linkSel),
     field('Descrição',desc),
+    (typeof ehPercentual==='function'&&ehPercentual(sys))
+      ? field('Valor base (%)',h('input',{class:'in',type:'number',min:'0',max:'99',value:typeof s.basePct==='number'?s.basePct:20,
+          onchange:e=>{ const n=parseInt(e.target.value); s.basePct=Number.isNaN(n)?20:Math.max(0,Math.min(99,n)); render(); }}))
+      : null,
     field('Bônus ao treinar',h('input',{class:'in',type:'number',value:s.trainedBonus||0,onchange:e=>{s.trainedBonus=parseInt(e.target.value)||0;render();}}),'bonustreino'),
     field('Disponibilidade',h('button',{class:'in',type:'button',style:{cursor:'pointer',textAlign:'left'},onclick:()=>{s.auto=!s.auto;render();}},
       s.auto?'⚡ Automática (todo personagem tem)':'✋ Jogador escolhe'),'periciaauto'),

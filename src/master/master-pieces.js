@@ -175,7 +175,9 @@ function tabDados(sys){
               onchange:e=>{sys.poolFaces=Math.max(2,parseInt(e.target.value)||20);render();}})),
             h('div',{class:'hint',style:{alignSelf:'end',paddingBottom:'8px'}},'Atributo 0 → rola 2 e pega o PIOR.')),
       h('div',{class:'hint',style:{marginTop:'10px'}},'Prévia: ', h('span',{class:'tg-fx'},exemplo))),
-    card('Crítico','O que acontece quando a rolagem estoura.',null,
+    (typeof ehPercentual==='function'&&ehPercentual(sys))
+    ? card('Crítico','No modo d100 ≤ perícia o crítico é tirar 1 e o desastre é 96+ (ou 100) — já automático.',null)
+    : card('Crítico','O que acontece quando a rolagem estoura.',null,
       h('div',{class:'grid g2',style:{alignItems:'end'}},
         field('Crítico no dado natural ≥', h('input',{class:'in',type:'number',value:sys.critNat||20,
           onchange:e=>{sys.critNat=parseInt(e.target.value)||20;render();}}), 'critnat'),

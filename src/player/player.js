@@ -235,6 +235,8 @@ function jogadorView(){
   }
   const avancar=()=>{
     const okAgora = atual==='id' ? !!(d.name.trim()&&d.classId&&d.originId) : canNext;   /* o nome é digitado sem render() */
+    /* faltar técnica/magia de classe trava: a ficha sairia sem elas e sem os efeitos (ex.: Escudo +2) */
+    if(!okAgora && atual==='tech') return showToast('💡 '+motivo,3500);
     if(!okAgora) showToast('💡 '+(atual==='id'&&!d.name.trim()?'Falta dar um nome ao personagem.':motivo)+' Você pode voltar e ajustar quando quiser.');
     S.step++; render(); window.scrollTo(0,0);
   };
@@ -603,7 +605,11 @@ function skillRows(sys,d,ctx){
   (sys.skills||[]).forEach(s=>{ if(s.auto) presentIds.add(s.id); });
   (d.skills||[]).forEach(id=>presentIds.add(id));
   ctx.eff.grantedSkills.forEach(id=>presentIds.add(id));
+  const pct=typeof ehPercentual==='function'&&ehPercentual(sys);
+  if(pct) (sys.skills||[]).forEach(s=>presentIds.add(s.id));   /* no d100 todo personagem tem todas, cada uma com seu % */
   return [...presentIds].map(id=>(sys.skills||[]).find(s=>s.id===id)).filter(Boolean).map(s=>{
+    if(pct){ const v=pctDe(sys,d,s); return {s, value:v, pct:true, tag:Math.floor(v/2)+' / '+Math.floor(v/5),
+      link:'½ / ⅕'}; }
     const tier=(sys.profTiers||[]).find(t=>t.id===(d.skillTier||{})[s.id]);
     return {s, value:ctx.skillVal(s), tier,
       tag: sys.profMode!=='nenhum' && tier ? tier.name
@@ -620,6 +626,18 @@ function periciasInner(sys,d,ctx,b,mode){
   const dica=r=>(r.s.description?r.s.description+'\n':'')+(joga?'🎲 Clique para rolar (Shift = vantagem · Alt = desvantagem)':'');
   const rola=r=>joga?(e=>rolarPericia(sys,ctx,r.s,r.value,e.shiftKey?1:e.altKey?-1:0)):null;
   const cls=base=>base+(joga?' rolavel':'');
+  /* percentual: o valor é editável na própria linha (clique no nome rola; o campo não rola) */
+  if(rows.length&&rows[0].pct){
+    const campo=r=>h('input',{class:'in pct-in',type:'number',min:'0',max:'99',value:r.value,'aria-label':'% de '+r.s.name,
+      onclick:e=>e.stopPropagation(),
+      onchange:e=>{ const n=parseInt(e.target.value); d.pct=d.pct||{};
+        if(Number.isNaN(n)) delete d.pct[r.s.id]; else { if(n>99||n<0) showToast('Perícia vai de 0 a 99%.'); d.pct[r.s.id]=Math.max(0,Math.min(99,n)); }
+        render(); }});
+    return h('table',{class:'ptable'},
+      h('thead',{},h('tr',{},h('th',{},'Perícia'),h('th',{},'Difícil / Extremo'),h('th',{style:{textAlign:'right'}},'%'))),
+      h('tbody',{}, ...rows.map(r=>h('tr',{class:cls(''),title:dica(r),onclick:rola(r)},
+        h('td',{},(joga?'🎲 ':'')+r.s.name), h('td',{class:'at'},r.tag), h('td',{class:'vv'},campo(r))))));
+  }
   if(view==='tabela'){
     const tb=h('table',{class:'ptable'},
       h('thead',{},h('tr',{},h('th',{},'Perícia'),h('th',{},'Atributo'),h('th',{},'Tipo'),h('th',{style:{textAlign:'right'}},joga?'🎲 Valor':'Valor'))),
@@ -755,13 +773,17 @@ function rolarPericia(sys,ctx,s,valor,vd){
   const soma=sys.rollMode==='pool'?'':(valor?(' + '+valor):'');
   const res=rollExpr(expr+soma,ctx.varsTotal);
   const nat=res.detalhes&&res.detalhes[0]?Math.max(...res.detalhes[0].usados):0;
-  const crit=nat>=(sys.critNat||20);
+  const crit=!(sys.graus&&sys.graus.on&&sys.graus.modo==='abaixo')&&nat>=(sys.critNat||20);
   /* graus de sucesso: "abaixo" (d100 <= perícia) usa o próprio valor como alvo; "acima" usa a CD do bloco Dados */
   const gm=(sys.graus&&sys.graus.on)?sys.graus.modo:null;
   let total=res.erro?null:res.total;
-  if(gm==='abaixo'&&!res.erro){ const r2=rollExpr(expr,ctx.varsTotal); total=r2.total; res.detalhes=r2.detalhes; }
+  if(gm==='abaixo'){
+    /* d100 contra o % da perícia — sem somar bônus e sem crítico de d20 */
+    valor=pctDe(sys,S.draft,s); expr=vd>0?'2d100kl1':vd<0?'2d100kh1':'1d100';   /* dado bônus = fica com o MENOR */
+    const r2=rollExpr(expr,{}); total=r2.erro?null:r2.total; res.detalhes=r2.detalhes; res.erro=r2.erro;
+  }
   const faces=res.detalhes&&res.detalhes[0]?res.detalhes[0].faces:null;
-  const gr=(typeof grauDeSucesso==='function')?grauDeSucesso(sys,total,gm==='abaixo'?valor:S.dice.cd,nat,faces):null;
+  const gr=(typeof grauDeSucesso==='function')?grauDeSucesso(sys,total,gm==='abaixo'?valor:S.dice.cd,gm==='abaixo'?total:nat,faces):null;
   S.dice.result={livre:true,titulo:s.name+(gr?('  '+gr.ic+' '+gr.t):(crit?'  ★ CRÍTICO':''))+(vd>0?' (vantagem)':vd<0?' (desvantagem)':''),
     total,sub:res.erro?('⚠ '+res.erro):((gm==='abaixo'?(expr+' ≤ '+valor):(expr+soma+(S.dice.cd?(' vs CD '+S.dice.cd):'')))+'   '+textoRolagem(res))};
   avisaResultado(S.dice.result);

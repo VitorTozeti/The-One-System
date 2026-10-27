@@ -18,6 +18,15 @@ function sanitizarGraus(sys){
 }
 const GRAUS=[{k:3,ic:'🌟',t:'Sucesso crítico'},{k:2,ic:'✅',t:'Sucesso'},{k:1,ic:'❌',t:'Falha'},{k:0,ic:'💀',t:'Falha crítica'}];
 /* acima: total contra CD.  abaixo: rolagem (d100) contra o valor-alvo. Devolve {ic,t,extra} ou null. */
+/* Modo percentual (CoC/BRP): ligado quando os graus estão em "d100 ≤ perícia".
+   A perícia passa a ter um valor 0–99 próprio: base do sistema (s.basePct) ou o que
+   o jogador anotou na ficha (d.pct[id]). Não usa atributo + bônus. */
+function ehPercentual(sys){ const g=sys&&sys.graus; return !!(g&&g.on&&g.modo==='abaixo'); }
+function pctDe(sys,d,s){
+  const v=d&&d.pct&&d.pct[s.id];
+  const n=(typeof v==='number'&&!Number.isNaN(v))?v:(typeof s.basePct==='number'?s.basePct:20);
+  return Math.max(0,Math.min(99,Math.round(n)));
+}
 function grauDeSucesso(sys,total,alvo,nat,faces){
   const g=sanitizarGraus(sys); if(!g.on||alvo==null||alvo===''||Number.isNaN(Number(alvo))||total==null) return null;
   alvo=Number(alvo);

@@ -579,6 +579,7 @@ function sanitizeDraft(d,sys){
   if(!d||typeof d!=='object') return initDraft(sys);
   if(!d.choices||typeof d.choices!=='object') d.choices={};
   if(!d.skillTier||typeof d.skillTier!=='object') d.skillTier={};
+  if(!d.pct||typeof d.pct!=='object'||Array.isArray(d.pct)) d.pct={};
   if(!Array.isArray(d.conditions)) d.conditions=[];
   if(!Array.isArray(d.techniques)) d.techniques=[];
   if(!Array.isArray(d.classTechs)) d.classTechs=[];
