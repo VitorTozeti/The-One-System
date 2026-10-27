@@ -54,7 +54,11 @@ function jogadoresView(){
 }
 
 function adicionarPersonagemDeTeste(){
-  const c=S.campaign, d=S.draft; if(!d) return showToast('Monte um personagem em “Testar como jogador” primeiro.');
+  const c=S.campaign, d=S.draft;
+  if(!d){   /* sem ficha de teste ainda: leva direto para montar uma, em vez de só reclamar */
+    S.draft=initDraft(S.system); S.view='jogador'; S.step=0; render(); window.scrollTo(0,0);
+    return showToast('Monte o personagem de teste e depois volte em Jogadores → 🧪 para pô-lo na mesa.',6000);
+  }
   const nome=(d.name||'').trim()||'Personagem de teste';
   const copia=JSON.parse(JSON.stringify(d));
   const ja=c.players.find(p=>p.teste);

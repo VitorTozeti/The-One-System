@@ -92,14 +92,21 @@ function loadAccountData(id){ const d=load('nexus_acct_'+id) || {personagens:[]}
 function saveAccountData(id, data){ store('nexus_acct_'+id, data); }
 
 /* ---------- Personagens ---------- */
-function newPersonagem(kind, name, templateSystem){
+function newPersonagem(kind, name, templateSystem, opts){
   name=String(name||'').trim() || (kind==='mestre'?'Mestre':'Jogador');
   const base={ id:uid(), kind, name, createdAt:Date.now() };
   if(kind==='mestre'){
     base.system=templateSystem?JSON.parse(JSON.stringify(templateSystem)):defaultSystem();
     base.campaign=(typeof defaultCampaign==='function')?defaultCampaign():{};
   }
-  else { base.draft=initDraft(defaultSystem()); base.saved=[]; }
+  else {
+    /* jogador: liga ao sistema de um Mestre da conta (fonte viva) e guarda uma cópia
+       para continuar jogando mesmo se aquele Mestre for excluído */
+    const sys=templateSystem?JSON.parse(JSON.stringify(templateSystem)):null;
+    if(sys) base.system=sys;
+    if(opts&&opts.mestreId) base.mestreId=opts.mestreId;
+    base.draft=initDraft(sys||defaultSystem()); base.saved=[];
+  }
   return base;
 }
 

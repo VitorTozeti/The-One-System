@@ -38,6 +38,20 @@ function bindAccount(acc){
   S.currentId=null; S.system=null; S.draft=null; S.saved=[];
 }
 
+/* Sistema que a ficha do jogador usa: o do Mestre ligado (sempre a versão atual),
+   senão a cópia guardada na ficha, senão o exemplo embutido. */
+function sistemaDoJogador(p){
+  const m=p.mestreId&&S.personagens.find(x=>x.id===p.mestreId&&x.kind==='mestre');
+  if(m&&m.system){ p.system=JSON.parse(JSON.stringify(m.system)); }
+  return (p.system&&migrateSystem(p.system))||defaultSystem();
+}
+/* Nome do sistema que a ficha usa (para o cartão do hub). */
+function nomeSistemaDoJogador(p){
+  const m=p.mestreId&&S.personagens.find(x=>x.id===p.mestreId&&x.kind==='mestre');
+  const s=(m&&m.system)||p.system;
+  return s?(s.campaignName||s.name||'sistema sem nome'):'Sistema de exemplo';
+}
+
 /* Liga os espelhos S.system/S.draft/S.saved/S.view ao personagem escolhido.
    O tipo (kind) do personagem é o que define o acesso: mestre → editor de
    sistema; jogador → ficha. */
@@ -47,11 +61,11 @@ function bindPersonagem(p){
     S.system=migrateSystem(p.system)||defaultSystem();
     p.campaign=sanitizeCampaign(p.campaign);   /* migra campanhas antigas/ausentes */
     S.campaign=p.campaign;
-    S.draft=null; S.saved=[];   /* o preview "Testar como jogador" gera uma ficha na hora */
+    /* a ficha de "Testar como jogador" fica guardada no Mestre: sobrevive ao F5 e à troca de personagem */
+    S.draft=p.testDraft ? sanitizeDraft(p.testDraft,S.system) : null; S.saved=[];
     S.view='mestre'; S.tab='inicio'; S.mopen=['painel'];
   } else {
-    /* por enquanto a ficha do jogador usa o sistema de exemplo embutido */
-    S.system=defaultSystem();
+    S.system=sistemaDoJogador(p);
     S.draft=p.draft ? sanitizeDraft(p.draft,S.system) : initDraft(S.system);
     S.saved=p.saved || [];
     S.view='jogador'; S.step=0;
@@ -85,7 +99,7 @@ function persist(){
     /* grava os espelhos de volta no personagem selecionado */
     const p=currentPersonagem();
     if(p){
-      if(p.kind==='mestre'){ if(S.system) p.system=S.system; if(S.campaign) p.campaign=S.campaign; }
+      if(p.kind==='mestre'){ if(S.system) p.system=S.system; if(S.campaign) p.campaign=S.campaign; if(S.draft) p.testDraft=S.draft; }
       else { if(S.draft) p.draft=S.draft; p.saved=S.saved; }
     }
     /* preserva outras chaves da conta (ex.: templates) ao salvar os personagens */

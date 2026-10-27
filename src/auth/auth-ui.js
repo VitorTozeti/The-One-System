@@ -28,8 +28,8 @@ function trocarPersonagem(){
   S.currentId=null; S.system=null; S.draft=null; S.saved=[];
   setSession(S.account.id, null); render();
 }
-function addPersonagem(kind, name, templateSystem){
-  const p=newPersonagem(kind, name, templateSystem);
+function addPersonagem(kind, name, templateSystem, opts){
+  const p=newPersonagem(kind, name, templateSystem, opts);
   S.personagens.push(p); persist(); render();
   return p.id;
 }
@@ -46,6 +46,19 @@ async function removePersonagem(id){
     if(S.personagens.some(p=>p.id===alvo.id)) return;
     S.personagens.splice(Math.min(idx,S.personagens.length),0,alvo); persist(); render();
   }, 9000);
+}
+/* Jogador com o sistema de um arquivo .nexus (o mestre exporta e manda; tudo offline). */
+function importarSistemaParaJogador(nome){
+  const inp=h('input',{type:'file',accept:'.nexus,.json',class:'hide',
+    onchange:async e=>{
+      const f=e.target.files[0]; inp.remove(); if(!f) return;
+      let txt; try{ txt=await lerArquivoTexto(f); }catch(err){ return uiAlert(err.message,{titulo:'Não foi possível abrir'}); }
+      const r=importarSistemaTexto(txt);
+      if(r.erro) return uiAlert(r.erro,{titulo:'Arquivo .nexus inválido'});
+      const id=addPersonagem('jogador', nome||'', r.sys); selectPersonagem(id);
+      showToast('Ficha criada no sistema “'+(r.sys.campaignName||r.sys.name||f.name)+'”');
+    }});
+  document.body.appendChild(inp); inp.click();
 }
 /* Cria um Mestre guiado: assistente → sistema pronto → entra direto na aba Início. */
 function criarMestreGuiado(nome){
@@ -99,11 +112,12 @@ function personagensView(){
     : h('div',{class:'pj-grid'}, S.personagens.map(p=>h('div',{class:'pj-card '+p.kind},
         h('div',{class:'pj-badge'}, p.kind==='mestre'?'🛠️ Mestre':'🎲 Jogador'),
         h('div',{class:'pj-name'}, p.name),
-        h('div',{class:'pj-role-d'}, p.kind==='mestre'?'Editor de sistema e campanha.':'Ficha de jogador.'),
+        h('div',{class:'pj-role-d'}, p.kind==='mestre'?'Editor de sistema e campanha.':('Ficha no sistema: '+nomeSistemaDoJogador(p))),
         h('div',{class:'row'},
           h('button',{class:'btn primary sm', onclick:()=>selectPersonagem(p.id)},'Entrar →'),
           h('button',{class:'btn ghost sm', onclick:()=>removePersonagem(p.id)},'Excluir')))));
 
+  const mestres=S.personagens.filter(p=>p.kind==='mestre');
   const templates=(typeof listTemplates==='function')?listTemplates():[];
   const tplSel=templates.length?h('select',{id:'pj-template', class:'auth-inp'},
     h('option',{value:''},'assistente guiado (recomendado)'),
@@ -119,6 +133,12 @@ function personagensView(){
       if(tid){ const t=templates.find(x=>x.id===tid); if(t) tplSystem=t.system; }
       else return criarMestreGuiado(name);      /* sem modelo salvo → assistente */
     }
+    if(kind==='jogador'){
+      const v=(document.getElementById('pj-sys')||{}).value||'';
+      if(v==='__importar') return importarSistemaParaJogador(name);
+      const m=mestres.find(x=>x.id===v);
+      if(m){ const id=addPersonagem('jogador', name||'', m.system, {mestreId:m.id}); return selectPersonagem(id); }
+    }
     const novoId=addPersonagem(kind, name, tplSystem);
     if(kind==='jogador' || tplSystem) selectPersonagem(novoId);   /* já entra: menos um clique */
   }
@@ -130,10 +150,18 @@ function personagensView(){
     tplSel ? field2('Começar de', tplSel) : null,
     h('button',{class:'btn amber pj-role-go', onclick:()=>criar('mestre')},tplSel?'Criar Mestre →':'Criar sistema com assistente →'));
 
+  /* o jogador escolhe EM QUAL sistema vai jogar: o de um Mestre desta conta, o exemplo ou um .nexus recebido */
+  const sysSel=h('select',{id:'pj-sys', class:'auth-inp'},
+    mestres.map(m=>h('option',{value:m.id},'🛠️ '+(m.system&&(m.system.campaignName||m.system.name)||m.name)+'  (do Mestre “'+m.name+'”)')),
+    h('option',{value:''},'📘 Sistema de exemplo (fantasia pronta)'),
+    h('option',{value:'__importar'},'📂 Arquivo .nexus que o mestre me mandou…'));
   const cartaoJogador=h('div',{class:'pj-role jogador'},
     h('div',{class:'pj-role-ic'},'🎲'),
     h('div',{class:'pj-role-t'},'Jogador'),
-    h('div',{class:'pj-role-s'},'Cria uma ficha e joga com o sistema de exemplo já pronto. Escolha isto para experimentar rápido, sem montar regras.'),
+    h('div',{class:'pj-role-s'}, mestres.length
+      ? 'Cria uma ficha para jogar. Escolha abaixo o sistema — o que o Mestre montou já aparece na lista.'
+      : 'Cria uma ficha para jogar. Sem Mestre ainda? Use o sistema de exemplo, ou o arquivo .nexus que o seu mestre mandou.'),
+    field2('Jogar com o sistema', sysSel),
     h('button',{class:'btn primary pj-role-go', onclick:()=>criar('jogador')},'Criar Jogador e entrar →'));
 
   const novo=h('div',{class:'pj-new'},
