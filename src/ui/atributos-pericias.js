@@ -50,6 +50,9 @@ function tabAtributos(sys){
   const conjuntos=h('div',{class:'row wrapf'}, ...CONJUNTOS_ATRIBUTOS.map(c=>
     h('button',{class:'btn sm ghost',type:'button',title:c.itens.map(x=>x[0]).join(', '),onclick:()=>{
       let n=0; c.itens.forEach(([nm,sg])=>{ if(adicionaAtributo(sys,nm,sg,true)) n++; });
+      /* D&D não é só o nome dos atributos: liga modificador, 8–15, compra de pontos, proficiência e Vida por nível */
+      if(c.nome==='D&D'&&typeof aplicarRegrasDnD==='function'){ pushUndo(); aplicarRegrasDnD(sys); render();
+        return showToast('⚔ Regras de D&D ligadas: valores 8–15 com modificador, 24 pontos, proficiência e Vida por nível',6000); }
       render(); showToast(n?(n+' atributo(s) adicionado(s)'):'Esses atributos já estão na lista');
     }}, c.nome+' ('+c.n+')')));
 

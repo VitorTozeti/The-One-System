@@ -41,7 +41,9 @@ function conjuracaoEditor(sys,ab){
           field('Custo extra',h('input',{class:'in mono',value:au.custo,placeholder:'1',oninput:e=>{au.custo=e.target.value;persist();}})),
           field('Máx. de vezes',h('input',{class:'in mono',value:au.max,placeholder:'9 - círculo',oninput:e=>{au.max=e.target.value;persist();}}))))),
     h('div',{class:'hint',style:{marginTop:'6px'}},'Dica: dados que crescem com o nível = ',h('code',{},'(1 + piso((Nível + 1) / 6))d10'),' (truque de D&D: 1d10 → 4d10).'),
-    semPM?h('button',{type:'button',class:'btn sm ghost',style:{marginTop:'6px'},title:'Cria o recurso “Pontos de Magia” com a tabela da variante oficial do D&D (DMG)',onclick:()=>{ criarPontosMagia(sys); render(); }},'📘 Criar “Pontos de Magia” (tabela D&D)'):null);
+    semPM?h('button',{type:'button',class:'btn sm ghost',style:{marginTop:'6px'},title:'Cria o recurso “Pontos de Magia” com a tabela da variante oficial do D&D (DMG)',onclick:()=>{ criarPontosMagia(sys); render(); }},'📘 Criar “Pontos de Magia” (tabela D&D)'):null,
+    (typeof criarEspacosDeMagia==='function'&&!(sys.resources||[]).some(r=>/^Espaços /.test(r.name)))
+      ?h('button',{type:'button',class:'btn sm ghost',style:{marginTop:'6px',marginLeft:'6px'},title:'Cria “Espaços 1º…5º círculo” como caixas que crescem com o nível e voltam no descanso longo',onclick:()=>{ criarEspacosDeMagia(sys); render(); }},'✨ Criar espaços de magia por círculo'):null);
 }
 function _atrMagia(sys){ return _atrNome(sys,['Inteligência','Inteligencia','Sabedoria','Carisma','Intelecto','Mente','Presença','Espírito']); }
 function bonusMagiaPadrao(sys){ const a=_atrMagia(sys); return 'Proficiência'+(a?(' + '+a):''); }

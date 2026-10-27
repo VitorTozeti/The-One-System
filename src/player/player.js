@@ -102,7 +102,7 @@ function jogadorView(){
       d.skills=has?d.skills.filter(x=>x!==id):[...d.skills,id];
       /* ao escolher, já entra no primeiro grau que dá valor (peça 2) */
       if(!has && sys.profMode!=='nenhum'){
-        const t=(sys.profTiers||[]).find(x=>(sys.profMode==='mult'?x.mult:x.bonus)>0);
+        const t=grauPadraoTreinado(sys);
         if(t) d.skillTier[id]=t.id;
       }
       render();};
@@ -769,6 +769,13 @@ function fotoInner(sys,d,b,mode){
 function avisaResultado(r){
   if(!r) return render();
   showToast('🎲 '+(r.titulo||'Rolagem')+': '+(r.total==null?'—':r.total)+(r.sub&&r.total!=null&&String(r.sub).length<60?('  ('+r.sub+')'):''),4500);
+}
+/* Grau que uma perícia recém-escolhida recebe: o "×1" (Proficiente) se existir; senão o primeiro que dá valor.
+   Antes pegava "Metade" (×0,5) no preset D&D. */
+function grauPadraoTreinado(sys){
+  const ts=sys.profTiers||[];
+  if(sys.profMode==='mult') return ts.find(x=>x.mult===1)||ts.find(x=>x.mult>0);
+  return ts.find(x=>x.bonus>0);
 }
 /* Crítico por "dado natural ≥ X" só faz sentido em dado + bônus sem graus de rolar-abaixo. */
 function critD20(sys){
@@ -1467,7 +1474,7 @@ function surpreendaFicha(sys,d){
   const esc=sys.skills.filter(s=>!s.auto).slice();
   d.skills=[]; d.skillTier={};
   while(d.skills.length<lp.skillCount&&esc.length){ const s=esc.splice(Math.floor(Math.random()*esc.length),1)[0]; d.skills.push(s.id);
-    if(sys.profMode!=='nenhum'){ const t=(sys.profTiers||[]).find(x=>(sys.profMode==='mult'?x.mult:x.bonus)>0); if(t) d.skillTier[s.id]=t.id; } }
+    if(sys.profMode!=='nenhum'){ const t=grauPadraoTreinado(sys); if(t) d.skillTier[s.id]=t.id; } }
   escolherTecnicas(sys,d,true);
   showToast('🎲 Ficha sorteada — ajuste o que quiser');
   S.step=Math.max(0,S.step); render();

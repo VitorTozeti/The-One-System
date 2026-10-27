@@ -113,7 +113,7 @@ const CATALOGO_CLASSES2=[
   {n:'Mago',ic:'🔮',c:'#4f46e5',d:'Estuda e domina a magia.',rec:[[_M,'substitui','Base + Nível * 3']],
    tec:['Magias','Nível + 1'],
    hab:s=>[[1,'Grimório','Prepara magias a partir do livro.',[]],[5,'Magia potente','Suas magias ficam mais fortes.',[_rol('tecnica',2)]],[10,'Mente blindada','Ataques mentais pegam pela metade.',[_res('Psíquico','metade')]]],
-   opc:s=>[['Bola de fogo','Explosão em área.',[_txt('Dano de fogo em área')]],['Raio de gelo','Projétil que deixa o alvo lento.',[_txt('Dano de frio + Lento')]],
+   opc:s=>[['Bola de fogo','Explosão em área (3º círculo).',[_txt('Dano de fogo em área')],5],['Raio de gelo','Projétil que deixa o alvo lento.',[_txt('Dano de frio + Lento')]],
            ['Escudo arcano','Barreira de força.',[_rol('defesa',2)]],['Voar','Levita e se move pelo ar.',[_cap('Voo',9)],5],['Visão arcana','Enxerga no escuro.',[_cap('Visão no escuro',18)]]]},
   {n:'Ladino',ic:'🗡️',c:'#334155',d:'Furtivo, ágil e esperto; vive de golpes certeiros.',
    tec:['Truques','1 + piso(Nível / 3)'],
@@ -199,6 +199,7 @@ function novaClasseDe(sys,p){
   if(p.tec){ c.tecnicas.nome=p.tec[0]; c.tecnicas.formula=p.tec[1]; }
   if(p.hab) c.abilities=p.hab(sys).map(x=>_hab(sys,x));
   if(p.opc) c.tecnicas.opcoes=p.opc(sys).map(([n,d,efs,lv])=>_hab(sys,[lv||0,n,d,efs]));
+  if(sys.dndVida&&typeof vidaPorDadoDeVida==='function') vidaPorDadoDeVida(sys,c);
   return c;
 }
 function novaOrigemDe(sys,p){
