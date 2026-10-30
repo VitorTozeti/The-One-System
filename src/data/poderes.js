@@ -9,13 +9,29 @@
      forma = habilidade normal (efeitos + uso) + grupo, perdivel, desbloq:{tipo:'livre'|'ritual'|'forma'|'perdida', formaId, texto}
    Quem tem: efeito "🔮 Concede sistema de poder" (classe, origem, escolha, item) ou o sistema marcado "todos".
    Estado do personagem: d.poder[poderId] = {des:{formaId:true}, perd:{formaId:true}, esc:[ids], equip:id, copias:[abId]}
-   Usos limitados (qualquer técnica): ab.uso.usos = {max:'3', recarga:'longo'|'curto'|'cena'|'nunca'} · gasto em d.usos[abId]. */
+   Usos limitados (qualquer técnica): ab.uso.usos = {max:'3', recarga:'longo'|'curto'|'cena'|'nunca'} · gasto em d.usos[abId].
+
+   REFATORAÇÃO 2026-10-30 — três CATEGORIAS de poder (separadas de habilidades de classe/origem):
+     categoria 'tecnica' → TÉCNICA INATA ÚNICA (estilo Jujutsu / F&M): cada personagem nasce com UMA; ela tem
+                            GRAUS DE CRESCIMENTO (domínio I…V, expansão de domínio…) que o personagem sobe ao treinar.
+                            Marcada "todos" = vira opção no sorteio/escolha da técnica inata (d.tecnicaInata, só uma).
+     categoria 'magia'   → SISTEMA ABERTO que qualquer um aprende (estilo Ordem Paranormal / grimório): CÍRCULOS
+                            liberados pelo nível e ELEMENTOS (Sangue, Morte, Conhecimento, Energia, Medo…).
+     categoria 'outro'   → posturas, brasões, modos equipáveis etc.
+   P.graus=[{id,nome,desc,nivel}] (nivel = nível mínimo do personagem p/ chegar no grau) · P.grauAuto (sobe sozinho pelo nível)
+   P.elementos=[{id,nome,icone,cor}] · forma.grau (índice do grau/círculo) · forma.elemento (id)
+   d.poder[pid].grau = grau atual (técnica, manual) · d.tecnicaInata = id da técnica inata escolhida entre as "todos". */
 
 const DESBLOQ_TIPOS=[
   ['livre','🔓 Já vem liberada','Basta ter o nível.'],
   ['ritual','🕯 Ritual / conquista','Fica trancada até alguém marcar "conquistado" na ficha (vencer o shikigami, achar o grimório, treinar com o mestre…).'],
   ['forma','🔗 Depois de outra','Só libera quando outra forma deste sistema estiver liberada.'],
   ['perdida','💀 Quando outra for destruída','Herança: aparece quando uma forma marcada como perdível for destruída.'],
+];
+const PODER_CATEGORIAS=[
+  ['tecnica','🌀 Técnica inata','Única do personagem (Dez Sombras, Ilimitado…). Cresce em graus de domínio. Cada personagem tem uma só.'],
+  ['magia','📜 Magia aprendível','Sistema aberto que qualquer um pode estudar (rituais, grimório). Círculos pelo nível e elementos.'],
+  ['outro','🎽 Outro poder','Posturas, brasões, modos, mutações — o que não é técnica inata nem magia.'],
 ];
 const PODER_MODOS=[
   ['todas','📖 Tem todas','O personagem tem todas as formas que conseguir desbloquear.'],
@@ -28,6 +44,7 @@ function _formaPadrao(f){
   if(!DESBLOQ_TIPOS.some(t=>t[0]===f.desbloq.tipo)) f.desbloq.tipo='livre';
   ['formaId','texto'].forEach(k=>{ if(typeof f.desbloq[k]!=='string') f.desbloq[k]=''; });
   if(typeof f.grupo!=='string') f.grupo='';
+  f.grau=Math.max(0,Math.min(19,parseInt(f.grau,10)||0)); if(typeof f.elemento!=='string') f.elemento='';
   f.perdivel=!!f.perdivel;
   if(!Array.isArray(f.effects)) f.effects=[];
   if(!f.req||typeof f.req!=='object') f.req={level:0,attrs:[]};
@@ -43,6 +60,14 @@ function sanitizePoderes(sys){
     if(!p.nome) p.nome='Sistema de poder';
     if(!PODER_MODOS.some(m=>m[0]===p.modo)) p.modo='todas';
     p.todos=!!p.todos; p.copia=!!p.copia;
+    if(!PODER_CATEGORIAS.some(c=>c[0]===p.categoria)) p.categoria=p.modo==='escolher'?'magia':p.modo==='exclusiva'?'outro':'tecnica';
+    if(!Array.isArray(p.graus)) p.graus=[];
+    p.graus=p.graus.filter(g=>g&&typeof g==='object').slice(0,20);
+    p.graus.forEach(g=>{ if(!g.id) g.id=uid(); ['nome','desc','nivel'].forEach(k=>{ if(typeof g[k]!=='string') g[k]=g[k]==null?'':String(g[k]); }); });
+    if(typeof p.grauAuto!=='boolean') p.grauAuto=p.categoria==='magia';
+    if(!Array.isArray(p.elementos)) p.elementos=[];
+    p.elementos=p.elementos.filter(x=>x&&typeof x==='object').slice(0,20);
+    p.elementos.forEach(x=>{ if(!x.id) x.id=uid(); ['nome','icone','cor'].forEach(k=>{ if(typeof x[k]!=='string') x[k]=''; }); });
     if(!Array.isArray(p.formas)) p.formas=[];
     p.formas=p.formas.filter(f=>f&&typeof f==='object').slice(0,80);
     p.formas.forEach(f=>{ if(!f.id) f.id=uid(); _formaPadrao(f); });
@@ -57,17 +82,35 @@ function sanitizePoderDraft(d){
   if(!d.poder||typeof d.poder!=='object'||Array.isArray(d.poder)) d.poder={};
   Object.keys(d.poder).forEach(k=>{ const e=d.poder[k]; if(!e||typeof e!=='object'){ delete d.poder[k]; return; }
     if(!e.des||typeof e.des!=='object') e.des={}; if(!e.perd||typeof e.perd!=='object') e.perd={};
-    if(!Array.isArray(e.esc)) e.esc=[]; if(!Array.isArray(e.copias)) e.copias=[]; if(typeof e.equip!=='string') e.equip=''; });
+    if(!Array.isArray(e.esc)) e.esc=[]; if(!Array.isArray(e.copias)) e.copias=[]; if(typeof e.equip!=='string') e.equip='';
+    e.grau=Math.max(0,parseInt(e.grau,10)||0); });
+  if(typeof d.tecnicaInata!=='string') d.tecnicaInata='';
   if(!d.usos||typeof d.usos!=='object'||Array.isArray(d.usos)) d.usos={};
 }
-function poderEstadoDe(d,pid){ sanitizePoderDraft(d); if(!d.poder[pid]) d.poder[pid]={des:{},perd:{},esc:[],equip:'',copias:[]}; return d.poder[pid]; }
+function poderEstadoDe(d,pid){ sanitizePoderDraft(d); if(!d.poder[pid]) d.poder[pid]={des:{},perd:{},esc:[],equip:'',copias:[],grau:0}; return d.poder[pid]; }
 function _varsNivel(sys,level){ const v={'Nível':level,'Nivel':level}; v[sys.levelName||'Nível']=level; return v; }
 function poderQtd(sys,f,level,padrao){ const s=String(f||'').trim(); if(!s) return padrao; const v=evalFormula(s,_varsNivel(sys,level)); return Number.isNaN(v)?padrao:Math.max(0,Math.floor(v)); }
+
+/* ---------- graus de crescimento / círculos ---------- */
+const grauNivelMin=(sys,g)=>poderQtd(sys,g&&g.nivel,1,0);
+/* maior grau que o nível do personagem permite */
+function grauMaxPorNivel(sys,d,P){ let m=0; (P.graus||[]).forEach((g,i)=>{ if(grauNivelMin(sys,g)<=(d.level||1)) m=i; else if(i===0) m=0; }); return m; }
+/* grau atual: automático pelo nível (círculos) ou o que o personagem já dominou (técnica), nunca acima do nível */
+function grauAtual(sys,d,P){
+  if(!(P.graus||[]).length) return 99;
+  const mx=grauMaxPorNivel(sys,d,P);
+  return P.grauAuto?mx:Math.min(poderEstadoDe(d,P.id).grau||0,mx);
+}
+const grauNome=(P,i)=>{ const g=(P.graus||[])[i]; return g?(g.nome||('Grau '+(i+1))):''; };
+const elementoDe=(P,id)=>(P.elementos||[]).find(x=>x.id===id)||null;
+/* técnicas inatas disponíveis para escolher (as marcadas "todos") */
+const tecnicasInatasLivres=sys=>(sys.poderes||[]).filter(p=>p.categoria==='tecnica'&&p.todos);
 
 /* quais sistemas o personagem tem: marcados "todos" + efeitos kind 'poder' nas fontes (nível já alcançado) */
 function _efsPoder(efs,out){ (efs||[]).forEach(ef=>{ if(!ef) return; if(ef.kind==='poder'&&ef.targetId) out.add(ef.targetId); if(ef.kind==='livre') _efsPoder(ef.mods,out); }); }
 function poderesDoPersonagem(sys,d,sources,equipados){
-  const out=new Set((sys.poderes||[]).filter(p=>p.todos).map(p=>p.id));
+  /* "todos": magia/outro valem para todo mundo; técnica inata só a que o personagem escolheu (uma) */
+  const out=new Set((sys.poderes||[]).filter(p=>p.todos&&(p.categoria!=='tecnica'||p.id===d.tecnicaInata)).map(p=>p.id));
   (sources||[]).forEach(({ab})=>{ const r=ab.req||{}; if(r.level&&(d.level||1)<r.level) return; _efsPoder(ab.effects,out); });
   (equipados||[]).forEach(({it})=>_efsPoder(it.effects,out));
   return (sys.poderes||[]).filter(p=>out.has(p.id));
@@ -77,6 +120,7 @@ function formaEstado(sys,d,P,f,_prof){
   const e=poderEstadoDe(d,P.id), lv=d.level||1;
   if(e.perd[f.id]) return 'perdida';
   if((f.req||{}).level&&lv<f.req.level) return 'nivel';
+  if((P.graus||[]).length&&(f.grau||0)>grauAtual(sys,d,P)) return 'grau';
   const db=f.desbloq||{};
   if(db.tipo==='ritual'&&!e.des[f.id]) return 'ritual';
   if(db.tipo==='forma'){ const o=P.formas.find(x=>x.id===db.formaId); if(o&&(_prof||0)<6){ const eo=formaEstado(sys,d,P,o,(_prof||0)+1); if(eo!=='ativa'&&eo!=='escolher'&&eo!=='guardada') return 'requer'; } }
